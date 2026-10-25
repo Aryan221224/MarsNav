@@ -1,0 +1,23 @@
+[bridge] polling TSS2027 at udp://192.0.2.2:14142 0.5 Hz -> http://127.0.0.1:41691/events
+t=6s  O2 99.92%  batt 99.70%  CO2 bed 0.78%  | learned: O2/met x1.00  batt x1.00  CO2 x1.00  | stopped  cross-track 17 m  | plan v1
+t=26s  O2 99.66%  batt 98.70%  CO2 bed 3.38%  | learned: O2/met x1.00  batt x1.00  CO2 x1.00  | stopped  cross-track 3 m  | plan v1
+[bridge] TSS timeout (command 0)
+t=51s  O2 99.34%  batt 97.45%  CO2 bed 6.63%  | learned: O2/met x1.00  batt x1.00  CO2 x1.00  | traverse  cross-track 1 m  | plan v1
+t=79s  O2 98.97%  batt 96.05%  CO2 bed 10.27%  | learned: O2/met x1.00  batt x1.00  CO2 x1.00  | traverse  cross-track 1 m  | plan v1
+t=112s  O2 98.54%  batt 94.40%  CO2 bed 14.56%  | learned: O2/met x1.00  batt x1.00  CO2 x1.00  | traverse  cross-track 1 m  | plan v1
+t=140s  O2 98.18%  batt 93.00%  CO2 bed 18.20%  | learned: O2/met x4.08  batt x8.00  CO2 x8.00  | traverse  cross-track 5 m  | plan v2
+t=171s  O2 97.78%  batt 91.45%  CO2 bed 22.23%  | learned: O2/met x4.07  batt x8.00  CO2 x8.00  | traverse  cross-track 2 m  | plan v2
+t=201s  O2 97.39%  batt 89.95%  CO2 bed 26.13%  | learned: O2/met x4.05  batt x8.00  CO2 x8.00  | traverse  cross-track 1 m  | plan v2
+t=232s  O2 96.98%  batt 88.40%  CO2 bed 30.16%  | learned: O2/met x3.99  batt x8.00  CO2 x8.00  | traverse  cross-track 2 m  | plan v2
+t=262s  O2 96.59%  batt 86.90%  CO2 bed 34.06%  | learned: O2/met x3.95  batt x8.00  CO2 x8.00  | traverse  cross-track 1 m  | plan v2
+t=287s  O2 96.27%  batt 85.65%  CO2 bed 37.31%  | learned: O2/met x3.93  batt x8.00  CO2 x8.00  | traverse  cross-track 1 m  | plan v2
+t=317s  O2 95.88%  batt 84.15%  CO2 bed 41.21%  | learned: O2/met x3.90  batt x8.00  CO2 x8.00  | traverse  cross-track 0 m  | plan v2
+t=348s  O2 95.48%  batt 82.60%  CO2 bed 45.24%  | learned: O2/met x3.87  batt x8.00  CO2 x8.00  | stopped  cross-track 0 m  | plan v2
+t=377s  O2 95.10%  batt 81.15%  CO2 bed 49.01%  | learned: O2/met x3.87  batt x8.00  CO2 x8.00  | stopped  cross-track 0 m  | plan v2
+t=402s  O2 94.77%  batt 79.90%  CO2 bed 52.26%  | learned: O2/met x3.90  batt x8.00  CO2 x8.00  | stopped  cross-track 0 m  | plan v2
+
+frames: 142
+  6 s  telemetry: cooling water reads 0 at the start - treated as NOT REPORTED, model value used (check the suit)
+  133 s  REPLAN v2: forecast: o2, co2, batt would run below the reserve; dropped Issole, Seitah (Malay core), Amalik, delta front (Mageik core) (613 ms)
+  298 s  EVA complete
+alerts: COOLING WATER NOT REPORTED - MODEL VALUE SHOWN | BATTERY DRAIN 8.0x MODEL

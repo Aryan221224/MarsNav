@@ -1,0 +1,19 @@
+{
+ "ortho5": {
+  "file": "ortho5.jpg",
+  "res": 5.0,
+  "width": 2008,
+  "height": 2008,
+  "source": "gen/g_3p144n_155p311e/ortho_ctx5.tif (orthoimage), tinted for display"
+ },
+ "hi2": {
+  "tiles": [],
+  "res": 2.0,
+  "source": "none (no 1 m DTM at this site)"
+ },
+ "regional": {
+  "file": "regional.jpg",
+  "grid": "reg100",
+  "source": "gen/g_3p144n_155p311e/regional_dem.tif averaged to 100 m, shaded relief"
+ }
+}

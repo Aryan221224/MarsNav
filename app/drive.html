@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MarsNav · Drive</title>
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="logo-192.png">
+<link rel="stylesheet" href="css/drive.css">
+<link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="hudTop" class="hud">
+  <div class="cell"><span class="lbl">MET</span><span class="v" id="hMet">00:00:00</span></div>
+  <div class="cell"><span class="lbl">Speed</span><span class="v" id="hSpeed">0.0 km/h</span></div>
+  <div class="cell"><span class="lbl">Grade</span><span class="v" id="hGrade">0°</span></div>
+  <div class="cell"><span class="lbl">Ground</span><span class="v" id="hGround">firm</span></div>
+  <div class="cell"><span class="lbl">Heading</span><span class="v" id="hHead">000°</span></div>
+  <div class="cell" id="cSteer" hidden><span class="lbl">Steer</span><span class="v" id="hSteer">centre</span></div>
+  <div class="cell"><span class="lbl">Camera</span><span class="v" id="hCam">eyes</span></div>
+  <div class="cell"><span class="lbl">Next</span><span class="v" id="hNext">--</span></div>
+  <div class="cell"><span class="lbl">Walk home</span><span class="v" id="hBack">--</span></div>
+  <div class="cell"><span class="lbl">Worst margin</span><span class="v" id="hMargin">--</span></div>
+  <div class="cell"><span class="lbl">Off route</span><span class="v" id="hXt">--</span></div>
+</div>
+
+<div id="alertsBox" class="hud"></div>
+<canvas id="mini" width="240" height="240"></canvas>
+<div id="ctlHint" class="hud"></div>
+<div id="crosshair">+</div>
+
+<div id="panel">
+  <div class="phead"><b>MARSNAV · DRIVE</b><button id="pToggle" title="Hide / show the panel (P)">–</button></div>
+  <div id="pBody">
+    <p class="note" id="status">Waiting for the main MarsNav window…</p>
+    <div class="row">
+      <label><span class="lbl">Mode</span><select id="mode"><option value="foot">Walk (suited)</option><option value="rover">Rover (unpressurised)</option></select></label>
+      <label><span class="lbl">Time warp</span><select id="warp"><option>1</option><option>5</option><option selected>20</option><option>60</option><option>120</option></select></label>
+    </div>
+    <details open>
+      <summary class="lbl">Hidden truth (the planner is NOT told; it must learn it from telemetry)</summary>
+      <label><span class="lbl">Crew work rate × <b id="vMet">1.00</b></span><input type="range" id="met" min="0.7" max="1.8" step="0.05" value="1"></label>
+      <label><span class="lbl">Walking pace × <b id="vPace">1.00</b></span><input type="range" id="pace" min="0.5" max="1.4" step="0.05" value="1"></label>
+      <label><span class="lbl">Suit battery drain × <b id="vBatt">1.00</b></span><input type="range" id="battX" min="0.8" max="3" step="0.05" value="1"></label>
+      <label><span class="lbl">Suit O₂ leak <b id="vLeak">0.000</b> kg/h</span><input type="range" id="leak" min="0" max="0.2" step="0.005" value="0"></label>
+      <label class="chk"><input type="checkbox" id="fCool"> Cooling fault (scrubber/fan error flag)</label>
+    </details>
+    <details open>
+      <summary class="lbl">Live: change consumables now (sudden events)</summary>
+      <p class="note">Hit the suit or rover with a sudden change mid-EVA and watch the planner (main window) notice it from telemetry and react. Reactions appear below with how long they took.</p>
+      <label><span class="lbl">Size of the change</span>
+        <select id="sev"><option value="0.15">Small (15 %)</option><option value="0.35" selected>Large (35 %)</option><option value="0.6">Severe (60 %)</option></select></label>
+      <div class="btngrid">
+        <button class="btn" data-inject="o2">O₂ tank loss</button>
+        <button class="btn" data-inject="batt">Battery failure</button>
+        <button class="btn" data-inject="water">Coolant leak</button>
+        <button class="btn" data-inject="leak">Suit O₂ leak starts</button>
+        <button class="btn" data-inject="scrub">CO₂ scrubber degrades</button>
+        <button class="btn" data-inject="spike">Exertion spike</button>
+        <button class="btn" data-inject="rbatt">Rover battery fault</button>
+        <button class="btn" data-inject="clear">Clear faults</button>
+      </div>
+      <div class="lbl" style="margin-top:6px">Or set what is left right now</div>
+      <label><span class="lbl">O₂ remaining <b id="vNow_o2">100</b> %</span><input type="range" id="now_o2" min="1" max="100" step="1" value="100"></label>
+      <label><span class="lbl">Suit battery remaining <b id="vNow_batt">100</b> %</span><input type="range" id="now_batt" min="1" max="100" step="1" value="100"></label>
+      <label><span class="lbl">Cooling water remaining <b id="vNow_water">100</b> %</span><input type="range" id="now_water" min="1" max="100" step="1" value="100"></label>
+      <label id="rowRbatt"><span class="lbl">Rover battery remaining <b id="vNow_rbatt">100</b> %</span><input type="range" id="now_rbatt" min="1" max="100" step="1" value="100"></label>
+      <div id="react" class="note react"></div>
+    </details>
+    <details>
+      <summary class="lbl">Declared at checkout (the planner IS told; re-plans)</summary>
+      <label><span class="lbl">Suit O₂ fill <b id="vO2">100</b> %</span><input type="range" id="o2Fill" min="40" max="100" step="1" value="100"></label>
+      <label><span class="lbl">Suit battery health <b id="vBh">100</b> %</span><input type="range" id="battSOH" min="40" max="100" step="1" value="100"></label>
+      <label><span class="lbl">Cooling water fill <b id="vW">100</b> %</span><input type="range" id="waterFill" min="40" max="100" step="1" value="100"></label>
+      <label><span class="lbl">Rover battery health <b id="vRb">100</b> %</span><input type="range" id="roverSOH" min="30" max="100" step="1" value="100"></label>
+      <button class="btn" id="btnDeclare">Send checkout to planner</button>
+    </details>
+    <div class="row">
+      <button class="btn primary" id="btnStart">Start EVA (feed the planner)</button>
+      <button class="btn" id="btnHome">Back to habitat</button>
+    </div>
+    <div id="cons"></div>
+    <div id="events" class="note"></div>
+    <p class="note keys"><b>Click the view</b> to look with the mouse (Esc to release).<br>
+      <b>Rover:</b> <b>W/↑</b> throttle, <b>S/↓</b> slow down and reverse, <b>A/←</b> <b>D/→</b> steer (turns on the spot when stopped), <b>Space</b> brake, <b>Shift</b> boost, <b>V</b> look straight ahead.<br>
+      <b>Walk:</b> <b>W/S</b> forward/back, <b>A/D</b> step sideways, turn with the mouse, <b>Shift</b> hurry, hold <b>F</b> to work at a station.<br>
+      <b>C</b> camera (rover: cockpit, chase, top; walk: eyes, top) · <b>M</b> minimap zoom · <b>P</b> panel. Steering follows the ground, not the clock: time warp speeds up the mission clock and the distance covered, and the path you steer stays the same.</p>
+  </div>
+</div>
+<script src="js/desktop.js"></script>
+<script type="module" src="js/drive.js"></script>
+</body>
+</html>

@@ -1,0 +1,1436 @@
+{
+ "generated_utc": "2026-10-25T10:59:22.082Z",
+ "summary": {
+  "runs": 40,
+  "minReserve": {
+   "closedMean": 0.2456512830108199,
+   "openMean": -0.051477271641697596,
+   "closedWorst": 0.030562685127549893,
+   "openWorst": -0.4083400575625562,
+   "test": {
+    "n": 34,
+    "wPlus": 595,
+    "z": 5.077664991741727,
+    "pTwoSided": 3.8275285985100993e-7,
+    "pGreater": 1.9137642992550497e-7
+   }
+  },
+  "breaches": {
+   "closed": 0,
+   "open": 31
+  },
+  "lateReturnWarnings": {
+   "closed": 0,
+   "open": 31
+  },
+  "science": {
+   "closedMean": 0.6365555555555554,
+   "openMean": 0.8950000000000001,
+   "test": {
+    "n": 22,
+    "wPlus": 0,
+    "z": -4.134760506660056,
+    "pTwoSided": 0.00003555277468225704,
+    "pGreater": 0.9999845980072806
+   }
+  },
+  "safeScience": {
+   "closed": 0.6365555555555554,
+   "open": 0.2925,
+   "test": {
+    "n": 27,
+    "wPlus": 372,
+    "z": 4.473227323923853,
+    "pTwoSided": 0.000007711651056396818,
+    "pGreater": 0.000003855825528198409
+   }
+  },
+  "replansMean": 1.075,
+  "noReplanWhenNominal": true,
+  "runtime_s": 68.3664954
+ },
+ "runs": [
+  {
+   "label": "nominal",
+   "truth": {
+    "met": 1,
+    "water": 1,
+    "batt": 1,
+    "speed": 1
+   },
+   "closed": {
+    "minRem": 0.13881125445348497,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.705781359593528,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": 0.13881125445348497,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.705781359593528,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   }
+  },
+  {
+   "label": "hardwork",
+   "truth": {
+    "met": 1.35,
+    "water": 1.25,
+    "batt": 1,
+    "speed": 1
+   },
+   "closed": {
+    "minRem": 0.07957575723185917,
+    "breach": false,
+    "science": 1,
+    "returning": false,
+    "done": true,
+    "tH": 4.422054095491052,
+    "replans": 1,
+    "firstDecisionMin": 5.333333333366665,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": 0.03005247509084874,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.705781359593528,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   }
+  },
+  {
+   "label": "slow",
+   "truth": {
+    "met": 1.1,
+    "water": 1.05,
+    "batt": 1,
+    "speed": 0.75
+   },
+   "closed": {
+    "minRem": 0.09511628615557166,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 4.944543150649983,
+    "replans": 1,
+    "firstDecisionMin": 36.999999999999986,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.05983240331275175,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 5.791227060959052,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "battery",
+   "truth": {
+    "met": 1,
+    "water": 1,
+    "batt": 1.4,
+    "speed": 1
+   },
+   "closed": {
+    "minRem": 0.0883231041872411,
+    "breach": false,
+    "science": 0.35777777777777775,
+    "returning": false,
+    "done": true,
+    "tH": 3.5583307413100767,
+    "replans": 2,
+    "firstDecisionMin": 5.666666666733331,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.06478480779210583,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.155920295719261,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 4",
+   "truth": {
+    "met": 0.9877040268387646,
+    "water": 1.0376578646013512,
+    "batt": 1.18017657562159,
+    "speed": 0.9543752630241216
+   },
+   "closed": {
+    "minRem": 0.1315339275528148,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 4.021048079619481,
+    "replans": 1,
+    "firstDecisionMin": 7.166666666683331,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.05040581298175306,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.863439587466712,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 5",
+   "truth": {
+    "met": 1.109196377545595,
+    "water": 1.2461258525494485,
+    "batt": 1.2280923436861486,
+    "speed": 0.9267808068543673
+   },
+   "closed": {
+    "minRem": 0.07077736161569659,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 4.134492014724219,
+    "replans": 1,
+    "firstDecisionMin": 5.333333333366665,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.05914202871794161,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.712556581496088,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 6",
+   "truth": {
+    "met": 1.076278734812513,
+    "water": 1.0102650235407054,
+    "batt": 1.4596811989322305,
+    "speed": 1.0864302155561745
+   },
+   "closed": {
+    "minRem": 0.030562685127549893,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 3.6290680968064444,
+    "replans": 1,
+    "firstDecisionMin": 5.833333333416663,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.059354759809363555,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 3.965672151303585,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 7",
+   "truth": {
+    "met": 1.3355230662040412,
+    "water": 1.0215012557804584,
+    "batt": 0.9595104408916086,
+    "speed": 0.8705580004490912
+   },
+   "closed": {
+    "minRem": 0.08917275390585389,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 4.392460777311893,
+    "replans": 2,
+    "firstDecisionMin": 5.333333333366663,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.06430192197722628,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 5.181144846705548,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 8",
+   "truth": {
+    "met": 1.2850078127579763,
+    "water": 1.2631578681524842,
+    "batt": 1.2004181087482722,
+    "speed": 1.0411975639872253
+   },
+   "closed": {
+    "minRem": 0.06348681060220818,
+    "breach": false,
+    "science": 1,
+    "returning": false,
+    "done": true,
+    "tH": 4.262994372354716,
+    "replans": 1,
+    "firstDecisionMin": 5.3333333333666655,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.008934428944540773,
+    "breach": true,
+    "science": 1.2999999999999998,
+    "returning": true,
+    "done": true,
+    "tH": 4.592654797986575,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 9",
+   "truth": {
+    "met": 1.246494809607975,
+    "water": 1.214831502153538,
+    "batt": 1.1475366513244807,
+    "speed": 0.8701169764623046
+   },
+   "closed": {
+    "minRem": 0.08795468595224976,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 4.342934210057984,
+    "replans": 1,
+    "firstDecisionMin": 5.16666666668333,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.06013613455071121,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 5.048106070108978,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 10",
+   "truth": {
+    "met": 1.1162719580810516,
+    "water": 1.3008615687489509,
+    "batt": 1.4328019785694779,
+    "speed": 0.8387779545970261
+   },
+   "closed": {
+    "minRem": 0.9423533351174463,
+    "breach": false,
+    "science": 0,
+    "returning": false,
+    "done": true,
+    "tH": 0.21984744026418096,
+    "replans": 1,
+    "firstDecisionMin": 5.833333333416664,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.19609059168161402,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.5615380428514465,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 11",
+   "truth": {
+    "met": 1.395814038091339,
+    "water": 1.2366296555614098,
+    "batt": 1.4446867689024656,
+    "speed": 1.024136571213603
+   },
+   "closed": {
+    "minRem": 0.09118672302062236,
+    "breach": false,
+    "science": 0.35777777777777775,
+    "returning": false,
+    "done": true,
+    "tH": 3.437433991400384,
+    "replans": 1,
+    "firstDecisionMin": 5.666666666733331,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.07300757386390111,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.058471416360614,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 12",
+   "truth": {
+    "met": 1.0484760651364922,
+    "water": 1.1744324363302439,
+    "batt": 1.1901333366986364,
+    "speed": 0.9678002018481493
+   },
+   "closed": {
+    "minRem": 0.12360106350692124,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 4.023829970159996,
+    "replans": 1,
+    "firstDecisionMin": 6.166666666683327,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.05040607672993014,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.822752831372794,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 13",
+   "truth": {
+    "met": 0.9107674279715866,
+    "water": 0.9985302807530388,
+    "batt": 1.3159250262659044,
+    "speed": 1.001989402063191
+   },
+   "closed": {
+    "minRem": 0.06540303884705434,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 3.880847861017204,
+    "replans": 1,
+    "firstDecisionMin": 5.5000000000499965,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.056790800833939725,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.388249148488197,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 14",
+   "truth": {
+    "met": 0.9787113690748811,
+    "water": 1.3067353341961279,
+    "batt": 1.4252086782362312,
+    "speed": 1.071076804213226
+   },
+   "closed": {
+    "minRem": 0.134740280547198,
+    "breach": false,
+    "science": 0.35777777777777775,
+    "returning": false,
+    "done": true,
+    "tH": 3.317427402985037,
+    "replans": 2,
+    "firstDecisionMin": 5.833333333416663,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.06215983111818013,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.072347355230888,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 15",
+   "truth": {
+    "met": 1.0253837883705272,
+    "water": 1.3745156171265989,
+    "batt": 1.1321908309590072,
+    "speed": 1.0166938051581382
+   },
+   "closed": {
+    "minRem": 0.0361600070232625,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.65177508991044,
+    "replans": 0,
+    "firstDecisionMin": 7.833333333416661,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": 0.0361600070232625,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.65177508991044,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   }
+  },
+  {
+   "label": "random 16",
+   "truth": {
+    "met": 1.3925213326932862,
+    "water": 1.3971777661703526,
+    "batt": 1.06464656945318,
+    "speed": 0.8052048335783183
+   },
+   "closed": {
+    "minRem": 0.05637756052522602,
+    "breach": false,
+    "science": 0.35777777777777775,
+    "returning": false,
+    "done": true,
+    "tH": 4.300795025984472,
+    "replans": 1,
+    "firstDecisionMin": 5.333333333366664,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.07935967308905956,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.961645875212845,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 17",
+   "truth": {
+    "met": 1.011418290180154,
+    "water": 0.9940930985379964,
+    "batt": 0.9266928459517658,
+    "speed": 1.067701155692339
+   },
+   "closed": {
+    "minRem": 0.23731195908674385,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.497224063641723,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": 0.23731195908674385,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.497224063641723,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   }
+  },
+  {
+   "label": "random 18",
+   "truth": {
+    "met": 1.2563603677321225,
+    "water": 1.3269075237680226,
+    "batt": 1.125751427700743,
+    "speed": 0.9369205664843321
+   },
+   "closed": {
+    "minRem": 0.15030419490950586,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 4.1243391169642925,
+    "replans": 2,
+    "firstDecisionMin": 5.5000000000499965,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.028759879303296154,
+    "breach": true,
+    "science": 1.2999999999999998,
+    "returning": true,
+    "done": true,
+    "tH": 4.993498363478584,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 19",
+   "truth": {
+    "met": 0.9289383158087731,
+    "water": 1.3892800629604607,
+    "batt": 1.3531281968113036,
+    "speed": 0.8182251690886915
+   },
+   "closed": {
+    "minRem": 0.9442258309613036,
+    "breach": false,
+    "science": 0,
+    "returning": false,
+    "done": true,
+    "tH": 0.2252306882840052,
+    "replans": 1,
+    "firstDecisionMin": 5.666666666733331,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.15756514685805434,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.674550948119628,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 20",
+   "truth": {
+    "met": 0.9613755707163364,
+    "water": 1.3701118152588605,
+    "batt": 1.2369889735244215,
+    "speed": 0.719569247495383
+   },
+   "closed": {
+    "minRem": 0.9600258584165863,
+    "breach": false,
+    "science": 0,
+    "returning": false,
+    "done": true,
+    "tH": 0.1765821163083872,
+    "replans": 1,
+    "firstDecisionMin": 5.166666666683331,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.18386926525115532,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 5.229634258794295,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 21",
+   "truth": {
+    "met": 1.3743386446498334,
+    "water": 1.340240192809142,
+    "batt": 1.0519201434217393,
+    "speed": 1.0352423697710038
+   },
+   "closed": {
+    "minRem": 0.08271146161218079,
+    "breach": false,
+    "science": 1,
+    "returning": false,
+    "done": true,
+    "tH": 4.34598070476626,
+    "replans": 1,
+    "firstDecisionMin": 5.666666666733329,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": 0.03819554787174717,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.593811255188897,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   }
+  },
+  {
+   "label": "random 22",
+   "truth": {
+    "met": 1.3525672922609373,
+    "water": 1.0898644805187359,
+    "batt": 1.297048202343285,
+    "speed": 1.065991628728807
+   },
+   "closed": {
+    "minRem": 0.11580743583403719,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 3.7249816840431924,
+    "replans": 2,
+    "firstDecisionMin": 5.333333333366665,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.05025992230907872,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.4246006273262966,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 23",
+   "truth": {
+    "met": 1.1805576891405507,
+    "water": 1.3719501616200431,
+    "batt": 1.0495199418626726,
+    "speed": 0.8793183294124901
+   },
+   "closed": {
+    "minRem": 0.06601886668559553,
+    "breach": false,
+    "science": 1,
+    "returning": false,
+    "done": true,
+    "tH": 4.8627372959914235,
+    "replans": 1,
+    "firstDecisionMin": 7.666666666733329,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": 0.009462761711858225,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 5.157194508414784,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   }
+  },
+  {
+   "label": "random 24",
+   "truth": {
+    "met": 1.0841108498629182,
+    "water": 1.0441997167421504,
+    "batt": 1.3984347377903759,
+    "speed": 0.8531888036988675
+   },
+   "closed": {
+    "minRem": 0.9453461737985087,
+    "breach": false,
+    "science": 0,
+    "returning": false,
+    "done": true,
+    "tH": 0.2135559949088088,
+    "replans": 1,
+    "firstDecisionMin": 5.833333333416664,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.15519647114304358,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.5138492372081345,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 25",
+   "truth": {
+    "met": 1.3849682904314249,
+    "water": 1.187552261375822,
+    "batt": 1.1265003283973782,
+    "speed": 0.9573471597395837
+   },
+   "closed": {
+    "minRem": 0.12514699327414247,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 4.081317779433174,
+    "replans": 2,
+    "firstDecisionMin": 5.500000000049997,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.0385960037610138,
+    "breach": true,
+    "science": 1.2999999999999998,
+    "returning": true,
+    "done": true,
+    "tH": 4.90364759781803,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 26",
+   "truth": {
+    "met": 1.0015625491272657,
+    "water": 1.206383721414022,
+    "batt": 1.2966341945808382,
+    "speed": 0.9882120888680219
+   },
+   "closed": {
+    "minRem": 0.07001854931623397,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 3.919134923913459,
+    "replans": 1,
+    "firstDecisionMin": 5.3333333333666655,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.058788643348899994,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.461955177859433,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 27",
+   "truth": {
+    "met": 1.102894840738736,
+    "water": 1.321506882412359,
+    "batt": 0.958699493855238,
+    "speed": 1.049742926377803
+   },
+   "closed": {
+    "minRem": 0.20172369505635424,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.549923972125368,
+    "replans": 0,
+    "firstDecisionMin": 7.83333333341666,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": 0.20172369505635424,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.549923972125368,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   }
+  },
+  {
+   "label": "random 28",
+   "truth": {
+    "met": 0.936070499685593,
+    "water": 0.9869509229669348,
+    "batt": 1.45950795840472,
+    "speed": 0.870875608921051
+   },
+   "closed": {
+    "minRem": 0.9406669709666073,
+    "breach": false,
+    "science": 0,
+    "returning": false,
+    "done": true,
+    "tH": 0.22213830425894995,
+    "replans": 1,
+    "firstDecisionMin": 6.16666666668333,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.17829074242389864,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.411430053550068,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 29",
+   "truth": {
+    "met": 0.9597356068901718,
+    "water": 1.0862063013250007,
+    "batt": 1.398871056502685,
+    "speed": 0.9321849714033306
+   },
+   "closed": {
+    "minRem": 0.03337502402653725,
+    "breach": false,
+    "science": 0.35777777777777775,
+    "returning": false,
+    "done": true,
+    "tH": 3.7758412562262356,
+    "replans": 1,
+    "firstDecisionMin": 5.66666666673333,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.11825138266491386,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.368126016241194,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 30",
+   "truth": {
+    "met": 1.2273043254157527,
+    "water": 1.0306744419271126,
+    "batt": 1.4828021398745477,
+    "speed": 0.7517954907380044
+   },
+   "closed": {
+    "minRem": 0.9448253244830683,
+    "breach": false,
+    "science": 0,
+    "returning": false,
+    "done": true,
+    "tH": 0.20332462646906285,
+    "replans": 1,
+    "firstDecisionMin": 5.166666666683331,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.4083400575625562,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 5.189884914818558,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 31",
+   "truth": {
+    "met": 1.362423462071456,
+    "water": 1.3069419051520526,
+    "batt": 1.2225738372188062,
+    "speed": 1.0661765705794095
+   },
+   "closed": {
+    "minRem": 0.058650351610958995,
+    "breach": false,
+    "science": 1,
+    "returning": false,
+    "done": true,
+    "tH": 4.207356054291008,
+    "replans": 1,
+    "firstDecisionMin": 5.833333333416663,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.010617133773395793,
+    "breach": true,
+    "science": 1.2999999999999998,
+    "returning": true,
+    "done": true,
+    "tH": 4.516946624060859,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 32",
+   "truth": {
+    "met": 1.2817646889947354,
+    "water": 1.1931995525723322,
+    "batt": 1.0665463461074978,
+    "speed": 1.0171944689005614
+   },
+   "closed": {
+    "minRem": 0.08826704747573733,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.650182767557294,
+    "replans": 0,
+    "firstDecisionMin": 5.333333333366664,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": 0.08826704747573733,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.650182767557294,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   }
+  },
+  {
+   "label": "random 33",
+   "truth": {
+    "met": 1.2615417968248948,
+    "water": 1.2974693261552601,
+    "batt": 1.4539836801588535,
+    "speed": 0.8089741511270403
+   },
+   "closed": {
+    "minRem": 0.9460366854934869,
+    "breach": false,
+    "science": 0,
+    "returning": false,
+    "done": true,
+    "tH": 0.2028021170920094,
+    "replans": 1,
+    "firstDecisionMin": 5.333333333366664,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.2634796607684198,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.748343433864045,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 34",
+   "truth": {
+    "met": 1.2846303110476582,
+    "water": 1.280052006454207,
+    "batt": 1.373539511114359,
+    "speed": 1.09966760603711
+   },
+   "closed": {
+    "minRem": 0.09328079635280917,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 3.6071570939654096,
+    "replans": 1,
+    "firstDecisionMin": 5.500000000049996,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.05408112686489375,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.193399896121767,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 35",
+   "truth": {
+    "met": 1.2026885994477197,
+    "water": 1.392629047250375,
+    "batt": 1.093852104060352,
+    "speed": 0.7582935310900211
+   },
+   "closed": {
+    "minRem": 0.09113185418424063,
+    "breach": false,
+    "science": 0.35777777777777775,
+    "returning": false,
+    "done": true,
+    "tH": 4.540207224464562,
+    "replans": 1,
+    "firstDecisionMin": 5.66666666673333,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.07107744433275243,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 5.350515994105908,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 36",
+   "truth": {
+    "met": 1.35631569030229,
+    "water": 1.3306079318048432,
+    "batt": 1.2228757371660322,
+    "speed": 1.0052508994936944
+   },
+   "closed": {
+    "minRem": 0.13138448089745347,
+    "breach": false,
+    "science": 0.7,
+    "returning": false,
+    "done": true,
+    "tH": 3.8813128987566365,
+    "replans": 2,
+    "firstDecisionMin": 5.166666666683329,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.048836598764097294,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.686610968771498,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 37",
+   "truth": {
+    "met": 1.1826082296669482,
+    "water": 1.0995353725505992,
+    "batt": 1.1356309598777443,
+    "speed": 1.0566819981671869
+   },
+   "closed": {
+    "minRem": 0.05867509958002215,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.529348342546273,
+    "replans": 0,
+    "firstDecisionMin": 8.16666666668333,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": 0.05867509958002215,
+    "breach": false,
+    "science": 1.2999999999999998,
+    "returning": false,
+    "done": true,
+    "tH": 4.529348342546273,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [],
+    "lateReturn": false
+   }
+  },
+  {
+   "label": "random 38",
+   "truth": {
+    "met": 0.9019443781347946,
+    "water": 1.188799806847237,
+    "batt": 1.4996361748315394,
+    "speed": 1.092927962075919
+   },
+   "closed": {
+    "minRem": 0.09885708102688906,
+    "breach": false,
+    "science": 0.35777777777777775,
+    "returning": false,
+    "done": true,
+    "tH": 3.283531340011667,
+    "replans": 2,
+    "firstDecisionMin": 5.9999999999999964,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.0647217640579969,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 3.8795702735597635,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  },
+  {
+   "label": "random 39",
+   "truth": {
+    "met": 1.1830087738111614,
+    "water": 1.1400953919859602,
+    "batt": 1.3342317970935256,
+    "speed": 0.9779643713496625
+   },
+   "closed": {
+    "minRem": 0.11712295001152939,
+    "breach": false,
+    "science": 0.35777777777777775,
+    "returning": false,
+    "done": true,
+    "tH": 3.615782851399585,
+    "replans": 2,
+    "firstDecisionMin": 5.5000000000499965,
+    "warnings": [],
+    "lateReturn": false
+   },
+   "open": {
+    "minRem": -0.062312624427477425,
+    "breach": true,
+    "science": 0.7,
+    "returning": true,
+    "done": true,
+    "tH": 4.350653095218988,
+    "replans": 0,
+    "firstDecisionMin": null,
+    "warnings": [
+     "pnr"
+    ],
+    "lateReturn": true
+   }
+  }
+ ]
+}

@@ -1,0 +1,50 @@
+{
+ "id": "jezero_east",
+ "name": "Jezero Crater east floor, Mars (CTX-only test site)",
+ "short": "Jezero east floor",
+ "description": "Portability test: an area with no 1 m DTM coverage, built only from the 20 m CTX DEM. Proves the pipeline and engine run on any site with a DEM; confidence and soft-soil uncertainty reflect the coarser data.",
+ "projection": {
+  "name": "Jezero_Crater_Projection",
+  "lat_ts": 18.4663,
+  "note": "same projection as the source CTX DEM"
+ },
+ "snap_origin": [
+  4329000.0,
+  1143420.0
+ ],
+ "crater_center": [
+  77.583,
+  18.383
+ ],
+ "base": null,
+ "ops_area": [
+  77.7,
+  18.22,
+  78.0,
+  18.46
+ ],
+ "regional_area": [
+  77.0,
+  17.6,
+  78.57,
+  19.28
+ ],
+ "clock": {
+  "name": "M2020",
+  "landing_utc": "2021-02-18T20:43:48Z",
+  "lon_east": 77.45088572,
+  "note": "shares the Mars 2020 mission calendar (same crater)"
+ },
+ "sources": {
+  "regional_dem": "M20_JezeroCrater_CTXDEM_20m.tif",
+  "check_dem": null,
+  "hires_dtms": [],
+  "ortho": "M20_JezeroCrater_CTXortho_mosaic_5m.tif",
+  "traverse": null,
+  "climate": "from:jezero"
+ },
+ "calibration_from": "jezero",
+ "out_dir": "sites/jezero_east",
+ "targets": [],
+ "keepouts": []
+}

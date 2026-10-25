@@ -1,0 +1,194 @@
+{
+ "generated": "2026-09-26",
+ "note": "Every input of the pipeline. fetch_data.py downloads, verifies SHA-256 and places each file. planetarymaps.usgs.gov redirects to the asc-pds-services S3 bucket; both are listed.",
+ "sources": [
+  {
+   "file": "M20_JezeroCrater_CTXDEM_20m.tif",
+   "dest": "raw",
+   "bytes": 90345300,
+   "sha256": "ba7f706ea1b5d63a562f28a7dcf7a7f3c79bce7f048e6974b57e8a33c30d1ba2",
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXDEM_20m.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXDEM_20m.tif"
+   ],
+   "what": "JPL Mars 2020 Science Investigation CTX DEM mosaic, 20 m, whole Jezero crater (Jezero_Crater_Projection)",
+   "publisher": "USGS Astrogeology / NASA-JPL (Mars 2020 landing site products)",
+   "license": "Public domain (US Government work)"
+  },
+  {
+   "file": "M20_JezeroCrater_CTXortho_mosaic_5m.tif",
+   "dest": "raw",
+   "bytes": 359599280,
+   "sha256": "cd9f4b2154fdd43e8c17abfbae63210b72507db2209d1d7db63f6f855b18d2df",
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXortho_mosaic_5m.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/CTX/ScienceInvestigationMaps_JPL/M20_JezeroCrater_CTXortho_mosaic_5m.tif"
+   ],
+   "what": "JPL Mars 2020 Science Investigation CTX orthomosaic, 5 m",
+   "publisher": "USGS Astrogeology / NASA-JPL",
+   "license": "Public domain (US Government work)"
+  },
+  {
+   "file": "JEZ_ctx_B_soc_008_DTM_MOLAtopography_DeltaGeoid_20m_Eqc_latTs0_lon0.tif",
+   "dest": "raw",
+   "bytes": 9662387,
+   "sha256": "16a1aa66c3f48c1bca252795827db7b417876217aff0f5e1aff18027fab2327b",
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/CTX/JEZ_ctx_B_soc_008_DTM_MOLAtopography_DeltaGeoid_20m_Eqc_latTs0_lon0.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/CTX/JEZ_ctx_B_soc_008_DTM_MOLAtopography_DeltaGeoid_20m_Eqc_latTs0_lon0.tif"
+   ],
+   "what": "USGS Mars 2020 TRN CTX DTM, 20 m (independent processing, used as a cross-check)",
+   "publisher": "USGS Astrogeology",
+   "license": "Public domain (US Government work)"
+  },
+  {
+   "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_C_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+   "dest": "raw",
+   "bytes": 125020023,
+   "sha256": "0c681fa0c2fa72ec2253d09ed8643d5794ea0c3575f5fa953d470cc0beeb1751",
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_C_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_C_Edited_affine_1m_Eqc_latTs0_lon0.tif"
+   ],
+   "what": "USGS Mars 2020 HiRISE stereo DTM 'Jezero C', 1 m posts, edited, affine-aligned to the TRN base",
+   "publisher": "USGS Astrogeology",
+   "license": "Public domain (US Government work)",
+   "optional": false
+  },
+  {
+   "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_W_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+   "dest": "raw",
+   "bytes": 129734394,
+   "sha256": "5a56ce872a8e49389b9690fd2247dc8d3698a33f7e7bb33d1be3c4b790f7ff91",
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_W_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_W_Edited_affine_1m_Eqc_latTs0_lon0.tif"
+   ],
+   "what": "USGS Mars 2020 HiRISE stereo DTM 'Jezero W', 1 m posts, edited, affine-aligned to the TRN base",
+   "publisher": "USGS Astrogeology",
+   "license": "Public domain (US Government work)",
+   "optional": false
+  },
+  {
+   "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_CR_SOUTH_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+   "dest": "raw",
+   "bytes": 77432148,
+   "sha256": "1b79324efae3a5a08ba5d8059e9a22d10cd6685e0974e61602c303b911670c9b",
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_CR_SOUTH_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_CR_SOUTH_Edited_affine_1m_Eqc_latTs0_lon0.tif"
+   ],
+   "what": "USGS Mars 2020 HiRISE stereo DTM 'Jezero CR_SOUTH', 1 m posts, edited, affine-aligned to the TRN base",
+   "publisher": "USGS Astrogeology",
+   "license": "Public domain (US Government work)",
+   "optional": false
+  },
+  {
+   "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_CR_NORTH_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+   "dest": "raw",
+   "bytes": 72020271,
+   "sha256": "f3f47409081e64668dc2916296c7202191d42c83ce8dcb29193e00a0720ed96e",
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_CR_NORTH_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_CR_NORTH_Edited_affine_1m_Eqc_latTs0_lon0.tif"
+   ],
+   "what": "USGS Mars 2020 HiRISE stereo DTM 'Jezero CR_NORTH', 1 m posts, edited, affine-aligned to the TRN base",
+   "publisher": "USGS Astrogeology",
+   "license": "Public domain (US Government work)",
+   "optional": false
+  },
+  {
+   "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_E_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+   "dest": "raw",
+   "bytes": 132409896,
+   "sha256": null,
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_E_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_E_Edited_affine_1m_Eqc_latTs0_lon0.tif"
+   ],
+   "what": "USGS Mars 2020 HiRISE stereo DTM 'Jezero E', 1 m posts, edited, affine-aligned to the TRN base",
+   "publisher": "USGS Astrogeology",
+   "license": "Public domain (US Government work)",
+   "optional": true
+  },
+  {
+   "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_N_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+   "dest": "raw",
+   "bytes": null,
+   "sha256": null,
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_N_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_N_Edited_affine_1m_Eqc_latTs0_lon0.tif"
+   ],
+   "what": "USGS Mars 2020 HiRISE stereo DTM 'Jezero N', 1 m posts, edited, affine-aligned to the TRN base",
+   "publisher": "USGS Astrogeology",
+   "license": "Public domain (US Government work)",
+   "optional": true
+  },
+  {
+   "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_DL_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+   "dest": "raw",
+   "bytes": 114658582,
+   "sha256": null,
+   "urls": [
+    "https://planetarymaps.usgs.gov/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_DL_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/HiRISE/DTM_MOLAtopography_DeltaGeoid_Jezero_DL_Edited_affine_1m_Eqc_latTs0_lon0.tif"
+   ],
+   "what": "USGS Mars 2020 HiRISE stereo DTM 'Jezero DL', 1 m posts, edited, affine-aligned to the TRN base",
+   "publisher": "USGS Astrogeology",
+   "license": "Public domain (US Government work)",
+   "optional": true
+  },
+  {
+   "file": "m20_waypoints_enomis.json",
+   "dest": "cache",
+   "bytes": 100464,
+   "sha256": "6ffa13c5117e8bdefd6eb344a6263cab6f05efbf4b3ea8437b6be063b714c9af",
+   "urls": [
+    "https://raw.githubusercontent.com/enomis-dev/perseverance-traverse-3d/main/public/data/m20_waypoints.json"
+   ],
+   "canonical": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints.json",
+   "what": "Perseverance end-of-drive localisations, sols 13-1980 (snapshot of NASA's MMGIS feed, trimmed; the NASA endpoint sends no CORS header and changes hourly, so a fixed snapshot is used)",
+   "publisher": "NASA/JPL-Caltech (feed); snapshot by enomis-dev",
+   "license": "NASA data: public domain"
+  },
+  {
+   "file": "rover_points_stiles.geojson",
+   "dest": "cache",
+   "bytes": 382505,
+   "sha256": "52bc2d8a8fde3252d51f36ca45333f667e9fe14bb861ae66304cb2ac12ebb596",
+   "urls": [
+    "https://raw.githubusercontent.com/stiles/mars-perseverance-waypoints/main/data/processed/rover_points_full.geojson"
+   ],
+   "canonical": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints.json",
+   "what": "Perseverance localisations with geoid elevation and chassis roll/pitch/yaw (NASA feed, collected hourly by stiles)",
+   "publisher": "NASA/JPL-Caltech (feed); collection by Matt Stiles",
+   "license": "NASA data: public domain"
+  },
+  {
+   "file": "rover_path_stiles.geojson",
+   "dest": "cache",
+   "bytes": 14579,
+   "sha256": "5ea1a624053904f5eb229779a9adac94ef03a6eaba1a06fac9f8463d846a50c1",
+   "urls": [
+    "https://raw.githubusercontent.com/stiles/mars-perseverance-waypoints/main/data/processed/rover_path_full.geojson"
+   ],
+   "canonical": "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints.json",
+   "what": "Perseverance path linestring",
+   "publisher": "NASA/JPL-Caltech; collection by Matt Stiles",
+   "license": "NASA data: public domain"
+  },
+  {
+   "file": "meda_samples.json",
+   "dest": "cache",
+   "bytes": 2019827,
+   "sha256": "7ef4353d5451aa43b068f4236fc846ec87f5956a4f8557f2ecfc546b64aa0d52",
+   "urls": [],
+   "canonical": "https://atmos.nmsu.edu/PDS/data/PDS4/Mars2020/mars2020_meda/",
+   "how": "Run tools/meda_sampler.js in the browser console on the canonical URL (HTTP range reads: 48 rows per file per sol, every 15th sol 0-1859), then __medaSave(). The bundle is 30+ GB; the sampler reads ~2 MB.",
+   "what": "Perseverance MEDA calibrated/derived environment records (air and ground temperature, pressure, ancillary sun geometry), DOI 10.17189/1522849",
+   "publisher": "NASA PDS Atmospheres Node",
+   "license": "Public domain (NASA PDS)"
+  }
+ ]
+}

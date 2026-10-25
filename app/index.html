@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MarsNav</title>
+<meta name="description" content="EVA traverse planning and guidance for human Mars exploration, on real Jezero crater data.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="logo-192.png">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img class="logo" src="logo-96.png" width="34" height="34" alt="">
+    <div><div class="name">MARSNAV</div><div class="site" id="siteName">EVA planner</div></div>
+  </div>
+  <nav class="modsw" aria-label="Module"><div class="seg2">
+    <a href="landing.html" id="btnPlanet" title="Landing mode: choose where the crew lands and sets up the hub, anywhere on Mars, on real NASA / USGS data">Landing</a>
+    <a href="index.html" aria-current="page" title="EVA planner: plan, fly and review a Marswalk">EVA planner</a>
+  </div></nav>
+  <nav class="modes" role="tablist" aria-label="EVA phase">
+    <button role="tab" id="tabPlan" aria-selected="true" data-mode="plan">Plan</button>
+    <button role="tab" id="tabExec" aria-selected="false" data-mode="exec">Execute</button>
+    <button role="tab" id="tabReview" aria-selected="false" data-mode="review">Review</button>
+  </nav>
+  <div class="clock" id="clock" aria-live="off">
+    <div class="item"><span class="lbl">UTC</span><span class="v" id="ckUtc">--</span></div>
+    <div class="item"><span class="lbl" id="ckSolLbl">Sol</span><span class="v" id="ckSol">--</span></div>
+    <div class="item"><span class="lbl">LMST</span><span class="v" id="ckLmst">--</span></div>
+    <div class="item p1"><span class="lbl">Sun elev</span><span class="v" id="ckSun">--</span></div>
+    <div class="item p3"><span class="lbl">Ls</span><span class="v" id="ckLs">--</span></div>
+    <div class="item p2" title="One-way radio light time Earth to Mars (JPL approximate planetary positions)"><span class="lbl">Earth delay</span><span class="v" id="ckLight">--</span></div>
+  </div>
+  <div class="status" id="statusBox">
+    <span class="pill phase" id="dataPill" title="EVA phase and telemetry source">PRE-EVA</span>
+    <span class="cw" title="Caution and warning: warnings, cautions, advisories">
+      <span class="pill off" id="cntW" title="Warnings">W 0</span>
+      <span class="pill off" id="cntC" title="Cautions">C 0</span>
+      <span class="pill off" id="cntA" title="Advisories">A 0</span>
+    </span>
+    <button class="btn ghost sm" id="btnTour" title="A guided two-minute tour for first-time users and judges">Tour</button>
+  </div>
+</header>
+
+<main class="main">
+  <!-- ============================================================ LEFT PANEL -->
+  <aside class="panel left" id="left">
+    <div id="planLeft">
+      <section class="section">
+        <h2>EVA set-up</h2>
+        <div class="row">
+          <label hidden style="flex:1"><span class="lbl">Site</span><select id="siteSel" aria-label="Site"></select></label>
+          <button class="btn" id="btnDelSite" hidden title="Delete this site and its downloaded data (only hubs you created in Landing mode; the Jezero sites are kept)">Delete site</button>
+        </div>
+        <div class="row">
+          <label><span class="lbl">Crew mode</span>
+            <select id="profile">
+              <option value="foot">Suited walk</option>
+              <option value="rover">Unpressurised rover + walkback</option>
+              <option value="robot">Robotic scout (validation)</option>
+            </select></label>
+        </div>
+        <div class="row">
+          <label><span class="lbl">Depart sol</span><input id="departSol" type="number" min="0" step="1" value="2000"></label>
+          <label><span class="lbl">Depart LMST</span><input id="departLmst" type="text" value="09:00" pattern="[0-2][0-9]:[0-5][0-9]"></label>
+        </div>
+        <div class="row">
+          <label><span class="lbl">Max EVA (h)</span><input id="evaMax" type="number" min="1" max="8" step="0.5" value="7"></label>
+          <label><span class="lbl">Reserve (%)</span><input id="reserve" type="number" min="5" max="40" step="5" value="15"></label>
+        </div>
+        <div class="row">
+          <label><span class="lbl">Soft-soil risk</span>
+            <select id="risk">
+              <option value="cvar">CVaR 0.9 (tail-aware)</option>
+              <option value="mvar">Mean + 1 sigma</option>
+              <option value="mean">Mean (risk-neutral)</option>
+            </select></label>
+          <label><span class="lbl">Dust opacity tau</span>
+            <select id="tau">
+              <option value="0.45">0.45 typical Jezero</option>
+              <option value="1.5">1.5 regional dust</option>
+              <option value="5">5 global storm (2018)</option>
+            </select></label>
+        </div>
+        <div class="row">
+          <label><span class="lbl">Navigation aids</span>
+            <select id="nav">
+              <option value="beacon">Habitat beacon + landmarks</option>
+              <option value="dr">Dead reckoning + landmarks only</option>
+              <option value="constellation">Orbital nav constellation (studied)</option>
+            </select></label>
+        </div>
+        <label class="row" id="rescueRow" hidden style="gap:6px"><input type="checkbox" id="rescue"> <span>Rescue rover on standby (dual-rover operations): replaces the walk-home rule with a rescue-drive rule</span></label>
+        <p class="note" id="setupNote"></p>
+        <details id="hwBox">
+          <summary class="lbl" style="cursor:pointer">Suit and rover state (pre-EVA checkout)</summary>
+          <div class="row" style="margin-top:6px">
+            <label><span class="lbl">O₂ tank fill %</span><input id="hwO2" type="number" min="10" max="100" step="1" value="100"></label>
+            <label><span class="lbl">Battery health %</span><input id="hwBatt" type="number" min="10" max="100" step="1" value="100"></label>
+          </div>
+          <div class="row">
+            <label><span class="lbl">Cooling water fill %</span><input id="hwWater" type="number" min="10" max="100" step="1" value="100"></label>
+            <label><span class="lbl">CO₂ bed capacity %</span><input id="hwScrub" type="number" min="10" max="100" step="1" value="100"></label>
+          </div>
+          <div class="row">
+            <label><span class="lbl">Crew work rate ×</span><input id="calMet" type="number" min="0.5" max="2" step="0.05" value="1"></label>
+            <label><span class="lbl">Walking pace ×</span><input id="calSpeed" type="number" min="0.5" max="1.5" step="0.05" value="1"></label>
+          </div>
+          <div class="row" id="hwRoverRow" hidden>
+            <label><span class="lbl">Rover battery health %</span><input id="hwRBatt" type="number" min="10" max="100" step="1" value="100"></label>
+            <label><span class="lbl">Wheel wear %</span><input id="hwWear" type="number" min="0" max="100" step="5" value="0"></label>
+          </div>
+          <button class="btn" id="btnCarry" disabled title="Start from the rates learned on the last EVA flown">Use rates learned on the last EVA</button>
+          <p class="note">What the suit and rover report before egress. Capacities and rates scale with it; during the EVA the closed loop keeps learning them from telemetry.</p>
+        </details>
+      </section>
+
+      <section class="section" id="landingSec">
+        <h2>Landing site &amp; hub</h2>
+        <div class="row">
+          <label><span class="lbl">Lander</span><select id="landerSel" aria-label="Lander class"></select></label>
+        </div>
+        <div class="row">
+          <label><span class="lbl">Approach azimuth (°)</span><input id="landAz" type="number" min="0" max="179" step="1" value="90"></label>
+          <button class="btn" id="btnLandPick" aria-pressed="false" title="Then click the map where you want to land">Target on map</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnLandBest" title="Search nearby for the target with the highest probability of a safe landing">Find safest target</button>
+          <button class="btn" id="btnLandFly" title="Fly one landing: a single touchdown drawn from the real dispersion">Fly the landing</button>
+        </div>
+        <div id="landOut" class="note">Choose a lander, then pick a target on the map. The habitat (hub) goes where the lander touches down — the way NASA lands and then pinpoints a spacecraft.</div>
+      </section>
+
+      <section class="section">
+        <h2>Stations</h2>
+        <div class="stations" id="stations"></div>
+        <div class="row">
+          <button class="btn" id="btnAddMode" aria-pressed="false" title="Then click on the map">+ Add on map</button>
+          <button class="btn" id="btnClear">Clear</button>
+        </div>
+        <div class="routebox" id="routeBox">
+          <div class="row">
+            <label><span class="lbl">Start at</span><select id="routeStart" aria-label="Where the route starts"></select></label>
+            <label><span class="lbl">Finish</span><select id="routeEnd" aria-label="Where the route finishes"></select></label>
+          </div>
+          <div class="seq" id="routeSeq" aria-live="polite"></div>
+          <p class="note help">Tick a station to include it; &uarr;/&darr; set the visiting order. “Finish at the last station” plans a one-way traverse (e.g. rover pick-up). Every point still keeps a walk home to the habitat. The route re-plans automatically.</p>
+        </div>
+        <details>
+          <summary class="lbl" style="cursor:pointer">Science and survey targets</summary>
+          <div id="targets" style="margin-top:6px"></div>
+        </details>
+        <button class="btn" id="btnOptimise" title="Choose the best set and order of stations for this EVA">Suggest best sortie</button>
+        <div id="optOut" class="note"></div>
+      </section>
+
+      <section class="section">
+        <h2>Priorities (AHP)</h2>
+        <div id="ahpBox"></div>
+        <p class="note help">Pairwise judgements on Saaty's 1-9 scale. The weights are recomputed live with the consistency ratio; judgements with CR above 0.10 are flagged. Defaults are the team's documented judgements, not NASA values.</p>
+      </section>
+
+      <section class="section">
+        <button class="btn primary big" id="btnPlan">Plan EVA</button>
+        <div id="planMsg" class="note"></div>
+      </section>
+    </div>
+
+    <div id="execLeft" hidden>
+      <section class="section">
+        <h2>Consumables</h2>
+        <div id="gauges"></div>
+        <p class="note help">Bar = used. White tick = what the walk home would need from here. Margins include the planning reserve.</p>
+      </section>
+      <section class="section">
+        <h2>Telemetry</h2>
+        <div class="row">
+          <label style="flex:1"><span class="lbl">Source</span>
+            <select id="telSrc">
+              <option value="sim">Built-in simulator (TSS format)</option>
+              <option value="live">Live suit telemetry (TSS bridge)</option>
+              <option value="drive">You, in the 3D drive window (keyboard + mouse)</option>
+            </select></label>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnDrive" title="Open a separate first-person 3D window: walk or drive the route yourself; your movement is the telemetry">Open 3D drive window</button>
+        </div>
+        <p class="note" id="driveStatus" hidden></p>
+        <div class="row" id="simOpts">
+          <label style="flex:1"><span class="lbl">Hidden truth (the software is not told)</span>
+            <select id="truthSel"></select></label>
+        </div>
+        <div id="liveOpts" hidden>
+          <div class="row">
+            <label style="flex:2"><span class="lbl">Suit telemetry from</span>
+              <select id="tssMode">
+                <option value="auto" selected>Automatic: find a NASA SUITS TSS, else the demo suit</option>
+                <option value="addr">A TSS at a specific address</option>
+                <option value="demo">Demo suit (built in, no hardware)</option>
+              </select></label>
+            <label style="flex:1"><span class="lbl">Crew</span><select id="telCrew"><option value="eva1">EV1</option><option value="eva2">EV2</option></select></label>
+          </div>
+          <div class="row" id="tssAddrRow" hidden>
+            <label style="flex:1"><span class="lbl">TSS address (IP or IP:port)</span><input id="tssAddr" type="text" placeholder="192.168.1.20:14141" spellcheck="false"></label>
+          </div>
+          <div class="row" id="demoRow">
+            <label style="flex:1"><span class="lbl">Demo suit: hidden truth (the planner is not told)</span><select id="demoTruth"></select></label>
+          </div>
+          <div class="row"><button class="btn primary" id="btnLive">Enable live telemetry</button></div>
+          <p class="note" id="liveStatus">Press Enable. The app finds the telemetry server by itself (this computer, then your network) and falls back to a built-in demo suit if there is none. Nothing to install or start.</p>
+        </div>
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="chkReplan" checked> Re-plan automatically from telemetry</label>
+        <div class="row">
+          <button class="btn primary" id="btnRun">Run</button>
+          <button class="btn" id="btnPause">Pause</button>
+          <label style="flex:1" id="speedBox"><span class="lbl">Speed</span>
+            <select id="simSpeed"><option value="30">30x</option><option value="120" selected>120x</option><option value="600">600x</option></select></label>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnPin" title="Drop a pin at your estimated position">Drop pin</button>
+          <button class="btn danger" id="btnAbort" title="Two-step: arm, then confirm">Return now</button>
+        </div>
+        <h2 style="margin-top:6px">Inject a fault</h2>
+        <div class="faults">
+          <button class="btn" data-fault="leak">Suit leak</button>
+          <button class="btn" data-fault="cooling">Cooling</button>
+          <button class="btn" data-fault="injury">Injury</button>
+          <button class="btn" data-fault="dust">Dust storm</button>
+          <button class="btn" data-fault="spe">Solar particle event</button>
+          <button class="btn" data-fault="rover">Rover failure</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="reviewLeft" hidden>
+      <section class="section">
+        <h2>Exports</h2>
+        <button class="btn" id="btnCue">EVA cue card</button>
+        <button class="btn" id="btnGeo">Routes as GeoJSON</button>
+        <p class="note help">The cue card is the paper fallback crews carry (Artemis practice). GeoJSON opens in MMGIS or QGIS.</p>
+      </section>
+      <section class="section">
+        <h2>Event log</h2>
+        <div class="log" id="evLog"></div>
+      </section>
+    </div>
+  </aside>
+
+  <!-- ============================================================ MAP -->
+  <section class="mapwrap" aria-label="Map">
+    <canvas id="map"></canvas>
+    <div class="hud" id="hud" hidden></div>
+    <div class="maptools">
+      <button class="btn" id="zoomIn" aria-label="Zoom in">+</button>
+      <button class="btn" id="zoomOut" aria-label="Zoom out">&minus;</button>
+      <button class="btn" id="zoomFit" aria-label="Fit route">Fit</button>
+      <button class="btn" id="btn3d" aria-label="3D view" title="3D terrain view of the route">3D</button>
+      <button class="btn" id="btnDrive2" aria-label="Drive window" title="Walk or drive the route yourself in a separate first-person window">Drive</button>
+    </div>
+    <div class="view3d" id="view3d" hidden>
+      <canvas></canvas>
+      <div class="v3bar">
+        <div class="seg" role="group" aria-label="3D mode">
+          <button class="btn" data-v3="orbit" aria-pressed="true">Orbit</button>
+          <button class="btn" data-v3="helmet" aria-pressed="false">Helmet</button>
+        </div>
+        <button class="btn" id="v3play" title="Walk the route at eye height">Walk route</button>
+        <input type="range" id="v3t" min="0" max="1000" value="0" aria-label="Position along route">
+        <label class="lbl" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="v3x"> 2x relief</label>
+        <button class="btn" id="v3close">Close 3D</button>
+      </div>
+      <div class="v3info" id="v3info"></div>
+    </div>
+    <div class="layerbox collapsed" id="layers">
+      <button class="lhead" id="layersToggle" aria-expanded="false" title="Map layers (L)"><span class="lbl">Layers</span><span class="cur" id="layersCur">Safety hazard</span><i>&#9662;</i></button>
+      <div class="lbody">
+      <label><input type="radio" name="ov" value="none"> None</label>
+      <label><input type="radio" name="ov" value="hazard" checked> Safety hazard</label>
+      <label><input type="radio" name="ov" value="slope"> Slope (walking scale)</label>
+      <label><input type="radio" name="ov" value="sand"> Sand bedforms</label>
+      <label><input type="radio" name="ov" value="slip"> Wheel-slip risk</label>
+      <label><input type="radio" name="ov" value="shade"> Shadows at time</label>
+      <label><input type="radio" name="ov" value="walkback"> Walkback time</label>
+      <label><input type="radio" name="ov" value="range"> EVA range</label>
+      <label><input type="radio" name="ov" value="los"> Radio line of sight</label>
+      <label><input type="radio" name="ov" value="sigma"> Position error</label>
+      <label><input type="radio" name="ov" value="confidence"> Data confidence</label>
+      <label><input type="radio" name="ov" value="landing"> Landing safety</label>
+      <hr>
+      <label><input type="checkbox" id="chkVeto" checked> No-go areas</label>
+      <label><input type="checkbox" id="chkTrav" checked> Perseverance traverse</label>
+      <label><input type="checkbox" id="chkLmk"> Landmarks</label>
+      <label><input type="checkbox" id="chkAlt" checked> Alternative routes</label>
+      </div>
+    </div>
+    <div class="readout" id="readout">Move over the map for terrain details.</div>
+    <div class="legend" id="legend" hidden></div>
+    <div class="scale" id="scale"><div class="b" id="scaleBar"></div><span id="scaleTxt"></span></div>
+    <div class="busy" id="busy">Loading terrain&hellip;</div>
+  </section>
+
+  <!-- ============================================================ RIGHT PANEL -->
+  <aside class="panel right" id="right">
+    <div id="planRight">
+      <section class="section">
+        <h2>Routes</h2>
+        <div class="cards" id="cards"><p class="note">Plan an EVA to compare the named routes.</p></div>
+      </section>
+      <section class="section">
+        <h2>Why this route</h2>
+        <div id="why" class="note">Hard limits first (slope, cliffs, keep-outs, soft soil, walkback), then weighted criteria normalised by the fastest route.</div>
+      </section>
+      <section class="section">
+        <h2>Guidance</h2>
+        <div class="tablewrap" id="guidance"></div>
+      </section>
+    </div>
+    <div id="execRight" hidden>
+      <section class="section">
+        <h2>Alerts</h2>
+        <div class="row">
+          <button class="btn" id="btnAckAll">Acknowledge all</button>
+          <button class="btn" id="btnSilence">Silence tone</button>
+        </div>
+        <div class="alerts" id="alerts"><p class="note">No active alerts.</p></div>
+      </section>
+      <section class="section">
+        <h2>Closed loop</h2>
+        <div id="loopBox" class="note">The model the plan was made with, what telemetry says, and every re-plan.</div>
+      </section>
+      <section class="section">
+        <h2>Station procedure</h2>
+        <div id="proc" class="note">Shown while working at a station.</div>
+      </section>
+      <section class="section">
+        <h2>Voice</h2>
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="chkVoice"> Spoken callouts</label>
+        <div class="row">
+          <button class="btn" data-ask="where">Where am I</button>
+          <button class="btn" data-ask="home">Time home</button>
+          <button class="btn" data-ask="o2">Oxygen</button>
+        </div>
+        <form id="askForm" class="row" autocomplete="off">
+          <input id="askIn" type="text" placeholder="Ask: oxygen? time home? next stop? drop pin" aria-label="Ask the assistant" style="flex:1">
+          <button class="btn" type="submit">Ask</button>
+        </form>
+        <div id="voiceOut" class="note"></div>
+      </section>
+    </div>
+    <div id="reviewRight" hidden>
+      <section class="section">
+        <h2>Validation on real data</h2>
+        <div id="validation" class="note">Loading validation results&hellip;</div>
+      </section>
+      <section class="section">
+        <h2>After-action</h2>
+        <div id="aar" class="note">Run an EVA in Execute mode to see planned versus flown.</div>
+      </section>
+      <section class="section">
+        <h2>Data provenance</h2>
+        <div id="prov" class="note"></div>
+      </section>
+    </div>
+  </aside>
+</main>
+
+<footer class="timeline" aria-label="Route profile">
+  <canvas id="tl"></canvas>
+</footer>
+
+<div class="tour" id="tour" hidden role="dialog" aria-live="polite" aria-labelledby="tourTitle">
+  <div class="tstep" id="tourStep"></div>
+  <strong id="tourTitle"></strong>
+  <p id="tourText"></p>
+  <div class="row"><button class="btn" id="tourBack">Back</button><button class="btn primary" id="tourNext">Next</button><button class="btn" id="tourEnd">End tour</button></div>
+</div>
+
+<div class="modal" id="modal" hidden>
+  <div class="box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <header><strong id="modalTitle">Export</strong>
+      <div class="row"><button class="btn" id="modalCopy">Copy</button><button class="btn" id="modalSave">Save file</button><button class="btn" id="modalClose">Close</button></div>
+    </header>
+    <div class="content" id="modalBody"></div>
+  </div>
+</div>
+
+<script src="js/desktop.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

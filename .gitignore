@@ -1,0 +1,18 @@
+# Build output and the compiled program (publish MarsNav-Windows.zip as a release asset instead)
+/MarsNav.exe
+/MarsNav_runtime/
+/dist/
+/.buildvenv/
+/.buildwork/
+
+# Everything the app downloads or builds at run time (maps, tiles, Local mode data, logs, reports)
+/data_cache/
+/_data_raw/
+
+# Local housekeeping
+/_to_delete/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+*.log

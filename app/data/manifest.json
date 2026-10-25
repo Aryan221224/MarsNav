@@ -1,0 +1,1089 @@
+{
+ "version": 2,
+ "built_utc": "2026-09-27T05:26:24Z",
+ "site": "Jezero Crater, Mars",
+ "site_info": {
+  "id": "jezero",
+  "name": "Jezero Crater, Mars",
+  "short": "Jezero crater",
+  "description": "Perseverance's field site: delta, crater floor and western rim. HiRISE 1 m DTMs over the rover traverse, CTX 20 m DEM over the whole crater.",
+  "base": {
+   "id": "HAB",
+   "name": "Octavia E. Butler Landing",
+   "lon": 77.45088572,
+   "lat": 18.44462715
+  },
+  "clock": {
+   "name": "M2020",
+   "landing_utc": "2021-02-18T20:43:48Z",
+   "lon_east": 77.45088572,
+   "note": "Mars 2020 mission sols (sol 0 = landing day) at the landing longitude"
+  },
+  "ops_area": [
+   77.17,
+   18.36,
+   77.52,
+   18.56
+  ],
+  "hires_dtms": [
+   "C",
+   "W",
+   "CR_SOUTH",
+   "CR_NORTH",
+   "E",
+   "N",
+   "DL"
+  ],
+  "regional_dem": "M20_JezeroCrater_CTXDEM_20m.tif",
+  "calibration_site": "jezero",
+  "climate": "meda",
+  "quality_note": "USGS metadata: the crater-rim (CR) pairs have uncompensated y-parallax outside the landing ellipse; their bedform evidence is down-weighted.",
+  "dem_res_m": 20,
+  "landing": null,
+  "generated": null
+ },
+ "grids": {
+  "ops10": {
+   "x0": 4338700.0,
+   "y0": 1100140.0,
+   "res": 10.0,
+   "width": 1968,
+   "height": 1188,
+   "name": "ops10"
+  },
+  "hz40": {
+   "x0": 4338700.0,
+   "y0": 1100140.0,
+   "res": 40.0,
+   "width": 492,
+   "height": 297,
+   "name": "hz40"
+  },
+  "reg100": {
+   "x0": 4329100.0,
+   "y0": 1142820.0,
+   "res": 100.0,
+   "width": 884,
+   "height": 996,
+   "name": "reg100"
+  }
+ },
+ "projection": {
+  "name": "Jezero_Crater_Projection",
+  "type": "equirectangular",
+  "lat_ts": 18.4663,
+  "clon": 0.0,
+  "R": 3396190.0
+ },
+ "horizon": {
+  "sectors": 16,
+  "eye_height_m": 1.7
+ },
+ "layers": {
+  "elev_dm": {
+   "file": "elev_dm.bin.gz",
+   "dtype": "uint16",
+   "grid": "ops10",
+   "scale": 10.0,
+   "offset": 3000.0,
+   "unit": "m",
+   "desc": "elevation (m) = v/10 - 3000",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 3119683
+  },
+  "slope": {
+   "file": "slope.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 4,
+   "offset": 0.0,
+   "unit": "deg",
+   "desc": "10 m surface slope",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 1506954
+  },
+  "slopeW": {
+   "file": "slopeW.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 4,
+   "offset": 0.0,
+   "unit": "deg",
+   "desc": "walking-scale slope p90",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 1693585
+  },
+  "steep": {
+   "file": "steep.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "fraction > 25 deg",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 181927
+  },
+  "step": {
+   "file": "step.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 100,
+   "offset": 0.0,
+   "unit": "m",
+   "desc": "p99 relief step",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 1319418
+  },
+  "rough": {
+   "file": "rough.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 100,
+   "offset": 0.0,
+   "unit": "m",
+   "desc": "RMS relief",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 1365283
+  },
+  "sand": {
+   "file": "sand.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "bedform evidence",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 945599
+  },
+  "slipMu": {
+   "file": "slipMu.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "slip mean",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 1130836
+  },
+  "slipSd": {
+   "file": "slipSd.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "slip sd",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 490601
+  },
+  "conf": {
+   "file": "conf.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "HiRISE 1 m coverage",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 15751
+  },
+  "cliffDist": {
+   "file": "cliffDist.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 0.25,
+   "offset": 0.0,
+   "unit": "m",
+   "desc": "distance to cliff, 4 m steps, capped 1020 m",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 197255
+  },
+  "landmark": {
+   "file": "landmark.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 0.1,
+   "offset": 0.0,
+   "unit": "m",
+   "desc": "distance to landmark, 10 m steps, capped 2550 m",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 211125
+  },
+  "keepout": {
+   "file": "keepout.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 1.0,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "bit 1 hardware/depot, bit 2 planetary protection, bit 4 unreliable DEM, bit 8 repaired DEM seam",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 2396
+  },
+  "science": {
+   "file": "science.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "science value",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 22595
+  },
+  "horizon": {
+   "file": "horizon.bin.gz",
+   "dtype": "uint8",
+   "grid": "hz40",
+   "scale": 4,
+   "offset": 0,
+   "unit": "deg",
+   "desc": "horizon elevation angle per sector (negative clipped to 0)",
+   "shape": [
+    16,
+    146124
+   ],
+   "bytes_gz": 731904
+  },
+  "reg_elev_dm": {
+   "file": "reg_elev_dm.bin.gz",
+   "dtype": "uint16",
+   "grid": "reg100",
+   "scale": 10.0,
+   "offset": 3600.0,
+   "unit": "m",
+   "desc": "regional elevation",
+   "shape": [
+    996,
+    884
+   ],
+   "bytes_gz": 1472834
+  },
+  "clutter": {
+   "file": "clutter.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 200.0,
+   "offset": 0.0,
+   "unit": "",
+   "nodata_raw": 255,
+   "desc": "share of 1 m blocks with rock / ripple contrast above 2x the mosaic median (25 cm HiRISE)",
+   "shape": [
+    1188,
+    1968
+   ],
+   "bytes_gz": 1420333
+  }
+ },
+ "calibration": {
+  "ctx_slope_bin_deg": [
+   0.0,
+   1.0,
+   2.0,
+   3.0,
+   4.0,
+   5.0,
+   6.0,
+   7.0,
+   8.0,
+   9.0,
+   10.0,
+   11.0,
+   12.0,
+   13.0,
+   14.0,
+   15.0,
+   16.0,
+   17.0,
+   18.0,
+   19.0,
+   20.0,
+   21.0,
+   22.0,
+   23.0,
+   24.0,
+   25.0,
+   26.0,
+   27.0,
+   28.0,
+   29.0,
+   30.0,
+   31.0,
+   32.0,
+   33.0,
+   34.0,
+   35.0,
+   36.0,
+   37.0,
+   38.0,
+   39.0
+  ],
+  "walk_p90_p75": [
+   6.007218360900879,
+   6.871310234069824,
+   7.981971740722656,
+   9.412775039672852,
+   10.985040664672852,
+   12.235359191894531,
+   13.387287139892578,
+   14.08135986328125,
+   14.598381996154785,
+   15.447086334228516,
+   16.22203254699707,
+   16.964183807373047,
+   17.614086151123047,
+   18.441896438598633,
+   19.340065002441406,
+   20.221513748168945,
+   21.194175720214844,
+   22.05643081665039,
+   22.797042846679688,
+   23.49164581298828,
+   24.475961685180664,
+   25.16656494140625,
+   25.587390899658203,
+   26.221004486083984,
+   27.152198791503906,
+   27.488439559936523,
+   27.907970428466797,
+   28.678028106689453,
+   28.862136840820312,
+   29.280040740966797,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082
+  ]
+ },
+ "landmarks": [
+  {
+   "r": 537,
+   "c": 557,
+   "lonlat": [
+    77.269124714755,
+    18.469347727494505
+   ],
+   "salience": 63.801
+  },
+  {
+   "r": 801,
+   "c": 518,
+   "lonlat": [
+    77.26218800871342,
+    18.42480933066908
+   ],
+   "salience": 61.898
+  },
+  {
+   "r": 22,
+   "c": 740,
+   "lonlat": [
+    77.30167387387314,
+    18.5562313425138
+   ],
+   "salience": 61.58
+  },
+  {
+   "r": 78,
+   "c": 735,
+   "lonlat": [
+    77.30078455258577,
+    18.546783803793254
+   ],
+   "salience": 61.12
+  },
+  {
+   "r": 717,
+   "c": 94,
+   "lonlat": [
+    77.1867735635435,
+    18.4389806387499
+   ],
+   "salience": 51.284
+  },
+  {
+   "r": 626,
+   "c": 536,
+   "lonlat": [
+    77.265389565348,
+    18.454332889170786
+   ],
+   "salience": 49.527
+  },
+  {
+   "r": 384,
+   "c": 648,
+   "lonlat": [
+    77.28531036218533,
+    18.495159752927425
+   ],
+   "salience": 48.051
+  },
+  {
+   "r": 480,
+   "c": 667,
+   "lonlat": [
+    77.28868978307737,
+    18.47896397226363
+   ],
+   "salience": 47.893
+  },
+  {
+   "r": 390,
+   "c": 710,
+   "lonlat": [
+    77.29633794614885,
+    18.494147516635937
+   ],
+   "salience": 45.542
+  },
+  {
+   "r": 585,
+   "c": 196,
+   "lonlat": [
+    77.20491571780607,
+    18.461249837162608
+   ],
+   "salience": 44.595
+  },
+  {
+   "r": 375,
+   "c": 590,
+   "lonlat": [
+    77.27499423525171,
+    18.49667810736465
+   ],
+   "salience": 44.569
+  },
+  {
+   "r": 0,
+   "c": 61,
+   "lonlat": [
+    77.18090404304678,
+    18.559942875582585
+   ],
+   "salience": 41.434
+  },
+  {
+   "r": 0,
+   "c": 472,
+   "lonlat": [
+    77.25400625286952,
+    18.559942875582585
+   ],
+   "salience": 40.908
+  },
+  {
+   "r": 457,
+   "c": 1176,
+   "lonlat": [
+    77.37922269013278,
+    18.482844211381
+   ],
+   "salience": 40.107
+  },
+  {
+   "r": 697,
+   "c": 363,
+   "lonlat": [
+    77.2346190488046,
+    18.442354759721525
+   ],
+   "salience": 39.986
+  },
+  {
+   "r": 899,
+   "c": 524,
+   "lonlat": [
+    77.26325519425828,
+    18.408276137908132
+   ],
+   "salience": 38.206
+  },
+  {
+   "r": 266,
+   "c": 254,
+   "lonlat": [
+    77.2152318447397,
+    18.51506706666
+   ],
+   "salience": 37.445
+  },
+  {
+   "r": 282,
+   "c": 644,
+   "lonlat": [
+    77.28459890515543,
+    18.5123677698827
+   ],
+   "salience": 36.282
+  },
+  {
+   "r": 303,
+   "c": 422,
+   "lonlat": [
+    77.24511303999572,
+    18.508824942862496
+   ],
+   "salience": 34.97
+  },
+  {
+   "r": 0,
+   "c": 677,
+   "lonlat": [
+    77.29046842565214,
+    18.559942875582585
+   ],
+   "salience": 34.035
+  },
+  {
+   "r": 872,
+   "c": 287,
+   "lonlat": [
+    77.22110136523641,
+    18.412831201219824
+   ],
+   "salience": 32.117
+  },
+  {
+   "r": 722,
+   "c": 561,
+   "lonlat": [
+    77.2698361717849,
+    18.438137108506993
+   ],
+   "salience": 31.759
+  },
+  {
+   "r": 120,
+   "c": 171,
+   "lonlat": [
+    77.20046911136917,
+    18.539698149752848
+   ],
+   "salience": 31.456
+  },
+  {
+   "r": 395,
+   "c": 1458,
+   "lonlat": [
+    77.42938041074108,
+    18.49330398639303
+   ],
+   "salience": 31.293
+  },
+  {
+   "r": 175,
+   "c": 543,
+   "lonlat": [
+    77.26663461515032,
+    18.530419317080884
+   ],
+   "salience": 30.84
+  },
+  {
+   "r": 680,
+   "c": 512,
+   "lonlat": [
+    77.26112082316855,
+    18.445222762547402
+   ],
+   "salience": 30.509
+  },
+  {
+   "r": 1078,
+   "c": 813,
+   "lonlat": [
+    77.31465796466891,
+    18.378077755212104
+   ],
+   "salience": 29.586
+  },
+  {
+   "r": 276,
+   "c": 1476,
+   "lonlat": [
+    77.43258196737565,
+    18.513380006174188
+   ],
+   "salience": 29.218
+  },
+  {
+   "r": 234,
+   "c": 89,
+   "lonlat": [
+    77.18588424225612,
+    18.520465660214594
+   ],
+   "salience": 29.177
+  },
+  {
+   "r": 186,
+   "c": 692,
+   "lonlat": [
+    77.29313638951429,
+    18.52856355054649
+   ],
+   "salience": 28.467
+  },
+  {
+   "r": 144,
+   "c": 490,
+   "lonlat": [
+    77.2572078095041,
+    18.5356492045869
+   ],
+   "salience": 28.313
+  },
+  {
+   "r": 469,
+   "c": 476,
+   "lonlat": [
+    77.25471770989942,
+    18.480819738798026
+   ],
+   "salience": 28.272
+  },
+  {
+   "r": 233,
+   "c": 503,
+   "lonlat": [
+    77.25952004485127,
+    18.520634366263177
+   ],
+   "salience": 28.113
+  },
+  {
+   "r": 462,
+   "c": 1498,
+   "lonlat": [
+    77.43649498104013,
+    18.482000681138093
+   ],
+   "salience": 27.259
+  },
+  {
+   "r": 713,
+   "c": 1341,
+   "lonlat": [
+    77.40857029261636,
+    18.439655462944224
+   ],
+   "salience": 27.118
+  },
+  {
+   "r": 1048,
+   "c": 518,
+   "lonlat": [
+    77.26218800871342,
+    18.38313893666954
+   ],
+   "salience": 27.097
+  },
+  {
+   "r": 631,
+   "c": 72,
+   "lonlat": [
+    77.18286054987902,
+    18.45348935892788
+   ],
+   "salience": 26.719
+  },
+  {
+   "r": 659,
+   "c": 657,
+   "lonlat": [
+    77.28691114050262,
+    18.448765589567603
+   ],
+   "salience": 26.444
+  },
+  {
+   "r": 728,
+   "c": 508,
+   "lonlat": [
+    77.26040936613866,
+    18.437124872215506
+   ],
+   "salience": 26.327
+  },
+  {
+   "r": 137,
+   "c": 1377,
+   "lonlat": [
+    77.4149734058855,
+    18.536830146926967
+   ],
+   "salience": 26.249
+  },
+  {
+   "r": 245,
+   "c": 411,
+   "lonlat": [
+    77.24315653316347,
+    18.518609893680203
+   ],
+   "salience": 26.013
+  },
+  {
+   "r": 386,
+   "c": 842,
+   "lonlat": [
+    77.31981602813572,
+    18.494822340830257
+   ],
+   "salience": 25.546
+  },
+  {
+   "r": 42,
+   "c": 1464,
+   "lonlat": [
+    77.43044759628594,
+    18.552857221542176
+   ],
+   "salience": 25.029
+  },
+  {
+   "r": 329,
+   "c": 489,
+   "lonlat": [
+    77.25702994524661,
+    18.504438585599388
+   ],
+   "salience": 24.908
+  },
+  {
+   "r": 762,
+   "c": 405,
+   "lonlat": [
+    77.2420893476186,
+    18.431388866563747
+   ],
+   "salience": 24.766
+  },
+  {
+   "r": 249,
+   "c": 349,
+   "lonlat": [
+    77.23212894919993,
+    18.51793506948588
+   ],
+   "salience": 24.69
+  },
+  {
+   "r": 683,
+   "c": 727,
+   "lonlat": [
+    77.29936163852595,
+    18.444716644401655
+   ],
+   "salience": 24.622
+  },
+  {
+   "r": 45,
+   "c": 391,
+   "lonlat": [
+    77.23959924801393,
+    18.552351103396433
+   ],
+   "salience": 24.58
+  },
+  {
+   "r": 983,
+   "c": 530,
+   "lonlat": [
+    77.26432237980313,
+    18.39410482982731
+   ],
+   "salience": 24.498
+  }
+ ],
+ "targets": [
+  {
+   "id": "HAB",
+   "name": "Habitat (Octavia E. Butler Landing)",
+   "kind": "base",
+   "lon": 77.45088572,
+   "lat": 18.44462715,
+   "value": 0.0,
+   "dwell_min": 0,
+   "why": "Perseverance's certified-safe landing point; first rover localisation, sol 13 [NASA feed].",
+   "source": "M20 waypoints feed, sol 13"
+  },
+  {
+   "id": "ROCH",
+   "name": "Rochette (first rock cores)",
+   "kind": "science",
+   "lon": 77.44436574,
+   "lat": 18.4307394,
+   "value": 0.6,
+   "dwell_min": 40,
+   "sigma_m": 120,
+   "why": "First cored samples Montdenier / Montagnac (~sol 190-196); igneous crater floor (Maaz formation).",
+   "source": "M20 waypoints feed, sol 180; NASA sample reports"
+  },
+  {
+   "id": "ISSO",
+   "name": "Issole, Seitah (Malay core)",
+   "kind": "science",
+   "lon": 77.44131402,
+   "lat": 18.43260907,
+   "value": 0.6,
+   "dwell_min": 40,
+   "sigma_m": 120,
+   "why": "Olivine-rich Seitah formation; sample Malay (~sol 337).",
+   "source": "M20 waypoints feed, sol 335"
+  },
+  {
+   "id": "AMAL",
+   "name": "Amalik, delta front (Mageik core)",
+   "kind": "science",
+   "lon": 77.4014403,
+   "lat": 18.45072631,
+   "value": 0.7,
+   "dwell_min": 45,
+   "sigma_m": 150,
+   "why": "Sedimentary delta-front rocks; sample Mageik (~sol 579).",
+   "source": "M20 waypoints feed, sol 565"
+  },
+  {
+   "id": "DTOP",
+   "name": "Delta top (sol 1000 position)",
+   "kind": "science",
+   "lon": 77.34664678,
+   "lat": 18.49539581,
+   "value": 0.5,
+   "dwell_min": 30,
+   "sigma_m": 150,
+   "why": "Upper fan / delta-top deposits reached as the mission passed 1,000 sols.",
+   "source": "M20 waypoints feed, sol 1000"
+  },
+  {
+   "id": "CHEY",
+   "name": "Cheyava Falls (Sapphire Canyon core)",
+   "kind": "science",
+   "lon": 77.30519,
+   "lat": 18.49748,
+   "value": 1.0,
+   "dwell_min": 60,
+   "sigma_m": 150,
+   "why": "Rock with 'leopard spot' features NASA called a potential biosignature; cored 21 Jul 2024 = sol 1215.",
+   "source": "M20 waypoints feed, end-of-drive sol 1210 (rover parked there until sol 1219)"
+  },
+  {
+   "id": "RIM",
+   "name": "Crater rim crest (reached 12 Dec 2024)",
+   "kind": "science",
+   "lon": 77.26853,
+   "lat": 18.45753,
+   "value": 0.8,
+   "dwell_min": 45,
+   "sigma_m": 150,
+   "why": "Highest point of the rim ascent (-3,468 m on the feed's radius datum); ancient crust and megabreccia.",
+   "source": "M20 waypoints feed, sol 1354 (rim top reached sol 1356)"
+  },
+  {
+   "id": "PERS",
+   "name": "Perseverance (latest position, sol 1980)",
+   "kind": "asset",
+   "lon": 77.23205444,
+   "lat": 18.43687407,
+   "value": 0.0,
+   "dwell_min": 20,
+   "why": "Active robotic asset beyond the crater rim; approach no closer than 50 m.",
+   "source": "M20 waypoints feed, sol 1980 (Sep 2026)"
+  }
+ ],
+ "keepouts": [
+  {
+   "id": "DEPOT",
+   "name": "Three Forks Sample Depot (10 cached tubes)",
+   "flag": 1,
+   "radius_m": 60,
+   "points": [
+    [
+     77.40771,
+     18.45255
+    ],
+    [
+     77.40785,
+     18.45252
+    ],
+    [
+     77.40806,
+     18.45267
+    ],
+    [
+     77.40807,
+     18.45277
+    ],
+    [
+     77.4082,
+     18.45272
+    ],
+    [
+     77.40824,
+     18.45281
+    ],
+    [
+     77.40834,
+     18.45273
+    ],
+    [
+     77.4085,
+     18.453
+    ],
+    [
+     77.4086,
+     18.45307
+    ],
+    [
+     77.40845,
+     18.45337
+    ]
+   ],
+   "why": "Tubes dropped sols 653-690 (21 Dec 2022 - 28 Jan 2023) at these rover end-of-drive positions; 60 m buffer.",
+   "source": "M20 waypoints feed sols 652-686; NASA depot announcements"
+  },
+  {
+   "id": "PERSV",
+   "name": "Perseverance rover (active asset)",
+   "flag": 1,
+   "radius_m": 50,
+   "points": [
+    [
+     77.23205444,
+     18.43687407
+    ]
+   ],
+   "why": "Do not approach an active rover closer than 50 m [ASSUME].",
+   "source": "M20 waypoints feed sol 1980"
+  }
+ ],
+ "stats": {
+  "slopeW_mean": 10.241752624554868,
+  "frac_walk_veto20": 0.07920627343899701,
+  "sand_frac_gt05": 0.06223609742410555,
+  "cliff_cells": 2325,
+  "landmarks": 49,
+  "clutter": {
+   "coverage": 0.7531989098300074,
+   "median_contrast": 0.05087345230462109,
+   "threshold_contrast": 0.1017469046092422,
+   "mean": 0.2116317266009835,
+   "p90": 0.5179660707306598,
+   "source": "https://asc-pds-services.s3.us-west-2.amazonaws.com/mosaic/mars2020_trn/HiRISE/JEZ_hirise_soc_007_orthoMosaic_25cm_Ortho_blend120.tif"
+  }
+ },
+ "quality": {
+  "hirise_vs_ctx": {
+   "n": 1758576,
+   "mean_m": -0.7547146081924438,
+   "sd_m": 3.6804213523864746,
+   "p95_abs_m": 7.543212890625
+  },
+  "ctx_vs_trn": {
+   "n": 2337984,
+   "mean_m": 0.09076546132564545,
+   "sd_m": 1.0074920654296875,
+   "p95_abs_m": 2.2108154296875
+  },
+  "hirise_noise": {
+   "C": {
+    "bed_E": 0.0562499463558197,
+    "rough": 0.048440705984830856,
+    "step_p99": 0.05008544772863388
+   },
+   "W": {
+    "bed_E": 0.11142897605895996,
+    "rough": 0.08100484311580658,
+    "step_p99": 0.07458227127790451
+   },
+   "CR_SOUTH": {
+    "bed_E": 0.10041199624538422,
+    "rough": 0.07566812634468079,
+    "step_p99": 0.0671539306640625
+   },
+   "CR_NORTH": {
+    "bed_E": 0.10733872652053833,
+    "rough": 0.07770051062107086,
+    "step_p99": 0.06791418045759201
+   },
+   "E": {
+    "bed_E": 0.07134244590997696,
+    "rough": 0.05945390462875366,
+    "step_p99": 0.06205566227436066
+   },
+   "N": {
+    "bed_E": 0.06273671984672546,
+    "rough": 0.05394604802131653,
+    "step_p99": 0.057380370795726776
+   },
+   "DL": {
+    "bed_E": 0.07998164743185043,
+    "rough": 0.06222642585635185,
+    "step_p99": 0.06104492023587227
+   }
+  },
+  "dem_blunders": {
+   "cells": 0,
+   "frac": 0.0
+  },
+  "dem_seams": {
+   "cells": 0,
+   "band_cells": 0,
+   "frac": 0.0
+  }
+ }
+}

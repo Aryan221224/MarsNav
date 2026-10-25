@@ -1,0 +1,16 @@
+{
+  "name": "marsnav",
+  "version": "2.0.0",
+  "description": "MarsNav: landing-site selection and EVA traverse planning and guidance for human Mars exploration, on real NASA and USGS data.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "validate": "node validation/validate.mjs",
+    "campaign": "node validation/closed_loop_campaign.mjs",
+    "build:app": "bash tools/build_app.sh",
+    "serve": "python3 -m http.server 8765 --directory app"
+  }
+}

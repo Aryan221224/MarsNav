@@ -1,0 +1,254 @@
+{
+ "id": "jezero",
+ "name": "Jezero Crater, Mars",
+ "short": "Jezero crater",
+ "description": "Perseverance's field site: delta, crater floor and western rim. HiRISE 1 m DTMs over the rover traverse, CTX 20 m DEM over the whole crater.",
+ "projection": {
+  "name": "Jezero_Crater_Projection",
+  "lat_ts": 18.4663,
+  "note": "JPL Mars 2020 science projection; equirectangular, standard parallel 18.4663 deg, Mars 2000 sphere"
+ },
+ "snap_origin": [
+  4329000.0,
+  1143420.0
+ ],
+ "crater_center": [
+  77.583,
+  18.383
+ ],
+ "base": {
+  "id": "HAB",
+  "name": "Octavia E. Butler Landing",
+  "lon": 77.45088572,
+  "lat": 18.44462715
+ },
+ "ops_area": [
+  77.17,
+  18.36,
+  77.52,
+  18.56
+ ],
+ "regional_area": [
+  77.0,
+  17.6,
+  78.57,
+  19.28
+ ],
+ "clock": {
+  "name": "M2020",
+  "landing_utc": "2021-02-18T20:43:48Z",
+  "lon_east": 77.45088572,
+  "note": "Mars 2020 mission sols (sol 0 = landing day) at the landing longitude"
+ },
+ "sources": {
+  "regional_dem": "M20_JezeroCrater_CTXDEM_20m.tif",
+  "check_dem": "JEZ_ctx_B_soc_008_DTM_MOLAtopography_DeltaGeoid_20m_Eqc_latTs0_lon0.tif",
+  "hires_dtms": [
+   {
+    "key": "C",
+    "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_C_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "quality": 1.0
+   },
+   {
+    "key": "W",
+    "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_W_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "quality": 0.9
+   },
+   {
+    "key": "CR_SOUTH",
+    "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_CR_SOUTH_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "quality": 0.5
+   },
+   {
+    "key": "CR_NORTH",
+    "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_CR_NORTH_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "quality": 0.5
+   },
+   {
+    "key": "E",
+    "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_E_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "quality": 1.0,
+    "optional": true
+   },
+   {
+    "key": "N",
+    "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_N_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "quality": 1.0,
+    "optional": true
+   },
+   {
+    "key": "DL",
+    "file": "DTM_MOLAtopography_DeltaGeoid_Jezero_DL_Edited_affine_1m_Eqc_latTs0_lon0.tif",
+    "quality": 0.9,
+    "optional": true
+   }
+  ],
+  "ortho": "M20_JezeroCrater_CTXortho_mosaic_5m.tif",
+  "traverse": "m20_waypoints_enomis.json",
+  "climate": "meda"
+ },
+ "quality_note": "USGS metadata: the crater-rim (CR) pairs have uncompensated y-parallax outside the landing ellipse; their bedform evidence is down-weighted.",
+ "out_dir": "",
+ "targets": [
+  {
+   "id": "HAB",
+   "name": "Habitat (Octavia E. Butler Landing)",
+   "kind": "base",
+   "lon": 77.45088572,
+   "lat": 18.44462715,
+   "value": 0.0,
+   "dwell_min": 0,
+   "why": "Perseverance's certified-safe landing point; first rover localisation, sol 13 [NASA feed].",
+   "source": "M20 waypoints feed, sol 13"
+  },
+  {
+   "id": "ROCH",
+   "name": "Rochette (first rock cores)",
+   "kind": "science",
+   "lon": 77.44436574,
+   "lat": 18.4307394,
+   "value": 0.6,
+   "dwell_min": 40,
+   "sigma_m": 120,
+   "why": "First cored samples Montdenier / Montagnac (~sol 190-196); igneous crater floor (Maaz formation).",
+   "source": "M20 waypoints feed, sol 180; NASA sample reports"
+  },
+  {
+   "id": "ISSO",
+   "name": "Issole, Seitah (Malay core)",
+   "kind": "science",
+   "lon": 77.44131402,
+   "lat": 18.43260907,
+   "value": 0.6,
+   "dwell_min": 40,
+   "sigma_m": 120,
+   "why": "Olivine-rich Seitah formation; sample Malay (~sol 337).",
+   "source": "M20 waypoints feed, sol 335"
+  },
+  {
+   "id": "AMAL",
+   "name": "Amalik, delta front (Mageik core)",
+   "kind": "science",
+   "lon": 77.4014403,
+   "lat": 18.45072631,
+   "value": 0.7,
+   "dwell_min": 45,
+   "sigma_m": 150,
+   "why": "Sedimentary delta-front rocks; sample Mageik (~sol 579).",
+   "source": "M20 waypoints feed, sol 565"
+  },
+  {
+   "id": "DTOP",
+   "name": "Delta top (sol 1000 position)",
+   "kind": "science",
+   "lon": 77.34664678,
+   "lat": 18.49539581,
+   "value": 0.5,
+   "dwell_min": 30,
+   "sigma_m": 150,
+   "why": "Upper fan / delta-top deposits reached as the mission passed 1,000 sols.",
+   "source": "M20 waypoints feed, sol 1000"
+  },
+  {
+   "id": "CHEY",
+   "name": "Cheyava Falls (Sapphire Canyon core)",
+   "kind": "science",
+   "lon": 77.30519,
+   "lat": 18.49748,
+   "value": 1.0,
+   "dwell_min": 60,
+   "sigma_m": 150,
+   "why": "Rock with 'leopard spot' features NASA called a potential biosignature; cored 21 Jul 2024 = sol 1215.",
+   "source": "M20 waypoints feed, end-of-drive sol 1210 (rover parked there until sol 1219)"
+  },
+  {
+   "id": "RIM",
+   "name": "Crater rim crest (reached 12 Dec 2024)",
+   "kind": "science",
+   "lon": 77.26853,
+   "lat": 18.45753,
+   "value": 0.8,
+   "dwell_min": 45,
+   "sigma_m": 150,
+   "why": "Highest point of the rim ascent (-3,468 m on the feed's radius datum); ancient crust and megabreccia.",
+   "source": "M20 waypoints feed, sol 1354 (rim top reached sol 1356)"
+  },
+  {
+   "id": "PERS",
+   "name": "Perseverance (latest position, sol 1980)",
+   "kind": "asset",
+   "lon": 77.23205444,
+   "lat": 18.43687407,
+   "value": 0.0,
+   "dwell_min": 20,
+   "why": "Active robotic asset beyond the crater rim; approach no closer than 50 m.",
+   "source": "M20 waypoints feed, sol 1980 (Sep 2026)"
+  }
+ ],
+ "keepouts": [
+  {
+   "id": "DEPOT",
+   "name": "Three Forks Sample Depot (10 cached tubes)",
+   "flag": 1,
+   "radius_m": 60,
+   "points": [
+    [
+     77.40771,
+     18.45255
+    ],
+    [
+     77.40785,
+     18.45252
+    ],
+    [
+     77.40806,
+     18.45267
+    ],
+    [
+     77.40807,
+     18.45277
+    ],
+    [
+     77.4082,
+     18.45272
+    ],
+    [
+     77.40824,
+     18.45281
+    ],
+    [
+     77.40834,
+     18.45273
+    ],
+    [
+     77.4085,
+     18.453
+    ],
+    [
+     77.4086,
+     18.45307
+    ],
+    [
+     77.40845,
+     18.45337
+    ]
+   ],
+   "why": "Tubes dropped sols 653-690 (21 Dec 2022 - 28 Jan 2023) at these rover end-of-drive positions; 60 m buffer.",
+   "source": "M20 waypoints feed sols 652-686; NASA depot announcements"
+  },
+  {
+   "id": "PERSV",
+   "name": "Perseverance rover (active asset)",
+   "flag": 1,
+   "radius_m": 50,
+   "points": [
+    [
+     77.23205444,
+     18.43687407
+    ]
+   ],
+   "why": "Do not approach an active rover closer than 50 m [ASSUME].",
+   "source": "M20 waypoints feed sol 1980"
+  }
+ ]
+}

@@ -1,0 +1,43 @@
+/* MarsNav shared console theme, loaded after each page's own stylesheet (EVA planner, Landing mode, drive window).
+   - Fonts are served from the app itself, so the interface looks the same with no internet (Mars mode).
+   - One control language everywhere: condensed upper-case labels and buttons, square annunciators, thin dark scrollbars.
+   Fonts: Barlow and Barlow Condensed (Jeremy Tribby), IBM Plex Mono (IBM); SIL Open Font License, vendor/fonts/OFL.txt. */
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 400; font-display: swap; src: url("../vendor/fonts/Barlow-Regular.woff") format("woff"); }
+@font-face { font-family: "Barlow"; font-style: italic; font-weight: 400; font-display: swap; src: url("../vendor/fonts/Barlow-Italic.woff") format("woff"); }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 500; font-display: swap; src: url("../vendor/fonts/Barlow-Medium.woff") format("woff"); }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 600; font-display: swap; src: url("../vendor/fonts/Barlow-SemiBold.woff") format("woff"); }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 700; font-display: swap; src: url("../vendor/fonts/Barlow-Bold.woff") format("woff"); }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 500; font-display: swap; src: url("../vendor/fonts/BarlowCondensed-Medium.woff") format("woff"); }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 600; font-display: swap; src: url("../vendor/fonts/BarlowCondensed-SemiBold.woff") format("woff"); }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 700; font-display: swap; src: url("../vendor/fonts/BarlowCondensed-Bold.woff") format("woff"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("../vendor/fonts/IBMPlexMono-Regular.woff") format("woff"); }
+@font-face { font-family: "IBM Plex Mono"; font-style: normal; font-weight: 500 700; font-display: swap; src: url("../vendor/fonts/IBMPlexMono-Medium.woff") format("woff"); }
+
+/* ------------------------------------------------------------------ scrollbars and native controls */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+::-webkit-scrollbar-thumb { background: #2c3949; border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: #45576d; border: 2px solid transparent; background-clip: padding-box; }
+input[type="checkbox"], input[type="radio"], input[type="range"], progress { accent-color: #d8a57a; }
+::selection { background: rgba(216, 165, 122, 0.35); }
+
+/* ------------------------------------------------------------------ module switch: Landing | EVA planner */
+.modsw { display: flex; align-items: center; padding: 0 12px; flex: 0 0 auto; }
+.modsw .seg2 { display: flex; border: 1px solid #34445a; border-radius: 4px; overflow: hidden; }
+.modsw a { padding: 5px 11px; font-family: "Barlow Condensed", "Barlow", sans-serif; font-weight: 600; font-size: 12.5px; letter-spacing: 0.09em;
+  text-transform: uppercase; color: #b8c2ce; text-decoration: none; white-space: nowrap; line-height: 1.25; }
+.modsw a + a { border-left: 1px solid #34445a; }
+.modsw a[aria-current="page"] { background: rgba(216, 165, 122, 0.16); color: #e8bd97; cursor: default; }
+.modsw a:not([aria-current]):hover { background: #1c2531; color: #f2f5f8; }
+
+/* ------------------------------------------------------------------ brand block */
+.brand .name { font-family: "Barlow Condensed", "Barlow", sans-serif; font-weight: 700; letter-spacing: 0.16em; font-size: 16px; line-height: 1.1; }
+.brand .logo { width: 34px; height: 34px; }
+
+/* ------------------------------------------------------------------ section help: inline explanations shown on request */
+.section .help { display: none; }
+.section.show-help .help { display: block; }
+.infob { margin-left: 6px; width: 17px; height: 17px; border-radius: 50%; border: 1px solid #3a4a5e; background: none; color: #8d9aab; cursor: pointer;
+  font: 600 11px/15px "Barlow", sans-serif; text-transform: none; letter-spacing: 0; padding: 0; vertical-align: 1px; }
+.infob:hover, .section.show-help .infob { border-color: #d8a57a; color: #d8a57a; }

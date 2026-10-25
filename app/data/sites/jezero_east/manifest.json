@@ -1,0 +1,782 @@
+{
+ "version": 2,
+ "built_utc": "2026-09-26T10:03:13Z",
+ "site": "Jezero Crater east floor, Mars (CTX-only test site)",
+ "site_info": {
+  "id": "jezero_east",
+  "name": "Jezero Crater east floor, Mars (CTX-only test site)",
+  "short": "Jezero east floor",
+  "description": "Portability test: an area with no 1 m DTM coverage, built only from the 20 m CTX DEM. Proves the pipeline and engine run on any site with a DEM; confidence and soft-soil uncertainty reflect the coarser data.",
+  "base": {
+   "id": "HAB",
+   "name": "Habitat (auto-sited: gentlest open ground)",
+   "lon": 77.845939,
+   "lat": 18.340794,
+   "auto": true,
+   "mean_slope_300m_deg": 7.48
+  },
+  "clock": {
+   "name": "M2020",
+   "landing_utc": "2021-02-18T20:43:48Z",
+   "lon_east": 77.45088572,
+   "note": "shares the Mars 2020 mission calendar (same crater)"
+  },
+  "ops_area": [
+   77.7,
+   18.22,
+   78.0,
+   18.46
+  ],
+  "hires_dtms": [],
+  "regional_dem": "M20_JezeroCrater_CTXDEM_20m.tif",
+  "calibration_site": "jezero",
+  "climate": "from:jezero",
+  "quality_note": ""
+ },
+ "grids": {
+  "ops10": {
+   "x0": 4368480.0,
+   "y0": 1094220.0,
+   "res": 10.0,
+   "width": 1692,
+   "height": 1424,
+   "name": "ops10"
+  },
+  "hz40": {
+   "x0": 4368480.0,
+   "y0": 1094220.0,
+   "res": 40.0,
+   "width": 423,
+   "height": 356,
+   "name": "hz40"
+  },
+  "reg100": {
+   "x0": 4329100.0,
+   "y0": 1142820.0,
+   "res": 100.0,
+   "width": 884,
+   "height": 996,
+   "name": "reg100"
+  }
+ },
+ "projection": {
+  "name": "Jezero_Crater_Projection",
+  "type": "equirectangular",
+  "lat_ts": 18.4663,
+  "R": 3396190.0
+ },
+ "horizon": {
+  "sectors": 16,
+  "eye_height_m": 1.7
+ },
+ "layers": {
+  "elev_dm": {
+   "file": "elev_dm.bin.gz",
+   "dtype": "uint16",
+   "grid": "ops10",
+   "scale": 10,
+   "offset": 3000,
+   "unit": "m",
+   "desc": "elevation (m) = v/10 - 3000",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 2052943
+  },
+  "slope": {
+   "file": "slope.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 4,
+   "offset": 0.0,
+   "unit": "deg",
+   "desc": "10 m surface slope",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 935771
+  },
+  "slopeW": {
+   "file": "slopeW.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 4,
+   "offset": 0.0,
+   "unit": "deg",
+   "desc": "walking-scale slope p90",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 858150
+  },
+  "steep": {
+   "file": "steep.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "fraction > 25 deg",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 47355
+  },
+  "step": {
+   "file": "step.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 100,
+   "offset": 0.0,
+   "unit": "m",
+   "desc": "p99 relief step",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 2379
+  },
+  "rough": {
+   "file": "rough.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 100,
+   "offset": 0.0,
+   "unit": "m",
+   "desc": "RMS relief",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 2380
+  },
+  "sand": {
+   "file": "sand.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "bedform evidence",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 2379
+  },
+  "slipMu": {
+   "file": "slipMu.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "slip mean",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 413860
+  },
+  "slipSd": {
+   "file": "slipSd.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "slip sd",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 2381
+  },
+  "conf": {
+   "file": "conf.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "HiRISE 1 m coverage",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 2378
+  },
+  "cliffDist": {
+   "file": "cliffDist.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 0.25,
+   "offset": 0.0,
+   "unit": "m",
+   "desc": "distance to cliff, 4 m steps, capped 1020 m",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 181591
+  },
+  "landmark": {
+   "file": "landmark.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 0.1,
+   "offset": 0.0,
+   "unit": "m",
+   "desc": "distance to landmark, 10 m steps, capped 2550 m",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 243728
+  },
+  "keepout": {
+   "file": "keepout.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 1.0,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "bit 1 hardware/depot, bit 2 planetary protection, bit 4 unreliable DEM, bit 8 repaired DEM seam",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 9441
+  },
+  "science": {
+   "file": "science.bin.gz",
+   "dtype": "uint8",
+   "grid": "ops10",
+   "scale": 255,
+   "offset": 0.0,
+   "unit": "",
+   "desc": "science value",
+   "shape": [
+    1424,
+    1692
+   ],
+   "bytes_gz": 13291
+  },
+  "horizon": {
+   "file": "horizon.bin.gz",
+   "dtype": "uint8",
+   "grid": "hz40",
+   "scale": 4,
+   "offset": 0,
+   "unit": "deg",
+   "desc": "horizon elevation angle per sector (negative clipped to 0)",
+   "shape": [
+    16,
+    150588
+   ],
+   "bytes_gz": 364607
+  },
+  "reg_elev_dm": {
+   "file": "reg_elev_dm.bin.gz",
+   "dtype": "uint16",
+   "grid": "reg100",
+   "scale": 10,
+   "offset": 3000,
+   "unit": "m",
+   "desc": "regional elevation",
+   "shape": [
+    996,
+    884
+   ],
+   "bytes_gz": 1483465
+  }
+ },
+ "calibration": {
+  "ctx_slope_bin_deg": [
+   0.0,
+   1.0,
+   2.0,
+   3.0,
+   4.0,
+   5.0,
+   6.0,
+   7.0,
+   8.0,
+   9.0,
+   10.0,
+   11.0,
+   12.0,
+   13.0,
+   14.0,
+   15.0,
+   16.0,
+   17.0,
+   18.0,
+   19.0,
+   20.0,
+   21.0,
+   22.0,
+   23.0,
+   24.0,
+   25.0,
+   26.0,
+   27.0,
+   28.0,
+   29.0,
+   30.0,
+   31.0,
+   32.0,
+   33.0,
+   34.0,
+   35.0,
+   36.0,
+   37.0,
+   38.0,
+   39.0
+  ],
+  "walk_p90_p75": [
+   6.931781768798828,
+   7.8234968185424805,
+   8.686413764953613,
+   9.961784362792969,
+   11.40696907043457,
+   12.517158508300781,
+   13.539703369140625,
+   14.17148494720459,
+   14.630340576171875,
+   15.471649169921875,
+   16.243946075439453,
+   16.9939022064209,
+   17.626869201660156,
+   18.45449447631836,
+   19.330055236816406,
+   20.222135543823242,
+   21.222332000732422,
+   22.061735153198242,
+   22.81728172302246,
+   23.492095947265625,
+   24.493865966796875,
+   25.178295135498047,
+   25.591901779174805,
+   26.22939109802246,
+   27.141929626464844,
+   27.52082633972168,
+   27.928298950195312,
+   28.736122131347656,
+   29.018844604492188,
+   29.378623962402344,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082,
+   29.79179573059082
+  ]
+ },
+ "landmarks": [
+  {
+   "r": 730,
+   "c": 1367,
+   "lonlat": [
+    77.94287452207496,
+    18.3369134793583
+   ],
+   "salience": 89.384
+  },
+  {
+   "r": 696,
+   "c": 1409,
+   "lonlat": [
+    77.95034482088896,
+    18.34264948501006
+   ],
+   "salience": 89.368
+  },
+  {
+   "r": 763,
+   "c": 1428,
+   "lonlat": [
+    77.95372424178102,
+    18.331346179755126
+   ],
+   "salience": 83.142
+  },
+  {
+   "r": 723,
+   "c": 1513,
+   "lonlat": [
+    77.96884270366648,
+    18.338094421698372
+   ],
+   "salience": 56.366
+  },
+  {
+   "r": 763,
+   "c": 1307,
+   "lonlat": [
+    77.93220266662638,
+    18.331346179755126
+   ],
+   "salience": 55.021
+  },
+  {
+   "r": 814,
+   "c": 1466,
+   "lonlat": [
+    77.96048308356511,
+    18.322742171277486
+   ],
+   "salience": 54.194
+  },
+  {
+   "r": 816,
+   "c": 1352,
+   "lonlat": [
+    77.94020655821282,
+    18.322404759180323
+   ],
+   "salience": 52.92
+  },
+  {
+   "r": 627,
+   "c": 1373,
+   "lonlat": [
+    77.94394170761981,
+    18.354290202362158
+   ],
+   "salience": 50.202
+  },
+  {
+   "r": 627,
+   "c": 1430,
+   "lonlat": [
+    77.95407997029596,
+    18.354290202362158
+   ],
+   "salience": 49.877
+  },
+  {
+   "r": 660,
+   "c": 1487,
+   "lonlat": [
+    77.9642182329721,
+    18.348722902758983
+   ],
+   "salience": 45.705
+  },
+  {
+   "r": 411,
+   "c": 679,
+   "lonlat": [
+    77.82050391293131,
+    18.39073070885569
+   ],
+   "salience": 26.487
+  },
+  {
+   "r": 203,
+   "c": 1394,
+   "lonlat": [
+    77.9476768570268,
+    18.425821566960572
+   ],
+   "salience": 20.864
+  },
+  {
+   "r": 829,
+   "c": 1520,
+   "lonlat": [
+    77.97008775346882,
+    18.32021158054877
+   ],
+   "salience": 17.74
+  },
+  {
+   "r": 1256,
+   "c": 1462,
+   "lonlat": [
+    77.9597716265352,
+    18.24817409780462
+   ],
+   "salience": 17.491
+  },
+  {
+   "r": 665,
+   "c": 874,
+   "lonlat": [
+    77.85518744313917,
+    18.34787937251608
+   ],
+   "salience": 16.457
+  },
+  {
+   "r": 165,
+   "c": 635,
+   "lonlat": [
+    77.81267788560235,
+    18.43223239680665
+   ],
+   "salience": 16.194
+  },
+  {
+   "r": 998,
+   "c": 1125,
+   "lonlat": [
+    77.8998313717657,
+    18.29170025833855
+   ],
+   "salience": 16.177
+  },
+  {
+   "r": 975,
+   "c": 911,
+   "lonlat": [
+    77.8617684206658,
+    18.295580497455923
+   ],
+   "salience": 16.112
+  },
+  {
+   "r": 579,
+   "c": 1446,
+   "lonlat": [
+    77.95692579841557,
+    18.362388092694054
+   ],
+   "salience": 16.098
+  },
+  {
+   "r": 784,
+   "c": 1256,
+   "lonlat": [
+    77.9231315894951,
+    18.32780335273492
+   ],
+   "salience": 15.708
+  },
+  {
+   "r": 1365,
+   "c": 957,
+   "lonlat": [
+    77.8699501765097,
+    18.22978513850927
+   ],
+   "salience": 15.338
+  },
+  {
+   "r": 714,
+   "c": 1242,
+   "lonlat": [
+    77.92064148989041,
+    18.3396127761356
+   ],
+   "salience": 15.179
+  },
+  {
+   "r": 505,
+   "c": 848,
+   "lonlat": [
+    77.85056297244479,
+    18.37487234028906
+   ],
+   "salience": 15.137
+  },
+  {
+   "r": 622,
+   "c": 57,
+   "lonlat": [
+    77.7098723447811,
+    18.35513373260507
+   ],
+   "salience": 15.024
+  },
+  {
+   "r": 800,
+   "c": 889,
+   "lonlat": [
+    77.85785540700131,
+    18.325104055957624
+   ],
+   "salience": 14.869
+  },
+  {
+   "r": 225,
+   "c": 816,
+   "lonlat": [
+    77.84487131620556,
+    18.422110033891784
+   ],
+   "salience": 14.811
+  },
+  {
+   "r": 759,
+   "c": 220,
+   "lonlat": [
+    77.73886421874973,
+    18.332021003949446
+   ],
+   "salience": 14.674
+  },
+  {
+   "r": 881,
+   "c": 1446,
+   "lonlat": [
+    77.95692579841557,
+    18.31143886602255
+   ],
+   "salience": 14.565
+  },
+  {
+   "r": 753,
+   "c": 140,
+   "lonlat": [
+    77.72463507815162,
+    18.333033240240937
+   ],
+   "salience": 14.559
+  },
+  {
+   "r": 1107,
+   "c": 925,
+   "lonlat": [
+    77.86425852027045,
+    18.273311299043208
+   ],
+   "salience": 14.378
+  },
+  {
+   "r": 734,
+   "c": 1573,
+   "lonlat": [
+    77.97951455911506,
+    18.336238655163978
+   ],
+   "salience": 14.245
+  },
+  {
+   "r": 672,
+   "c": 39,
+   "lonlat": [
+    77.70667078814652,
+    18.34669843017601
+   ],
+   "salience": 14.204
+  },
+  {
+   "r": 701,
+   "c": 120,
+   "lonlat": [
+    77.7210777930021,
+    18.341805954767153
+   ],
+   "salience": 13.59
+  },
+  {
+   "r": 1170,
+   "c": 934,
+   "lonlat": [
+    77.86585929858775,
+    18.262682817982594
+   ],
+   "salience": 13.545
+  },
+  {
+   "r": 0,
+   "c": 788,
+   "lonlat": [
+    77.83989111699621,
+    18.460068894822545
+   ],
+   "salience": 13.44
+  }
+ ],
+ "targets": [
+  {
+   "id": "HAB",
+   "name": "Habitat (auto-sited: gentlest open ground)",
+   "kind": "base",
+   "lon": 77.845939,
+   "lat": 18.340794,
+   "value": 0.0,
+   "dwell_min": 0,
+   "why": "Habitat site",
+   "source": "auto-sited"
+  },
+  {
+   "id": "S1",
+   "name": "Survey station 1 (landmark)",
+   "kind": "science",
+   "lon": 77.857855,
+   "lat": 18.325104,
+   "value": 0.4,
+   "dwell_min": 30,
+   "sigma_m": 150,
+   "why": "Distinctive terrain feature 1.1 km from the habitat (landmark detector).",
+   "source": "auto: landmark detector on the site DEM"
+  },
+  {
+   "id": "S2",
+   "name": "Survey station 2 (landmark)",
+   "kind": "science",
+   "lon": 77.850563,
+   "lat": 18.374872,
+   "value": 0.4,
+   "dwell_min": 30,
+   "sigma_m": 150,
+   "why": "Distinctive terrain feature 2.0 km from the habitat (landmark detector).",
+   "source": "auto: landmark detector on the site DEM"
+  },
+  {
+   "id": "S3",
+   "name": "Survey station 3 (landmark)",
+   "kind": "science",
+   "lon": 77.861768,
+   "lat": 18.29558,
+   "value": 0.4,
+   "dwell_min": 30,
+   "sigma_m": 150,
+   "why": "Distinctive terrain feature 2.8 km from the habitat (landmark detector).",
+   "source": "auto: landmark detector on the site DEM"
+  },
+  {
+   "id": "S4",
+   "name": "Survey station 4 (landmark)",
+   "kind": "science",
+   "lon": 77.820504,
+   "lat": 18.390731,
+   "value": 0.4,
+   "dwell_min": 30,
+   "sigma_m": 150,
+   "why": "Distinctive terrain feature 3.3 km from the habitat (landmark detector).",
+   "source": "auto: landmark detector on the site DEM"
+  }
+ ],
+ "keepouts": [],
+ "stats": {
+  "slopeW_mean": 8.711868176229565,
+  "frac_walk_veto20": 0.01453137036151619,
+  "sand_frac_gt05": 0.0,
+  "cliff_cells": 12793,
+  "landmarks": 35
+ },
+ "quality": {
+  "hirise_noise": {},
+  "dem_blunders": {
+   "cells": 12536,
+   "frac": 0.005202937817090339
+  },
+  "dem_seams": {
+   "cells": 4870,
+   "band_cells": 36143,
+   "frac": 0.01500078027465668
+  }
+ }
+}

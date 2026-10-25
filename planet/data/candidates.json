@@ -1,0 +1,685 @@
+{
+ "sources": {
+  "ez": "NASA First Landing Site / Exploration Zone Workshop for Human Missions to the Surface of Mars (2015): proposed EZ centres from the NASA Mars Trek EZMars service (trek.nasa.gov/mars/trekarcgis/rest/services/EZMars/MapServer); abstracts at hou.usra.edu/meetings/explorationzone2015",
+  "starship": "Golombek M. et al. 2021, Candidate landing sites for SpaceX Starship, LPSC 52, abstract 2420",
+  "heritage": "NSSDCA; GISS Mars24; PDS Analyst's Notebook; NASA MSL/M2020 waypoints; Golombek et al. 2019 (InSight); Nature Astronomy s41550-021-01519-5 (Zhurong)"
+ },
+ "ez": [
+  {
+   "id": "ez1002",
+   "abstract": 1002,
+   "name": "Phlegra Dorsa",
+   "lat": 39.0,
+   "lon": 172.0,
+   "elev_km": -3.968,
+   "proposer": "Barker Don",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1002.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/ez_barker_2001.pdf"
+  },
+  {
+   "id": "ez1005",
+   "abstract": 1005,
+   "name": "Southern Nectaris Fossae",
+   "lat": -28.88,
+   "lon": -59.71,
+   "elev_km": 1.9,
+   "proposer": "Boatwright Ben",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1005.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/boatwright_southernnectarisfossaetagged.pdf"
+  },
+  {
+   "id": "ez1006",
+   "abstract": 1006,
+   "name": "Chryse (Valles Marineris)",
+   "lat": 20.0,
+   "lon": -40.0,
+   "elev_km": -3.739,
+   "proposer": "Kochemasov Gennady",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1006.pdf",
+   "slides_url": null
+  },
+  {
+   "id": "ez1007",
+   "abstract": 1007,
+   "name": "Melas Chasma",
+   "lat": -12.0,
+   "lon": -70.0,
+   "elev_km": -4.788,
+   "proposer": "McEwen Alfred",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1007.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/e-melas-ez.pdf"
+  },
+  {
+   "id": "ez1008",
+   "abstract": 1008,
+   "name": "Gusev Crater",
+   "lat": -14.574,
+   "lon": 175.462,
+   "elev_km": -1.5,
+   "proposer": "Longo Alex",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1008.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/2015_equatorial2_columbia_hills.pdf"
+  },
+  {
+   "id": "ez1009",
+   "abstract": 1009,
+   "name": "Mawrth Vallis",
+   "lat": 24.802,
+   "lon": -19.683,
+   "elev_km": -0.52,
+   "proposer": "Horgan Briony",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1009.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/horgan_etal-mawrth_ez_v2_small.pdf"
+  },
+  {
+   "id": "ez1010",
+   "abstract": 1010,
+   "name": "Nili Fossae",
+   "lat": 21.506,
+   "lon": 76.948,
+   "elev_km": -0.611,
+   "proposer": "Markle Loren",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1010.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/nili_fossae_landing_site_and_ez.pdf"
+  },
+  {
+   "id": "ez1011.1",
+   "abstract": 1011.1,
+   "name": "Acheron Fossae",
+   "lat": 39.0,
+   "lon": -168.0,
+   "elev_km": -3.979,
+   "proposer": null,
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1011.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/viola_arcadiaplanitia_final_tagged.pdf"
+  },
+  {
+   "id": "ez1011.2",
+   "abstract": 1011.2,
+   "name": "Erebus Montes",
+   "lat": 40.0,
+   "lon": -139.5,
+   "elev_km": -3.121,
+   "proposer": null,
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1011.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/viola_arcadiaplanitia_final_tagged.pdf"
+  },
+  {
+   "id": "ez1012",
+   "abstract": 1012,
+   "name": "Hebrus Valles",
+   "lat": 20.083,
+   "lon": 126.633,
+   "elev_km": -3.608,
+   "proposer": "Davila Alfonso",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1012.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/ez_final_present_schulze-makuch_of_davila_etal_humanlanding_site_tagged.pdf"
+  },
+  {
+   "id": "ez1015",
+   "abstract": 1015,
+   "name": "Newton Crater",
+   "lat": -40.5,
+   "lon": -159.5,
+   "elev_km": -1.088,
+   "proposer": "Laine Pauli",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1015.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/laine_ez_1015tagged.pdf"
+  },
+  {
+   "id": "ez1016",
+   "abstract": 1016,
+   "name": "Hills Zephyria Planum",
+   "lat": -1.37,
+   "lon": 157.135,
+   "elev_km": -2.674,
+   "proposer": "Yakovlev Valeriy",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1016.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/valeriyyakovlev_tagged.pdf"
+  },
+  {
+   "id": "ez1017",
+   "abstract": 1017,
+   "name": "Cerberus",
+   "lat": 9.7,
+   "lon": 161.9,
+   "elev_km": -2.731,
+   "proposer": "Wright Shawn",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1017.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/wright_cerberus_ez_tagged.pdf"
+  },
+  {
+   "id": "ez1018",
+   "abstract": 1018,
+   "name": "Amazonis Planitia",
+   "lat": 46.16,
+   "lon": -171.2,
+   "elev_km": -3.9,
+   "proposer": "Stoker Carol",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1018.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/stokerez_presentation_icebreaker_details.pdf"
+  },
+  {
+   "id": "ez1019",
+   "abstract": 1019,
+   "name": "Chryse - Viking",
+   "lat": 22.5,
+   "lon": -48.5,
+   "elev_km": -3.607,
+   "proposer": "Farrell Winslow",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1019.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/ez_chryse_farrell.pdf"
+  },
+  {
+   "id": "ez1020",
+   "abstract": 1020,
+   "name": "Gale Crater",
+   "lat": -4.5,
+   "lon": 137.5,
+   "elev_km": -4.519,
+   "proposer": "Calef Fred",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1020.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/calef_galecrater_lsez2015tagged.pdf"
+  },
+  {
+   "id": "ez1021",
+   "abstract": 1021,
+   "name": "Noachis Terra",
+   "lat": -37.33,
+   "lon": -9.352,
+   "elev_km": 1.21,
+   "proposer": "Hill Jonathan",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1021.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/jhill_noachis_chlorides_finaltagged.pdf"
+  },
+  {
+   "id": "ez1022",
+   "abstract": 1022,
+   "name": "Gale Crater",
+   "lat": -4.74,
+   "lon": 137.087,
+   "elev_km": -4.519,
+   "proposer": "Yun Paul",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1022.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/yun_nasa_landing_site_ez_proposal_for_human_missions_1022.pdf"
+  },
+  {
+   "id": "ez1023",
+   "abstract": 1023,
+   "name": "Equatorial Valles Marineris",
+   "lat": -18.83,
+   "lon": -49.21,
+   "elev_km": 1.218,
+   "proposer": "Mitchell Julie",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1023.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/mitchell_landingsite_final.pdf"
+  },
+  {
+   "id": "ez1025",
+   "abstract": 1025,
+   "name": "McLaughlin Crater",
+   "lat": 21.9,
+   "lon": -22.4,
+   "elev_km": -5.057,
+   "proposer": "Michalski Joe",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1025.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/michalski-8am-mclaughlin-humanstagged.pdf"
+  },
+  {
+   "id": "ez1026",
+   "abstract": 1026,
+   "name": "Firsoff Crater",
+   "lat": 0.0,
+   "lon": -8.0,
+   "elev_km": -1.846,
+   "proposer": "Ori Gian",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1026.pdf",
+   "slides_url": null
+  },
+  {
+   "id": "ez1027",
+   "abstract": 1027,
+   "name": "Ismenius Cavus",
+   "lat": 33.5,
+   "lon": 17.0,
+   "elev_km": -3.1,
+   "proposer": "Mangold Nicolas",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1027.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/ismenius-mangoldtagged.pdf"
+  },
+  {
+   "id": "ez1028",
+   "abstract": 1028,
+   "name": "Hale Crater",
+   "lat": -35.5479,
+   "lon": -36.5342,
+   "elev_km": -1.941,
+   "proposer": "Stillman David",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1028.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/hale_crater_v3.pdf"
+  },
+  {
+   "id": "ez1029",
+   "abstract": 1029,
+   "name": "Copernicus Crater",
+   "lat": -49.0,
+   "lon": -169.0,
+   "elev_km": 0.2,
+   "proposer": "Westenberg",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1029.pdf",
+   "slides_url": null
+  },
+  {
+   "id": "ez1030",
+   "abstract": 1030,
+   "name": "Meridiani Planum",
+   "lat": 0.5,
+   "lon": -4.5,
+   "elev_km": -1.306,
+   "proposer": "Cohen Barb",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1030.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/1030_seibert_meridiani_planumtagged.pdf"
+  },
+  {
+   "id": "ez1032",
+   "abstract": 1032,
+   "name": "Huygens Crater",
+   "lat": -13.5,
+   "lon": 55.5,
+   "elev_km": 1.319,
+   "proposer": "Ackiss Sheridan",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1032.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/huygens_presentation_v3tagged.pdf"
+  },
+  {
+   "id": "ez1033",
+   "abstract": 1033,
+   "name": "Deuteronilus Mensae",
+   "lat": 39.11,
+   "lon": 23.199,
+   "elev_km": -3.565,
+   "proposer": "Head Jim",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1033.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/1033-head_humans_to_mars_presentation_10-28-15final.pdf"
+  },
+  {
+   "id": "ez1034",
+   "abstract": 1034,
+   "name": "Jezero Crater",
+   "lat": 17.5,
+   "lon": 77.0,
+   "elev_km": -2.421,
+   "proposer": "Mustard Jack",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1034.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/mustard_human_landing_october-2015tagged.pdf"
+  },
+  {
+   "id": "ez1035",
+   "abstract": 1035,
+   "name": "Hellas Basin",
+   "lat": -35.5,
+   "lon": 94.0,
+   "elev_km": -2.594,
+   "proposer": "Gallegos Zachary",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1035.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/hellas_presentationtagged.pdf"
+  },
+  {
+   "id": "ez1036",
+   "abstract": 1036,
+   "name": "Coprates Chasma",
+   "lat": -11.76,
+   "lon": -66.6,
+   "elev_km": -4.744,
+   "proposer": "Mojarro A",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1036.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/mojarro_1036.pdf"
+  },
+  {
+   "id": "ez1037",
+   "abstract": 1037,
+   "name": "Hellas Rim",
+   "lat": -39.0,
+   "lon": 102.0,
+   "elev_km": -0.381,
+   "proposer": "Levy Joe",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1037.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/ez_levy_holt_v2a_tagged.pdf"
+  },
+  {
+   "id": "ez1038",
+   "abstract": 1038,
+   "name": "Eastern Hellas",
+   "lat": -40.0,
+   "lon": 104.0,
+   "elev_km": 0.471,
+   "proposer": "Rice Jim",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1038.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/rice_hellas_ez_tagged.pdf"
+  },
+  {
+   "id": "ez1040",
+   "abstract": 1040,
+   "name": "Gale Crater",
+   "lat": -4.64,
+   "lon": 137.12,
+   "elev_km": -2,
+   "proposer": "Montaño Sui",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1040.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/20151021landingsite-4tagged.pdf"
+  },
+  {
+   "id": "ez1041",
+   "abstract": 1041,
+   "name": "Columbus Crater",
+   "lat": -29.0,
+   "lon": -166.0,
+   "elev_km": 0.902,
+   "proposer": "Lynch Kennda",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1041.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/columbus_crater_klynchtagged.pdf"
+  },
+  {
+   "id": "ez1042",
+   "abstract": 1042,
+   "name": "Sinus Meridiani",
+   "lat": -2.3,
+   "lon": -6.4,
+   "elev_km": -0.991,
+   "proposer": "Wilkinson Murray",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1042.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/wilkinson_mcgovern_ez_28oct_tagged.pdf"
+  },
+  {
+   "id": "ez1043",
+   "abstract": 1043,
+   "name": "Apollinaris Sulci",
+   "lat": -12.623,
+   "lon": 177.0211,
+   "elev_km": -2142,
+   "proposer": "Kerber Laura",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1043.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/kerber_apollinaris_sulcitagged.pdf"
+  },
+  {
+   "id": "ez1044",
+   "abstract": 1044,
+   "name": "Deuteronilus Mensae",
+   "lat": 41.0,
+   "lon": 22.0,
+   "elev_km": -2.313,
+   "proposer": "Plaut Jeff",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1044.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/plaut_deut_human_ez_tagged.pdf"
+  },
+  {
+   "id": "ez1045.1",
+   "abstract": 1045.1,
+   "name": "Ausonia Cavus",
+   "lat": -32.0,
+   "lon": 96.5,
+   "elev_km": -2.71,
+   "proposer": null,
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1045.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/1045_uhhilo_hamiltontagged.pdf"
+  },
+  {
+   "id": "ez1045.2",
+   "abstract": 1045.2,
+   "name": "Kasei Valles",
+   "lat": 25.0,
+   "lon": -72.0,
+   "elev_km": 0.394,
+   "proposer": null,
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1045.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/1045_uhhilo_hamiltontagged.pdf"
+  },
+  {
+   "id": "ez1046",
+   "abstract": 1046,
+   "name": "Apollinaris Sulci",
+   "lat": -13.0,
+   "lon": 175.0,
+   "elev_km": -1.361,
+   "proposer": "Rice Jim",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1046.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/rice_gusev_mars_landing_2015.pdf"
+  },
+  {
+   "id": "ez1048",
+   "abstract": 1048,
+   "name": "Aram Chaos",
+   "lat": 2.44,
+   "lon": -19.73,
+   "elev_km": -3400,
+   "proposer": "Sibille Laurent",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1048.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/sibille_aram_chaos_102815_2_tagged.pdf"
+  },
+  {
+   "id": "ez1050",
+   "abstract": 1050,
+   "name": "Noctis Landing",
+   "lat": -6.45,
+   "lon": -92.602,
+   "elev_km": 7.971,
+   "proposer": "Lee Pascal",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1050.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/noctislandingez-lee-presentedtagged.pdf"
+  },
+  {
+   "id": "ez1051",
+   "abstract": 1051,
+   "name": "Hypanis",
+   "lat": 11.7,
+   "lon": -45.3,
+   "elev_km": -2.7,
+   "proposer": "Gupta Sanjeev",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1051.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/hypanis_ez_hls2.pdf"
+  },
+  {
+   "id": "ez1052",
+   "abstract": 1052,
+   "name": "Hadriacus Palus",
+   "lat": -26.84,
+   "lon": 77.47,
+   "elev_km": -2.649,
+   "proposer": "Skinner Jim",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1052.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/skinner-et-al_marshumanez_firstworkshop_final_tagged.pdf"
+  },
+  {
+   "id": "ez1053",
+   "abstract": 1053,
+   "name": "Protonilus Mensae",
+   "lat": 42.187,
+   "lon": 48.062,
+   "elev_km": -1.48,
+   "proposer": "Gallegos Zachary",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1053.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/protonilus_mensae_presentation_tagged.pdf"
+  },
+  {
+   "id": "ez1054",
+   "abstract": 1054,
+   "name": "Eastern Valles Marineris",
+   "lat": -3.95,
+   "lon": -35.2,
+   "elev_km": -3.9,
+   "proposer": "Clifford Stephen",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1054.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/clifford_presentation_-_3.pdf"
+  },
+  {
+   "id": "ez1056",
+   "abstract": 1056,
+   "name": "Tempe Terra",
+   "lat": 41.628,
+   "lon": -88.921,
+   "elev_km": 0.61,
+   "proposer": "Gallegos Zachary",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1056.pdf",
+   "slides_url": null
+  },
+  {
+   "id": "ez1057",
+   "abstract": 1057,
+   "name": "Meridiani Planum",
+   "lat": -3.08,
+   "lon": -5.54,
+   "elev_km": -1574,
+   "proposer": "Clarke J.D. A.",
+   "abstract_url": "https://www.hou.usra.edu/meetings/explorationzone2015/pdf/1057.pdf",
+   "slides_url": "https://www.nasa.gov/sites/default/files/atoms/files/00_meridiani_ez_clarke_etal-7tagged.pdf"
+  }
+ ],
+ "starship": [
+  {
+   "id": "ssPM1",
+   "name": "Phlegra Montes PM-1",
+   "lat": 35.23,
+   "lon": 163.95,
+   "elev_km": -3.2,
+   "tier": "prime"
+  },
+  {
+   "id": "ssAP1",
+   "name": "Arcadia Planitia AP-1",
+   "lat": 39.8,
+   "lon": -157.9,
+   "elev_km": -3.9,
+   "tier": "prime"
+  },
+  {
+   "id": "ssAP9",
+   "name": "Arcadia Planitia AP-9",
+   "lat": 40.02,
+   "lon": -156.65,
+   "elev_km": -3.9,
+   "tier": "prime"
+  },
+  {
+   "id": "ssEM16",
+   "name": "Erebus Montes EM-16",
+   "lat": 39.89,
+   "lon": -167.97,
+   "elev_km": -3.9,
+   "tier": "prime"
+  },
+  {
+   "id": "ssAP8",
+   "name": "Arcadia Planitia AP-8",
+   "lat": 40.75,
+   "lon": -158.7,
+   "elev_km": null,
+   "tier": "secondary"
+  },
+  {
+   "id": "ssEM15",
+   "name": "Erebus Montes EM-15",
+   "lat": 39.75,
+   "lon": -164.38,
+   "elev_km": null,
+   "tier": "secondary"
+  },
+  {
+   "id": "ssPM7",
+   "name": "Phlegra Montes PM-7",
+   "lat": 36.43,
+   "lon": 162.16,
+   "elev_km": -2.3,
+   "tier": "secondary"
+  }
+ ],
+ "heritage": [
+  {
+   "id": "hVL1",
+   "name": "Viking 1",
+   "year": 1976,
+   "lat": 22.27,
+   "lon": -47.95,
+   "note": "Chryse Planitia; first successful Mars landing"
+  },
+  {
+   "id": "hVL2",
+   "name": "Viking 2",
+   "year": 1976,
+   "lat": 47.6673,
+   "lon": 134.2809,
+   "note": "Utopia Planitia"
+  },
+  {
+   "id": "hMPF",
+   "name": "Mars Pathfinder",
+   "year": 1997,
+   "lat": 19.086,
+   "lon": -33.237,
+   "note": "Ares Vallis; Sojourner rover"
+  },
+  {
+   "id": "hMER-A",
+   "name": "Spirit (MER-A)",
+   "year": 2004,
+   "lat": -14.5692,
+   "lon": 175.4729,
+   "note": "Gusev crater"
+  },
+  {
+   "id": "hMER-B",
+   "name": "Opportunity (MER-B)",
+   "year": 2004,
+   "lat": -1.9462,
+   "lon": -5.5266,
+   "note": "Meridiani Planum"
+  },
+  {
+   "id": "hPHX",
+   "name": "Phoenix",
+   "year": 2008,
+   "lat": 68.22,
+   "lon": -125.75,
+   "note": "Vastitas Borealis; dug into shallow water ice"
+  },
+  {
+   "id": "hMSL",
+   "name": "Curiosity (MSL)",
+   "year": 2012,
+   "lat": -4.589467,
+   "lon": 137.4416,
+   "note": "Gale crater, Bradbury Landing; ellipse 20 x 7 km"
+  },
+  {
+   "id": "hInSight",
+   "name": "InSight",
+   "year": 2018,
+   "lat": 4.502,
+   "lon": 135.623,
+   "note": "Elysium Planitia; ellipse 130 x 27 km"
+  },
+  {
+   "id": "hM2020",
+   "name": "Perseverance (Mars 2020)",
+   "year": 2021,
+   "lat": 18.44463,
+   "lon": 77.4509,
+   "note": "Jezero crater, Octavia E. Butler Landing; ellipse 7.7 x 6.6 km with TRN"
+  },
+  {
+   "id": "hZhurong",
+   "name": "Zhurong (Tianwen-1)",
+   "year": 2021,
+   "lat": 25.066,
+   "lon": 109.925,
+   "note": "Utopia Planitia; ellipse 56 x 22 km"
+  },
+  {
+   "id": "hMars3",
+   "name": "Mars 3 (probable)",
+   "year": 1971,
+   "lat": -45.058,
+   "lon": -157.969,
+   "note": "Terra Sirenum; first soft landing, lost after ~20 s; position from candidate hardware in HiRISE"
+  }
+ ]
+}

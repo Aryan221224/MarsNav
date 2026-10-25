@@ -1,0 +1,19 @@
+{
+ "ortho5": {
+  "file": "ortho5.jpg",
+  "res": 5.0,
+  "width": 3384,
+  "height": 2848,
+  "source": "M20_JezeroCrater_CTXortho_mosaic_5m.tif (orthoimage), tinted for display"
+ },
+ "hi2": {
+  "tiles": [],
+  "res": 2.0,
+  "source": "none (no 1 m DTM at this site)"
+ },
+ "regional": {
+  "file": "regional.jpg",
+  "grid": "reg100",
+  "source": "M20_JezeroCrater_CTXDEM_20m.tif averaged to 100 m, shaded relief"
+ }
+}

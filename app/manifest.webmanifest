@@ -1,0 +1,21 @@
+{
+  "name": "MarsNav",
+  "short_name": "MarsNav",
+  "description": "MarsNav: landing site selection and EVA traverse planning and guidance for human Mars exploration, on real NASA / USGS data.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0f14",
+  "theme_color": "#151c26",
+  "icons": [
+    {
+      "src": "logo-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
