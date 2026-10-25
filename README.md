@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="app/logo-192.png" width="120" alt="MarsNav logo">
+  <img src="app/logo-192.png" width="120" alt="MarsNav logo (AI-generated)"><br>
+  <sub>Logo: AI-generated</sub>
 </p>
 
 <h1 align="center">MarsNav</h1>
@@ -129,7 +130,7 @@ Mars data from NASA and the USGS Astrogeology Science Center: HiRISE and CTX (MR
 
 MarsNav is an independent project built for the NASA Space Apps Challenge 2026. It is not a NASA product and is not endorsed by NASA.
 
-**Use of AI.** MarsNav was developed with an AI coding assistant (Anthropic's Claude), which wrote and refactored much of the code and drafted the documents from the team's design decisions and results. Every result comes from running the code on real data and can be re-run. No images, video or audio in the project are AI-generated. Details: [`docs/AI_USE.md`](docs/AI_USE.md).
+**Use of AI.** We used an AI coding assistant (Anthropic's Claude) to help write, test and document MarsNav to the team's design; the team reviewed and tested every change. The logo was made with an AI image generator and is marked as AI-generated. All data is real mission data and every result can be re-run from the code. Details: [`docs/AI_USE.md`](docs/AI_USE.md).
 
 Fonts: Barlow and IBM Plex Mono (SIL Open Font License). 3D: three.js (MIT).
 

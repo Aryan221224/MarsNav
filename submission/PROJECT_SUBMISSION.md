@@ -18,8 +18,8 @@ It is checked against Perseverance's own records, including a result that did no
 
 ## Link to Final Project
 
-`https://github.com/<owner>/MarsNav` (repository: source, README, 55-page user guide, validation reports)
-Download for Windows: `https://github.com/<owner>/MarsNav/releases/latest` (`MarsNav-Windows.zip`, unzip and double-click `MarsNav.exe`; nothing to install)
+`https://github.com/Aryan221224/MarsNav` (repository: source, README, 55-page user guide, validation reports)
+Download for Windows: `https://github.com/Aryan221224/MarsNav/releases/latest` (`MarsNav-Windows.zip`, unzip and double-click `MarsNav.exe`; nothing to install)
 
 ## Link to Project Demo
 
@@ -33,7 +33,7 @@ A Marswalk is a closed-loop survival problem. The crew cannot call Earth for hel
 
 ### What it does
 
-**Landing mode: where the crew lands and lives.** A 3D globe streams the whole planet the way a flight simulator streams the Earth, from 3.7 km MOLA topography down to 1 m HiRISE elevation and 25 cm imagery where they exist. All 66 candidate sites (48 NASA Exploration Zones from the 2015 Human Landing Sites workshop, 7 SpaceX Starship candidates, 11 heritage landers) are screened in seconds against NASA's 2015 criteria, or the 2021 Starship study. Any point on Mars gets a dossier: engineering limits (latitude, elevation for atmospheric braking, slope), a Monte Carlo landing ellipse on lander-safe ground, terrain-relative-navigation coverage, water ice (SWIM), near-surface water (Mars Odyssey GRS), thermal inertia and dust (TES), craters, geology, radiation and sunlight. A safety map shows lander-safe ground; "commit the hub" builds a full EVA site at 1 to 20 m resolution from the best elevation data at that place.
+**Landing mode: where the crew lands and lives.** A 3D globe streams the whole planet, sharpening as you zoom in, from 3.7 km MOLA topography down to 1 m HiRISE elevation and 25 cm imagery where they exist. All 66 candidate sites (48 NASA Exploration Zones from the 2015 Human Landing Sites workshop, 7 SpaceX Starship candidates, 11 heritage landers) are screened in seconds against NASA's 2015 criteria, or the 2021 Starship study. Any point on Mars gets a dossier: engineering limits (latitude, elevation for atmospheric braking, slope), a Monte Carlo landing ellipse on lander-safe ground, terrain-relative-navigation coverage, water ice (SWIM), near-surface water (Mars Odyssey GRS), thermal inertia and dust (TES), craters, geology, radiation and sunlight. A safety map shows lander-safe ground; "commit the hub" builds a full EVA site at 1 to 20 m resolution from the best elevation data at that place.
 
 **Plan: the evening before.** The crew picks stations and states the work at each (time, intensity, tool energy, extra oxygen or water) and the suit and rover checkout state (tank fills, battery health). MarsNav runs the hard limits first (walking slope, step height, cliffs with a position-error buffer, soft soil priced by its worst 10 % of outcomes, keep-outs, planetary-protection zones, daylight, and the walk home), then plans five named routes: balanced, safest, fastest, lowest consumption, and a fallback in a different corridor. Each shows time, distance, oxygen, water, battery, the worst walk-home margin, radiation dose and data confidence. The best set and order of stations is found exactly (Held-Karp). When no plan can work, it shows the point of no return and the resource that runs out, instead of just saying "infeasible". A 3D view walks the route at eye height against the real crater skyline.
 
@@ -158,19 +158,18 @@ Every file is downloaded from its canonical source with a recorded size and SHA-
 **Software and assets** (all open source, used under their licences)
 - three.js (MIT), numpy, scipy, rasterio and GDAL, Pillow, pywebview, pythonnet, PyInstaller, Microsoft Edge WebView2 runtime.
 - Fonts: Barlow, Barlow Condensed and IBM Plex Mono (SIL Open Font License).
-- Logo, screenshots, diagrams and the user guide were made by the team for this project.
+- Screenshots, diagrams and the user guide were made by the team for this project; the logo was made with an AI image generator (see Use of AI).
 
 No code was copied from other projects; three ideas seen in other public entries were re-implemented independently and are credited in `submission/comparison.md`.
 
 ## Use of AI
 
-MarsNav was developed with an AI coding assistant (Anthropic's Claude), used throughout the project:
+We used AI tools the way a modern engineering team does: to move faster, while every design decision, method, result and claim stayed with the team.
 
-- **Code:** writing and refactoring much of the source code (planning engine, data pipeline, desktop app, interface) from the team's design decisions, and debugging. The repository acknowledges this in `docs/AI_USE.md`, linked from the README.
-- **Documents:** drafting the README, technical documents, the user guide and this submission text from the team's results.
-- **Testing:** writing automated tests and capturing the user guide's screenshots from the running app.
-
-The science, the data and the results are not AI-generated: every number comes from running the code on real NASA data, and the tests, the validation against Perseverance and the closed-loop campaign can be re-run by anyone (`validation/`). No images, video or audio in the project were generated by AI, and no AI-generated content uses NASA branding.
+- **Software development.** We used an AI coding assistant (Anthropic's Claude) to help write, refactor, test and debug code to our design. The team designed the system, chose the methods and data, set the safety rules, and reviewed and tested every change. The repository acknowledges the AI-assisted code in `docs/AI_USE.md`, linked from the README.
+- **Documentation.** The assistant helped draft and edit the README, the technical documents, the user guide and this submission from our results; we checked every statement against the code and data.
+- **Logo.** The MarsNav logo was created with an AI image generator and carries a visible "AI-generated" watermark.
+- **Not AI-generated.** All data is real NASA, ESA and USGS mission data, downloaded from its source with recorded checksums. Every number in this submission comes from running our code on that data and can be reproduced with the scripts in `validation/`. Screenshots are captures of the running app. No AI-generated content uses NASA branding.
 
 ## Images for the project page
 
