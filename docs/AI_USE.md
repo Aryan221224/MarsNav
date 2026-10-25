@@ -11,7 +11,7 @@ We used AI tools the way a modern engineering team does: to move faster, while e
 | Source code (`engine/`, `planet/`, `pipeline/`, `launcher/`, `app/`) | An AI coding assistant (Anthropic's Claude) helped write, refactor and debug code | Designed the system, chose methods and data, set the safety rules, reviewed and tested every change |
 | Tests and validation (`tests/`, `validation/`) | Helped write test and validation code | Chose what to test against (Perseverance's records, NASA's TSS2027 server) and checked the results |
 | Documents (`README.md`, `docs/`, `submission/`, the user guide) | Helped draft and edit text from our results | Checked every statement against the code and data |
-| Logo (`app/logo-*.png`, `app/icon-256.png`, `app/favicon-64.png`) | Created with an AI image generator | Chose the design; marked as AI-generated in the README and the submission |
+| Logo (`app/logo-*.png`, `app/icon-256.png`, `app/favicon-64.png`) | Created with an AI image generator | Chose the design; every logo image carries a visible "AI-generated" watermark (the 64 px favicon and the Windows program icon are too small to carry it) |
 
 All source files in this repository should be treated as AI-assisted.
 

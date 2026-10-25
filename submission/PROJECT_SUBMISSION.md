@@ -10,7 +10,7 @@ MarsNav
 
 ## High-Level Project Summary
 
-The first astronauts on Mars will walk with no GPS, 4 to 24 light-minutes from help, carrying a fixed supply of oxygen, water and battery across ground that has already trapped a rover. MarsNav is a desktop mission tool that answers the two questions every crew will ask: **where do we land and live, and which way do we walk, and can we always get home?**
+The first astronauts on Mars will walk with no GPS, 4 to 24 light-minutes from help, carrying a fixed supply of oxygen, water and battery across ground that has already trapped a rover. MarsNav is crew mission software, built to run on whatever computer the mission carries (a habitat station, a rover or a suit display), and it answers the two questions every crew will ask: **where do we land and live, and which way do we walk, and can we always get home?**
 
 Landing mode screens 66 candidate sites anywhere on Mars against NASA's human landing-site criteria, on live NASA and USGS data, and turns the chosen site into a full EVA site. The EVA planner reads the ground the way a boot meets it, from 1 m HiRISE elevation models, applies hard safety limits before it optimises anything, and plans five named routes on which every step keeps a walk home. During the EVA it reads suit telemetry in NASA's SUITS format, learns how hard the crew is really working, and re-plans before the margin runs out.
 
@@ -50,7 +50,7 @@ A Marswalk is a closed-loop survival problem. The crew cannot call Earth for hel
 - **The walk home inside the search.** A walkback field gives the true shortest safe return time and the oxygen, water and battery it costs from every cell. Any partial route from which the crew could not walk home is dropped during the search, so the guarantee holds at every step, not only at the turnaround.
 - **Physiology and environment.** Metabolic power from walking speed and slope (calibrated on Apollo surface data), a suit heat balance with sun, shade and temperature, a Mars clock on NASA's Mars24 algorithm, horizon shadows in 16 directions, a temperature and pressure climatology fitted to Perseverance's MEDA weather station, and radiation dose from Curiosity's RAD.
 - **Position error as a planning input.** Cliff and keep-out stand-offs grow where dead reckoning will have drifted; navigation-aid choices change the plan.
-- **One engine everywhere.** The planning engine is plain JavaScript shared by the app, the tests and the validation. The desktop app is a Python supervisor with health checks and automatic restarts, the planet engine reads MOLA, HRSC, CTX and HiRISE through GDAL in worker processes, and the interface is HTML, CSS and JavaScript in a native Windows window (Microsoft Edge WebView2). The display is informed by NASA-STD-3001 Vol. 2: dark low-glare ground, status colours reserved for status, every value with its unit.
+- **One engine everywhere.** The planning engine is plain JavaScript shared by the app, the tests and the validation, and runs offline in any modern browser engine, so it can move onto the computers a mission carries: a habitat station, a rover or a suit display. Today's host is a Python supervisor with health checks and automatic restarts, the planet engine reads MOLA, HRSC, CTX and HiRISE through GDAL in worker processes, and the interface is HTML, CSS and JavaScript in a native Windows window (Microsoft Edge WebView2). The display is informed by NASA-STD-3001 Vol. 2: dark low-glare ground, status colours reserved for status, every value with its unit.
 
 ### Checked against Perseverance
 
@@ -65,7 +65,7 @@ A Marswalk is a closed-loop survival problem. The crew cannot call Earth for hel
 | Against NASA's TSS2027 telemetry server | Learned an 8× faster battery and CO₂ drain and turned the EVA home within about 2 minutes |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-78 automated tests pass (63 engine and closed-loop, 15 pipeline and downloader), and the desktop server passes an end-to-end self-test under load, including a first run on an empty computer.
+78 automated tests pass (63 engine and closed-loop, 15 pipeline and downloader), and the local server passes an end-to-end self-test under load, including a first run on an empty computer.
 
 ### Use-case evidence: the same trip as Perseverance
 
@@ -116,7 +116,7 @@ Rock-abundance maps from HiRISE imagery, two-crew and rover-pair operations, a h
 
 ### Built with
 
-Python (numpy, scipy, rasterio / GDAL, Pillow, pywebview, pythonnet, PyInstaller), JavaScript (ES modules, Web Workers, three.js), HTML and CSS, Node.js test runner, pytest. Windows desktop app; the EVA planner also runs in any modern browser.
+Python (numpy, scipy, rasterio / GDAL, Pillow, pywebview, pythonnet, PyInstaller), JavaScript (ES modules, Web Workers, three.js), HTML and CSS, Node.js test runner, pytest. No special hardware: today it runs on any Windows 10 or 11 computer and the EVA planner runs in any modern browser; the same engine is built to run on habitat, rover and suit computers.
 
 ## NASA Data
 
