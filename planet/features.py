@@ -34,10 +34,15 @@ def _load() -> dict:
     with _lock:
         if _db:
             return _db
-        try:
-            doc = json.loads(gzip.decompress(_FILE.read_bytes()))
-        except (OSError, ValueError):
-            doc = {"layers": {}}
+        doc = {"layers": {}}
+        from .config import PATHS
+        # the install folder first (the packaged app runs these modules from its runtime folder), then next to this file
+        for f in (PATHS.get("root", Path(".")) / "planet" / "data" / "features.json.gz", _FILE):
+            try:
+                doc = json.loads(gzip.decompress(f.read_bytes()))
+                break
+            except (OSError, ValueError):
+                continue
         for k, L in doc.get("layers", {}).items():
             if L.get("pts") is not None and L["geom"] in ("point",):
                 a = np.array(L["pts"], np.float64).reshape(-1, 3)

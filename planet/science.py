@@ -19,10 +19,15 @@ _cache: dict = {}
 
 def _json(name: str) -> dict:
     if name not in _cache:
-        try:
-            _cache[name] = json.loads((_DIR / name).read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            _cache[name] = {}
+        from .config import PATHS
+        _cache[name] = {}
+        # the install folder first (the packaged app runs these modules from its runtime folder), then next to this file
+        for d in (PATHS.get("root", Path(".")) / "planet" / "data", _DIR):
+            try:
+                _cache[name] = json.loads((d / name).read_text(encoding="utf-8"))
+                break
+            except (OSError, ValueError):
+                continue
     return _cache[name]
 
 
