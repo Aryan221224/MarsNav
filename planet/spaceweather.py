@@ -236,10 +236,15 @@ def summary(now: datetime | None = None, days: int = 30) -> dict:
     return out
 
 
+_last_try = [0.0]
+
+
 def ensure_fresh(log=print) -> None:
-    """Refresh in the background when the stored data are stale and the internet is allowed."""
+    """Refresh in the background when the stored data are stale and the internet is allowed (at most one attempt every
+    15 minutes, so an unreachable server is not asked on every page load)."""
     doc = _load()
-    if net.blocked() or (doc and time.time() - doc.get("fetched_s", 0) < STALE_S):
+    if net.blocked() or (doc and time.time() - doc.get("fetched_s", 0) < STALE_S) or time.time() - _last_try[0] < 900:
         return
+    _last_try[0] = time.time()
     import threading
     threading.Thread(target=lambda: refresh(log=lambda m: None), daemon=True, name="spaceweather").start()

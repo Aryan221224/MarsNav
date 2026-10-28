@@ -314,7 +314,11 @@ body.mars .topbar { box-shadow: inset 0 -2px 0 var(--caution); }
 .sbar b { display: block; height: 100%; background: var(--accent); }
 .st { font-size: 11px; font-family: var(--font-label); letter-spacing: .04em; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line-2); white-space: nowrap; }
 .st.active { color: var(--go); border-color: #3ee07e66; } .st.future { color: var(--accent); } .st.past { color: var(--text-faint); }
-#misList .t small { display: block; }
+#misList .t, #objCard .list .t, #objRank .t { white-space: normal; }
+#misList .t small, #objCard .list .t small, #objRank .t small { display: block; margin-left: 0; }
+#misList .m, #objRank .m { white-space: normal; }
+/* the legend sits by the zoom controls: the layer list is long now and would cover it on the left */
+#legend { left: auto; right: 58px; }
 .mk.future { color: #ffd479; font-style: italic; } .mk.future::after { width: 7px; height: 7px; border-radius: 1px; transform: rotate(45deg); background: #ffd479; }
 #labels.far .mk.future { font-size: 0; }
 #swxBody .tbl { width: 100%; font-size: 12.5px; margin: 4px 0 8px; }
