@@ -80,6 +80,18 @@ Layer format: gzip-compressed little-endian uint8/uint16 arrays with a scale and
 - `index.html` and `css/app.css` implement the NASA-informed display: a dark theme, colours reserved for status (red, amber, green, cyan), violet for uncertainty, fixed-width digits and units everywhere.
 - `sw.js` caches the app shell and each file on first use, so a standalone deployment works with no network. It is skipped when the app is embedded in a viewer that does not allow service workers.
 
+## Added for the 2026 statement
+
+| Module | Responsibility |
+|---|---|
+| `planet/features.py` | The bundled feature catalogues (minerals, ice landforms, activity, dunes, valleys, landers, traverses): drawing on tiles, radius queries, the "science along the way" context and the planetary-protection flag |
+| `planet/atlas.py` | TES mineral and dust maps and MOLA roughness from Mars Trek; model layers for air pressure, cosmic-ray dose and sunlight; the layer catalogue grouped by kind of measurement |
+| `planet/datasets.py` (extended) | GRS elements, TES albedo, MRO GMM-3 gravity (spherical harmonics summed on a 0.25° grid) |
+| `planet/science.py` | Mission catalogue and science objectives; scores and ranks places by the evidence near them |
+| `planet/spaceweather.py` | NASA DONKI client, offline cache, Sun-Earth-Mars geometry and the EVA advisory |
+| `app/hud.html`, `app/js/hud.js` | Crew displays: helmet visor HUD, rover dashboard, wrist cuff, fed by the planner over a BroadcastChannel |
+| `tools/build_features.py`, `tools/build_pov.py`, `tools/add_rover_context.py` | Rebuild the bundled catalogues, the station photographs, and a site's rover context (traverse, stations, keep-out, clock) |
+
 ## Performance (one 2.1 GHz Xeon core, Node 22)
 
 | Step | Time |

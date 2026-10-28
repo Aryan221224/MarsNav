@@ -23,7 +23,16 @@ POST /api/local/estimate {plan}             sizes of a Local mode plan against t
 POST /api/local/install  {plan}             -> job (download it all, resumable)
 POST /api/local/cancel                      stop the running download (what is done is kept)
 POST /api/local/mode     {offline: bool}    Mars mode on / off (on: nothing is sent to the internet)
-GET  /tiles/img/{z}/{y}/{x}.jpg?layer=&ovl= base imagery + overlays (planet/imagery.py)"""
+GET  /tiles/img/{z}/{y}/{x}.jpg?layer=&ovl= base imagery + overlays (planet/imagery.py)
+GET  /api/atlas                             every map layer by kind of measurement (planet/atlas.py)
+GET  /api/features                          the bundled feature catalogues (planet/features.py)
+GET  /api/features/near?lon=&lat=&r=&layers= features near a place, and its science context
+GET  /api/missions                          past, present and future Mars missions (planet/science.py)
+GET  /api/objectives                        science objectives
+GET  /api/objective/rank?id=                every candidate site and hub scored for one objective
+GET  /api/objective/eval?lon=&lat=          every objective scored at one place
+GET  /api/spaceweather                      NASA DONKI digest for Mars with an EVA advisory (planet/spaceweather.py)
+POST /api/spaceweather/refresh              -> job (fetch the latest from DONKI)"""
 from __future__ import annotations
 
 import json

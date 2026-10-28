@@ -14,6 +14,8 @@ The first astronauts on Mars will walk with no GPS, 4 to 24 light-minutes from h
 
 Landing mode screens 66 candidate sites anywhere on Mars against NASA's human landing-site criteria, on live NASA and USGS data, and turns the chosen site into a full EVA site. The EVA planner reads the ground the way a boot meets it, from 1 m HiRISE elevation models, applies hard safety limits before it optimises anything, and plans five named routes on which every step keeps a walk home. During the EVA it reads suit telemetry in NASA's SUITS format, learns how hard the crew is really working, and re-plans before the margin runs out.
 
+A whole-Mars science atlas (minerals, chemistry, gravity, ice, present-day activity, air, radiation, sunlight) and seven science objectives rank where on Mars to go and why; NASA's space-weather database warns of radiation storms; and the same EVA runs on a helmet-visor HUD, a rover dashboard and a wrist cuff that shows the rover's own photograph of the next stop. The challenge's own example, Curiosity's boxwork on Mount Sharp, is a full EVA site.
+
 It is checked against Perseverance's own records, including a result that did not go our way. In 40 paired simulated EVAs it kept every crew out of their reserve (0 of 40, against 31 of 40 flying the filed plan). It runs fully offline, as it must on Mars.
 
 ## Link to Final Project
@@ -41,6 +43,14 @@ A Marswalk is a closed-loop survival problem. The crew cannot call Earth for hel
 
 **Review: after the EVA.** Planned against flown, the event log, the paper cue card crews carry as a fallback, routes as GeoJSON for NASA's MMGIS or QGIS, and the validation against Perseverance.
 
+**Science atlas and objectives: what to study, and where.** Twenty-six more whole-planet layers, grouped by the kind of measurement the challenge lists: spectral (4,572 aqueous-mineral sites, 1,648 CRISM and OMEGA hydrous detections, 642 chloride deposits, TES plagioclase, pyroxene and sheet silicates), chemical (Mars Odyssey GRS iron, chlorine, potassium, thorium, silicon), thermal and surface (albedo, dust cover), topographic (MOLA roughness), geophysical (MRO GMM-3 gravity), atmospheric and radiation (air pressure, cosmic-ray dose scaled from Curiosity's RAD by the air overhead, sunlight), water and ice (glaciers, gullies, fans, valley networks) and present-day activity (recurring slope lineae, new and icy impacts). The dossier lists what is within 100 km and flags candidate Special Regions. Seven science objectives, after the MEPAG goals, turn on their layers with one press and rank every candidate site by the evidence near it. For ancient life they rank Columbus crater, Jezero, Mawrth Vallis and Nili Fossae first. A catalogue of 31 missions (Viking to ESCAPADE, MMX, Rosalind Franklin and Tianwen-3, with MAVEN's loss and Mars Sample Return's cancellation) says what each one gives the map and the crew.
+
+**Space weather.** NASA's DONKI gives CME arrivals forecast at Mars, solar particle events and flares, with the Sun-Earth-Mars angle and an EVA advisory (quiet, watch, storm), cached for Mars mode. Route dose now follows the altitude of every step.
+
+**Crew displays.** The same EVA, live, on a helmet-visor HUD (heading tape, steering cue, walk-home margin, consumables, alerts; it can also overlay the first-person drive window), a rover dashboard (speed, slope ahead, power, route map) and a wrist cuff (the next stop with the rover's own photograph of it, the procedure checklist, acknowledge, pin and a two-step return). Every station at Jezero and Mount Sharp has the rover's raw Navcam and Mastcam frames from that spot: what the crew will see when they arrive.
+
+**The challenge's example: the Mount Sharp boxwork.** Built from five HiRISE 1 m models, with Curiosity's track to sol 5045 and its boxwork drill sites (Altadena, Monte Grande, Campo Marte) placed at the rover's own positions. MarsNav's answer is a real finding. Cliff-bounded buttes (every one at least 8 m high) and 39 % sand leave most of the foothills out of reach with dead-reckoning navigation, so the hub is a forward camp in a pressurised rover. From there a suited crew reaches Altadena in 1.3 h and Campo Marte in 3.4 h.
+
 **Local mode and Mars mode: no Earth link.** Local mode measures and downloads the whole-planet datasets at native resolution and every high-resolution product around each site. Mars mode then refuses every internet request, counts what it refused, and keeps everything working from local copies. The EVA planner needs no internet at any time.
 
 ### How it works
@@ -65,7 +75,7 @@ A Marswalk is a closed-loop survival problem. The crew cannot call Earth for hel
 | Against NASA's TSS2027 telemetry server | Learned an 8× faster battery and CO₂ drain and turned the EVA home within about 2 minutes |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-78 automated tests pass (63 engine and closed-loop, 15 pipeline and downloader), and the local server passes an end-to-end self-test under load, including a first run on an empty computer.
+97 automated tests pass (63 engine and closed-loop, 34 pipeline, downloader and science-atlas), and the local server passes an end-to-end self-test under load, including a first run on an empty computer.
 
 ### Use-case evidence: the same trip as Perseverance
 
@@ -93,7 +103,12 @@ Across all 45 validation drives, MarsNav's routes cross 47 % less mapped sand, 5
 | Updates on current conditions | Live Mars clock, sun and shade along the route, dust, radio line of sight, position error, live suit telemetry with learned rates |
 | Complete the mission quickly and safely | Five named routes under hard limits, walk-home margins everywhere, caution and warning, automatic return |
 | Plan and carry out a successful Marswalk | Plan, Execute and Review, with a 3D rehearsal and a first-person drive window |
-| New and exciting science along the way | Perseverance's real sample sites (Rochette, Séítah, Amalik, Cheyava Falls), a science-value optimiser, landing sites scored for water ice |
+| New and exciting science along the way | Perseverance's real sample sites (Rochette, Séítah, Amalik, Cheyava Falls) and Curiosity's boxwork drill sites, a science-value optimiser, seven science objectives that rank every site, and catalogued minerals, ice and activity within 100 km |
+| At least three kinds of data | Optical, thermal, spectral, topographic, geophysical, atmospheric, radiation and chemical layers for the whole planet |
+| Space weather and radiation | NASA DONKI CME arrivals at Mars, particle events and flares with an EVA advisory; dose by altitude on every route |
+| Habitat display, tablet or helmet HUD | Habitat console, helmet-visor HUD, rover dashboard and wrist cuff, all live |
+| Point-of-view images | The rover's own photographs from each station |
+| The boxwork example at Mount Sharp | A full EVA site with Curiosity's track and drill sites |
 
 ### Benefits and who it helps
 
@@ -112,7 +127,7 @@ Not flight software and not certified to NASA-STD-3001. Hazards smaller than the
 
 ### What's next
 
-Rock-abundance maps from HiRISE imagery, two-crew and rover-pair operations, a helmet display fed by the plan uplink, and testing with analog-mission crews.
+Rock-abundance maps from HiRISE imagery, two-crew and rover-pair operations, the helmet display on its own device through the plan uplink, ESCAPADE's space-weather data at Mars when it arrives in 2027, and testing with analog-mission crews.
 
 ### Built with
 
@@ -138,6 +153,13 @@ Python (numpy, scipy, rasterio / GDAL, Pillow, pywebview, pythonnet, PyInstaller
 | Mars24 algorithm | NASA Goddard Institute for Space Studies | Mars clock: sol, local solar time, season, sun position |
 | Apollo 14, 15 and 17 surface walking data | Apollo programme | Suited walking speed and slope model |
 | NASA-STD-3001 Vol. 2 and SUITS crew-display requirements | NASA | Display, alerting and caution-and-warning design |
+| CRISM and OMEGA hydrous minerals; aqueous-mineral compilation | MRO (with Mars Express OMEGA), via NASA Mars Trek | Spectral layers; science objectives; "science along the way" in the dossier |
+| TES mineral abundances, albedo and dust cover index | Mars Global Surveyor (PDS, NASA Mars Trek) | Spectral and surface layers |
+| GRS iron, chlorine, potassium, thorium, silicon | Mars Odyssey, PDS Geosciences Node | Chemical layers and dossier values |
+| GMM-3 gravity field (spherical harmonics to degree 120) | MRO, MGS and Odyssey radio science, PDS | Geophysical layer (free-air anomaly) |
+| Glaciers, gullies, fans, valley networks, dune fields, recurring slope lineae, new and icy impacts | MRO CTX / HiRISE, Mars Odyssey THEMIS surveys via NASA Mars Trek | Ice, activity, planetary protection and hazard layers |
+| Rover traverses and raw images | Curiosity and Perseverance (NASA/JPL waypoint feeds and raw-image service) | Traverses on the globe; the Mount Sharp site; photographs at every station |
+| DONKI space-weather database | NASA CCMC (api.nasa.gov) | CME arrivals at Mars, particle events, flares, EVA advisory |
 | NASA Mars Trek, Planetary Data System | NASA | Data access and cross-checks |
 
 Every file is downloaded from its canonical source with a recorded size and SHA-256 (`pipeline/sources.json`); `docs/04_data_and_provenance.md` lists each one.

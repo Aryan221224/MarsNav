@@ -43,6 +43,8 @@ Landing mode streams the whole of Mars from a local tile server that builds each
 | Place names | IAU | Gazetteer of Planetary Nomenclature | Labels and search |
 | Mars clock | NASA GISS | Mars24 algorithm | Sol, local solar time, season, sun position |
 
+**Added for the 2026 statement** (full list with citations in docs/12): CRISM / OMEGA / THEMIS mineral catalogues (Ehlmann & Edwards 2014; Carter et al. 2013; Osterloo et al. 2010), TES mineral and dust maps (Bandfield 2002; Ruff & Christensen 2002), TES albedo (PDS), GRS iron, chlorine, potassium, thorium and silicon (Boynton et al. 2007, PDS), MRO GMM-3 gravity (Genova et al. 2016, PDS), MOLA roughness (Kreslavsky & Head 2000), glaciers, gullies, fans, valley networks, dune fields and present-day activity (USGS and MRO surveys, via NASA Mars Trek), rover traverses and raw images (NASA/JPL), NASA DONKI space weather, and the HRSC + MOLA colour relief. The feature catalogues ship in `planet/data/features.json.gz` and are rebuilt by `tools/build_features.py`; the rover photographs by `tools/build_pov.py`.
+
 These whole-planet layers inform landing-site screening. They are not used in the Jezero validation, which relies only on the files listed below.
 
 ## Files
