@@ -83,6 +83,8 @@ async function pickSite() {
 async function boot() {
   try {
     await pickSite();
+    // what each station looks like from the ground: the rover's own photographs (tools/build_pov.py)
+    state.pov = await fetch(new URL("pov.json", DATA)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     const meta = await call("init", { base: DATA });
     state.meta = meta;
     if (meta.projection?.lat_ts != null) setProjection(meta.projection.lat_ts, meta.projection.clon ?? 0);
@@ -423,7 +425,8 @@ function renderStations() {
           · O₂ <input type="number" min="0" max="500" step="5" value="${s.extraO2g || 0}" data-f="extraO2g" style="width:52px;padding:2px 4px"> g
           · water <input type="number" min="0" max="2000" step="10" value="${s.extraWaterG || 0}" data-f="extraWaterG" style="width:58px;padding:2px 4px"> g</div>
         <div class="note">Stated for the full work time: tool and instrument energy from the suit battery, O₂ for a purge, water for sample handling.</div></details>
-      <div class="meta sb" id="sb${k}">${s.budget ? stationBudgetText(s.budget) : ""}</div></div>
+      <div class="meta sb" id="sb${k}">${s.budget ? stationBudgetText(s.budget) : ""}</div>
+      ${povOf(s).length ? `<button class="btn sm pov" data-pov="${k}" title="The rover's own photographs from this spot">What you'll see · ${povOf(s).length} photos</button>` : ""}</div>
       <div class="ord"><button aria-label="Visit earlier" title="Visit earlier" data-up="${k}">&uarr;</button><button aria-label="Visit later" title="Visit later" data-dn="${k}">&darr;</button><button aria-label="Remove" title="Remove" data-del="${k}">&times;</button></div>`;
     box.appendChild(d);
     d.querySelectorAll("[data-f]").forEach((el) => el.addEventListener("change", (e) => {
@@ -434,6 +437,7 @@ function renderStations() {
       scheduleReplan(1200);
     }));
   });
+  box.querySelectorAll("[data-pov]").forEach((b) => b.addEventListener("click", () => showPov(state.stations[+b.dataset.pov])));
   const changed = () => { renderStations(); scheduleReplan(); };
   box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => { state.stations.splice(+b.dataset.del, 1); changed(); }));
   box.querySelectorAll("[data-up]").forEach((b) => b.addEventListener("click", () => {
@@ -1006,6 +1010,20 @@ function runSim(on) {
   }, 500);
 }
 
+// ------------------------------------------------------------------------------------- point-of-view photos --
+const povOf = (s) => (s && state.pov?.stations?.[s.id ?? ""]?.images) || [];
+const povCaption = (i) => [`${i.rover} ${i.camera}`, `sol ${i.sol}`, i.lmst ? `${i.lmst} LMST` : null,
+  i.azimuth_deg != null ? `facing ${((i.azimuth_deg % 360) + 360) % 360}°` : null, `rover ${i.rover_m_from_station} m from the station`].filter(Boolean).join(" · ");
+function showPov(st) {
+  const imgs = povOf(st);
+  if (!imgs.length) return;
+  $("modalTitle").textContent = `What you'll see · ${st.name}`;
+  $("modalBody").innerHTML = `<div class="povgrid">${imgs.map((i) => `<figure><a href="${new URL(i.source).href}" target="_blank" rel="noopener"><img src="${new URL(i.file, DATA).href}" alt="${povCaption(i)}" loading="lazy"></a>
+      <figcaption>${povCaption(i)}<br><span class="note">${i.credit} · raw image ${i.imageid}</span></figcaption></figure>`).join("")}</div>
+    <p class="note">${state.pov.note} Click a photo for NASA's full-resolution original.</p>`;
+  $("modal").hidden = false;
+}
+
 // ---------------------------------------------------------------------------------- crew displays (hud.html) --
 // The same EVA on the displays a crew would carry: a helmet-visor HUD, a rover dashboard and a wrist cuff. They get
 // the plan and every snapshot over a BroadcastChannel and send back the cuff's commands (acknowledge, silence, pin,
@@ -1038,7 +1056,8 @@ function hudPlan() {
   ch.postMessage({ type: "plan", site: state.site?.short ?? state.site?.name, siteId: state.site?.id, base: state.base,
     clock: state.site?.clock ?? null, profile: $("profile").value, routeName: state.selected, departMs: state.cfg?.departMs ?? null,
     route: r?.ok ? r.pts.filter((_, k) => k % 3 === 0).map((p) => [p.lon, p.lat]) : [],
-    stations: routeStops().map(({ lon, lat, name, id }) => ({ lon, lat, name, id: id ?? null })),
+    stations: routeStops().map((st) => ({ lon: st.lon, lat: st.lat, name: st.name, id: st.id ?? null,
+      pov: povOf(st).map((i) => ({ src: new URL(i.file, DATA).href, caption: povCaption(i), alt: `${st.name}: ${povCaption(i)}` })) })),
     summary: r?.ok ? { t: r.t, dist: r.dist, doseMSv: r.doseMSv, minMargin: r.minMargin } : null,
     guidance: r?.ok ? r.legs.map((l) => ({ from: l.from, to: l.to, guidance: l.guidance })) : [],
     swx: state.swx ? { level: state.swx.level, headline: state.swx.headline } : null });
@@ -1292,9 +1311,12 @@ function onSnap(s) {
       <div class="ret" style="left:${Math.min(99.5, 100 * need)}%"></div></div><span class="num">${(100 * s.remaining[k]).toFixed(0)}%</span></div>`;
   }).join("");
   // station procedure: current and completed steps visible
+  const here = s.station ? state.stations.find((x) => x.name === s.station.name) : null;
+  const pic = povOf(here)[0];
   $("proc").innerHTML = s.station
     ? `<strong>${s.station.name}</strong> <span class="num">${fmtDuration(s.station.done).slice(0, 5)} / ${fmtDuration(s.station.total).slice(0, 5)}</span><ol>${s.station.steps
-      .map((x, k) => `<li class="${k < s.station.step ? "done" : k === s.station.step ? "cur" : ""}">${x}</li>`).join("")}</ol>`
+      .map((x, k) => `<li class="${k < s.station.step ? "done" : k === s.station.step ? "cur" : ""}">${x}</li>`).join("")}</ol>
+      ${pic ? `<img class="procpov" src="${new URL(pic.file, DATA).href}" alt="${povCaption(pic)}"><div class="note">${povCaption(pic)} · ${pic.credit}</div>` : ""}`
     : "Shown while working at a station.";
   state.map.pins = s.pins;
   // alerts

@@ -70,8 +70,8 @@ function nextStop() {
   const P = S.plan, s = S.snap;
   if (!P) return null;
   const home = { name: P.base?.name || "Habitat", lon: P.base.lon, lat: P.base.lat, home: true };
-  if (!s || s.returning || s.done) return home;
-  const done = new Set((s.stops || []).filter((x) => x.done || x.dropped).map((x) => x.name));
+  if (s && (s.returning || s.done)) return home;
+  const done = new Set((s?.stops || []).filter((x) => x.done || x.dropped).map((x) => x.name));
   return P.stations.find((x) => !done.has(x.name)) ?? home;
 }
 

@@ -292,3 +292,11 @@ a.btn { text-decoration: none; color: var(--text); }
 .clock button.item:hover .lbl { color: var(--text); }
 .clock .v.ok { color: var(--nominal); } .clock .v.warn { color: var(--caution); } .clock .v.bad { color: var(--warning); }
 .clock .item[hidden] { display: none; }
+
+/* point-of-view photos: the rover's own pictures from each station */
+.povgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.povgrid figure { margin: 0; }
+.povgrid img { width: 100%; border-radius: 4px; display: block; }
+.povgrid figcaption { font-size: 12.5px; color: var(--text-dim); margin-top: 4px; }
+.station .btn.pov { margin-top: 4px; }
+img.procpov { width: 100%; border-radius: 4px; margin-top: 6px; display: block; }
