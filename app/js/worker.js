@@ -276,7 +276,10 @@ function simSnap(s) {
     back: s.back, dist: s.dist, returning: s.returning, done: s.done, los: s.los, shade: s.shade, alerts: s.alerts, counts: s.counts,
     master: s.master, raised: s.raised || [], cap: P.cap, events: S.sim.events.slice(-40), station: s.station, pins: s.pins,
     returnPts: S.sim.returnCells ? S.sim.returnCells.filter((_, k) => k % 3 === 0).map((i) => S.T.grid.cellLonLat(...S.T.grid.rc(i))) : null,
-    track: S.sim.track.filter((_, k) => k % 5 === 0).map((p) => S.T.grid.cellLonLat(...S.T.grid.rc(p.cur))) };
+    track: S.sim.track.filter((_, k) => k % 5 === 0).map((p) => S.T.grid.cellLonLat(...S.T.grid.rc(p.cur))),
+    // what the crew displays (hud.html) look ahead with
+    rs: s.ruleState ? { slopeAhead: s.ruleState.slopeAhead, sunsetMinLeft: s.ruleState.sunsetMinLeft, losLostMin: s.ruleState.losLostMin,
+      cold: !!s.ruleState.cold, vetoHere: s.ruleState.vetoHere, offRoute: !!s.ruleState.offRoute, crossTrack: s.ruleState.crossTrack } : null };
 }
 
 const handlers = {

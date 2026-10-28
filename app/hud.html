@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MarsNav · Crew display</title>
+<meta name="description" content="The EVA on the displays a Mars crew carries: helmet-visor HUD, rover dashboard and wrist cuff, fed live by the MarsNav planner.">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="stylesheet" href="css/hud.css">
+<link rel="stylesheet" href="css/theme.css">
+</head>
+<body data-mode="visor">
+<nav id="modes" aria-label="Display">
+  <span class="brand">MARSNAV</span>
+  <div class="seg" role="radiogroup" aria-label="Display mode">
+    <button role="radio" data-mode="visor" title="Heads-up display on the helmet visor (1)">Helmet visor</button>
+    <button role="radio" data-mode="rover" title="Dashboard of the crew rover (2)">Rover dashboard</button>
+    <button role="radio" data-mode="cuff" title="Wrist cuff tablet the crew carries (3)">Wrist cuff</button>
+  </div>
+  <span id="link" class="link">waiting</span>
+  <button id="fs" title="Full screen (F)">⛶</button>
+</nav>
+
+<!-- ============================================================ helmet visor: black is transparent on a real visor -->
+<section id="visor" class="mode" aria-label="Helmet visor HUD">
+  <canvas id="vTape" aria-label="Heading tape"></canvas>
+  <div id="vSteer"><svg viewBox="-50 -50 100 100" aria-hidden="true"><path id="vArrow" d="M0,-34 L16,10 L0,2 L-16,10 Z"/></svg>
+    <div id="vNext" class="vtext">--</div></div>
+  <div id="vLeft" class="vcol"></div>
+  <div id="vRight" class="vcol"></div>
+  <div id="vBottom"><div id="vAlert"></div><div id="vProc"></div></div>
+  <div id="vMode" class="vtag">--</div>
+  <canvas id="vMini" width="220" height="220" aria-label="Mini map"></canvas>
+</section>
+
+<!-- ============================================================ rover dashboard -->
+<section id="rover" class="mode" aria-label="Rover dashboard">
+  <div class="rgrid">
+    <div class="rcol">
+      <canvas id="rSpeed" width="300" height="220" aria-label="Speed"></canvas>
+      <div class="rrow"><span class="k">Heading</span><span class="v" id="rHead">--</span></div>
+      <div class="rrow"><span class="k">Slope ahead</span><span class="v" id="rSlope">--</span></div>
+      <div class="rrow"><span class="k">Off route</span><span class="v" id="rXt">--</span></div>
+      <div class="rrow"><span class="k">Position error</span><span class="v" id="rSig">--</span></div>
+      <div class="rrow"><span class="k">Radio to habitat</span><span class="v" id="rLos">--</span></div>
+    </div>
+    <div class="rmap"><canvas id="rMap" aria-label="Route map"></canvas><div id="rMapNote" class="rnote"></div></div>
+    <div class="rcol">
+      <div class="rhead">Rover power</div>
+      <div id="rPower"></div>
+      <div class="rhead">Crew (suit)</div>
+      <div id="rCrew"></div>
+      <div class="rhead">Alerts</div>
+      <div id="rAlerts" class="ralerts"></div>
+    </div>
+  </div>
+  <div id="rBottom">
+    <div><span class="k">Next</span><span class="v" id="rNext">--</span></div>
+    <div><span class="k">Walk home from here</span><span class="v" id="rBack">--</span></div>
+    <div><span class="k">Worst margin</span><span class="v" id="rMargin">--</span></div>
+    <div><span class="k">Sunset in</span><span class="v" id="rSun">--</span></div>
+    <div><span class="k">Mission time</span><span class="v" id="rMet">--</span></div>
+  </div>
+</section>
+
+<!-- ============================================================ wrist cuff -->
+<section id="cuff" class="mode" aria-label="Wrist cuff">
+  <header class="chead"><span id="cMet" class="num">--:--</span><span id="cMode" class="ctag">--</span><span id="cLink" class="num"></span></header>
+  <div id="cAlert" class="calert" hidden></div>
+  <div class="ctiles">
+    <div class="ctile"><span class="k">O₂ left</span><span class="v" id="cO2">--</span></div>
+    <div class="ctile"><span class="k">Walk home</span><span class="v" id="cBack">--</span></div>
+    <div class="ctile"><span class="k">Margin</span><span class="v" id="cMargin">--</span></div>
+  </div>
+  <div class="ccard" id="cNext"></div>
+  <div class="ccard" id="cProc"></div>
+  <div class="cbtns">
+    <button class="cb" data-cmd="ack">ACK alerts</button>
+    <button class="cb" data-cmd="silence">Silence</button>
+    <button class="cb" data-cmd="pin">Drop pin</button>
+    <button class="cb danger" data-cmd="return" id="cReturn">Return now</button>
+  </div>
+  <div class="ccard" id="cCons"></div>
+  <div class="ccard" id="cLegs"></div>
+</section>
+
+<div id="wait" role="status">
+  <h2>Crew display</h2>
+  <p>Waiting for the MarsNav EVA planner. Open it in this browser (EVA planner, Execute, “Crew displays”), plan a route and start an EVA: this display follows it live.</p>
+</div>
+<script src="js/desktop.js"></script>
+<script type="module" src="js/hud.js"></script>
+</body>
+</html>

@@ -124,6 +124,8 @@ async function boot() {
     loadSpaceWeather();
     setInterval(loadSpaceWeather, 30 * 60 * 1000);
     $("ckSwxBox").addEventListener("click", showSpaceWeather);
+    for (const b of document.querySelectorAll("[data-display]")) b.addEventListener("click", () => openDisplay(b.dataset.display));
+    if ("BroadcastChannel" in window) hudChannel();       // a display opened earlier (or reloaded) finds us
     const landers = await call("landers");
     $("landerSel").innerHTML = landers.map((l) => `<option value="${l.id}"${l.id === "m2020" ? " selected" : ""} title="${l.src}">${l.label}${l.trn ? " · TRN" : ""}</option>`).join("");
     const truths = await call("truths");
@@ -594,6 +596,7 @@ function selectRoute(name) {
   showStationBudgets();
   renderWhy();
   renderGuidance();
+  hudPlan();
 }
 
 function marginClass(m) {
@@ -1003,6 +1006,59 @@ function runSim(on) {
   }, 500);
 }
 
+// ---------------------------------------------------------------------------------- crew displays (hud.html) --
+// The same EVA on the displays a crew would carry: a helmet-visor HUD, a rover dashboard and a wrist cuff. They get
+// the plan and every snapshot over a BroadcastChannel and send back the cuff's commands (acknowledge, silence, pin,
+// two-step return), so they work beside the simulator, live suit telemetry and the drive window alike.
+const HUD = "marsnav-hud";
+function hudChannel() {
+  if (state.hudCh || !("BroadcastChannel" in window)) return state.hudCh;
+  const ch = new BroadcastChannel(HUD);
+  state.hudCh = ch;
+  ch.onmessage = async (ev) => {
+    const m = ev.data;
+    try {
+      if (m.type === "hello") {
+        hudPlan();
+        if (state.sim?.snap) hudSnap(state.sim.snap);
+      } else if (!state.sim?.snap) {
+        ch.postMessage({ type: "note", text: "No EVA running: start one in Execute (simulator, live suit or drive window)." });
+      } else if (m.type === "ack") onSnap(await call("simAck", { id: m.id ?? null }));
+      else if (m.type === "silence") { await call("simSilence"); state.silenced = true; }
+      else if (m.type === "pin") onSnap(await call("simPin", { note: m.note || "pin from the wrist cuff" }));
+      else if (m.type === "return") onSnap(await call("simAbort"));
+    } catch (e) { console.error(e); }
+  };
+  return ch;
+}
+function hudPlan() {
+  const ch = hudChannel();
+  if (!ch) return;
+  const r = state.routes?.[state.selected];
+  ch.postMessage({ type: "plan", site: state.site?.short ?? state.site?.name, siteId: state.site?.id, base: state.base,
+    clock: state.site?.clock ?? null, profile: $("profile").value, routeName: state.selected, departMs: state.cfg?.departMs ?? null,
+    route: r?.ok ? r.pts.filter((_, k) => k % 3 === 0).map((p) => [p.lon, p.lat]) : [],
+    stations: routeStops().map(({ lon, lat, name, id }) => ({ lon, lat, name, id: id ?? null })),
+    summary: r?.ok ? { t: r.t, dist: r.dist, doseMSv: r.doseMSv, minMargin: r.minMargin } : null,
+    guidance: r?.ok ? r.legs.map((l) => ({ from: l.from, to: l.to, guidance: l.guidance })) : [],
+    swx: state.swx ? { level: state.swx.level, headline: state.swx.headline } : null });
+}
+function hudSnap(s) {
+  const ch = hudChannel();
+  if (!ch) return;
+  ch.postMessage({ type: "snap", snap: { t: s.t, ms: s.ms, lon: s.lon, lat: s.lat, sigma: s.sigma, remaining: s.remaining, margins: s.margins,
+    back: s.back, dist: s.dist, returning: s.returning, done: s.done, los: s.los, shade: s.shade, alerts: s.alerts, counts: s.counts,
+    station: s.station, stops: s.loop?.stops ?? null, livePlan: s.livePlan, returnPts: s.returnPts, rs: s.rs ?? null, live: !!s.live,
+    res: s.res, cap: s.cap, track: s.track?.slice(-60) ?? null } });
+}
+function openDisplay(mode) {
+  hudChannel();
+  const size = { visor: "width=1280,height=720", rover: "width=1400,height=820", cuff: "width=480,height=860" }[mode];
+  const w = window.open(new URL(`../hud.html?mode=${mode}`, import.meta.url).href, `marsnav-hud-${mode}`, `popup=yes,${size}`);
+  if (!w) $("planMsg").innerHTML = '<span class="bad">The browser blocked the display window. Allow pop-ups for this page, then press the button again.</span>';
+  else w.focus?.();
+}
+
 // ------------------------------------------------------------------------------------ 3D drive window link --
 // The drive window (drive.html) is a telemetry source like a real suit: it sends TSS frames over a BroadcastChannel,
 // the engine runs its closed loop on them (LiveSession), and every snapshot goes back so the walker sees the re-plans.
@@ -1208,6 +1264,7 @@ const GAUGES = [["o2", "Oxygen"], ["co2", "CO₂ scrub"], ["water", "Cooling H�
 
 function onSnap(s) {
   state.sim.snap = s;
+  hudSnap(s);
   state.simCrew = { lon: s.lon, lat: s.lat, sigma: s.sigma, ellipse: s.ellipse };
   state.map.crew = state.simCrew;
   state.map.returnPts = s.returnPts;
