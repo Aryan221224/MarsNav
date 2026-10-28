@@ -81,7 +81,7 @@ body.ready #wait { display: none; }
 .rhead { color: var(--accent); margin-top: 4px; }
 .rmap { position: relative; background: #05080c; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 #rMap { width: 100%; height: 100%; display: block; }
-.rnote { position: absolute; left: 10px; bottom: 8px; font-size: 12px; color: var(--text-faint); }
+.rnote { position: absolute; left: 10px; top: 8px; font-size: 12px; color: var(--text-faint); }
 .ralerts { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
 .ralerts .al { border-left: 4px solid var(--advisory); padding: 3px 7px; background: #0b0f14; }
 .ralerts .al.l3 { border-color: var(--warning); } .ralerts .al.l2 { border-color: var(--caution); }
@@ -128,3 +128,7 @@ body[data-mode="cuff"] #cuff { display: flex; flex-direction: column; gap: 10px;
 
 .hint { color: var(--text-faint); font-size: 13px; }
 body.overlay #wait { display: none; }
+@media (max-width: 560px) {
+  #modes .brand, #modes .link { display: none; }
+  #modes .seg button { padding: 4px 7px; font-size: 11.5px; letter-spacing: .04em; }
+}

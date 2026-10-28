@@ -582,7 +582,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dtWall = Math.min(0.1, (now - last) / 1000);
   last = now;
-  if (!S.T) { renderer.render(scene, camera); return; }
+  if (!S.T || !S.env) { renderer.render(scene, camera); return; }   // the terrain arrives before its climate file
   stepPlayer(dtWall);
   sendTelemetry(now);
   lodTimer += dtWall;

@@ -202,7 +202,7 @@ function rover(n) {
     const wm = worstMargin(s);
     $("rBack").textContent = hm(s.back);
     $("rMargin").innerHTML = `<span class="${MARGIN_CLS(wm)}">${Math.round(100 * wm)} %</span>`;
-    const rb = s.cap?.rbatt ? 1 - (s.res?.rbatt ?? 0) / s.cap.rbatt : null;
+    const rb = Number.isFinite(s.cap?.rbatt) && s.cap.rbatt > 0 ? 1 - (s.res?.rbatt ?? 0) / s.cap.rbatt : null;
     $("rPower").innerHTML = rb != null
       ? gauge2("Rover battery", rb, null) + `<div class="hint">${((s.cap.rbatt - (s.res?.rbatt ?? 0)) / 1000).toFixed(1)} kWh left of ${(s.cap.rbatt / 1000).toFixed(1)}</div>`
       : `<div class="hint">${vehicle ? "No rover battery in this telemetry." : "On foot: no rover on this EVA (switch the crew mode to rover in the planner)."}</div>`;
