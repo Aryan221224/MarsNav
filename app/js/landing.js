@@ -696,7 +696,7 @@ $("layersToggle").onclick = () => {
 
 // ------------------------------------------------------------------------------------------------- map layers and legend
 $("baseSel").onchange = () => { S.base = $("baseSel").value; reloadTextures(); saveHash(); };
-for (const el of document.querySelectorAll("[data-ovl]")) {
+function bindOvl(el) {
   el.onchange = () => {
     const need = OVL_NEEDS[el.dataset.ovl];
     if (el.checked && need && S.datasets[need] && !S.datasets[need].installed) {
@@ -706,6 +706,7 @@ for (const el of document.querySelectorAll("[data-ovl]")) {
     reloadTextures(); updateLegend(); saveHash();
   };
 }
+for (const el of document.querySelectorAll("[data-ovl]")) bindOvl(el);
 $("iceDepth").onchange = () => { if (document.querySelector('[data-ovl="ice"]').checked) { reloadTextures(); updateLegend(); saveHash(); } };
 $("exag").oninput = () => {
   S.exag = +$("exag").value; $("exagV").textContent = S.exag;
@@ -739,8 +740,9 @@ async function updateLegend() {
 function legendHtml(key, L) {
   const note = L.note ? `<p>${esc(L.note)}</p>` : "";
   if (L.classes) {
-    return `<div class="lg"><b>${esc(L.title)} · ${esc($("landerSel").selectedOptions[0].text.split("·")[0].trim())}</b><div class="cls">${L.classes.map((c) =>
-      `<i style="background:rgba(${c.rgba[0]},${c.rgba[1]},${c.rgba[2]},${Math.min(1, c.rgba[3] * 1.8)})"></i><span>${esc(c.label)}</span>`).join("")}</div>
+    const sw = L.classes.map((c) => `<i style="background:rgba(${c.rgba[0]},${c.rgba[1]},${c.rgba[2]},${Math.min(1, c.rgba[3] * 1.8)})"></i><span>${esc(c.label)}</span>`).join("");
+    if (key !== "safety") return `<div class="lg"><b>${esc(L.title)}</b><div class="cls">${sw}</div>${note}</div>`;
+    return `<div class="lg"><b>${esc(L.title)} · ${esc($("landerSel").selectedOptions[0].text.split("·")[0].trim())}</b><div class="cls">${sw}</div>
       <p>Resolution follows your zoom; over HiRISE footprints it reaches lander scale (1–2 m).</p></div>`;
   }
   if (L.ticks?.length) {
@@ -1134,6 +1136,34 @@ function renderDossier(d) {
     ${cx.heritage?.length ? `<div class="lbl">Landed spacecraft</div><ol class="list">${li(cx.heritage, (e) => `<li data-go="${e.lon},${e.lat},${esc(e.id)}"><span class="t">${esc(e.name)}<small>${e.year || ""}</small></span><span class="m">${fmtKm(e.dist_km)} away</span></li>`)}</ol>` : ""}
     ${cx.names?.length ? `<div class="lbl">IAU names</div><div class="hint">${cx.names.map((n) => `${esc(n.name)} (${esc(n.type || "")}, ${fmtKm(n.dist_km)})`).join(" · ")}</div>` : ""}
   </section>`);
+
+  // science along the way: the bundled catalogues near the site (planet/features.py)
+  const sc = d.science;
+  if (sc) {
+    const rows = Object.values(sc.layers || {}).sort((a, b) => (a.nearest?.km ?? 1e9) - (b.nearest?.km ?? 1e9))
+      .map((p) => `<span>${esc(p.name)}</span><span>${fmtN(p.count)} within ${fmtN(sc.radius_km)} km · nearest: ${esc(p.nearest.label)}, ${fmtKm(p.nearest.km)}</span>`).join("");
+    const pp = sc.planetary_protection;
+    sect.push(`<section class="sect"><h3>Science along the way <small>catalogued features within ${fmtN(sc.radius_km)} km</small></h3>
+      ${rows ? `<div class="kv">${rows}</div>` : `<p class="hint">No catalogued minerals, ice landforms, active slopes or mission sites within ${fmtN(sc.radius_km)} km.</p>`}
+      ${pp ? `<p class="warn-t">Planetary protection: ${esc(pp.label)} ${fmtKm(pp.nearest_rsl_km)} away. ${esc(pp.note)}</p>` : ""}
+      <p class="hint">Show them under Map layers, Science atlas. The Science tab ranks every site for an objective.</p></section>`);
+  }
+  if (d.objectives?.length && !d.objectives[0].error) {
+    const top = Math.max(1, ...d.objectives.map((o) => o.score));
+    sect.push(`<section class="sect"><h3>Science objectives here <small>evidence within 100 km</small></h3>${d.objectives.map((o) =>
+      `<div class="crit"><i class="${o.score >= 6 ? "go" : o.score >= 2 ? "caution" : "unknown"}"></i><span class="l">${esc(o.title)}</span>
+        <span class="v"><i class="sbar"><b style="width:${Math.max(3, 100 * o.score / top)}%"></b></i> ${o.score.toFixed(1)}</span></div>`).join("")}</section>`);
+  }
+  // chemistry, gravity, radiation
+  const ch = d.data?.chem, md = d.model || {};
+  const chemRows = ch ? Object.values(ch).map((e) => `<span>${esc(e.name)} (GRS)</span><span>${e.value != null ? `${fmtN(e.value, e.value < 2 ? 2 : 1)} ${esc(e.unit)}` : "no measurement here"}</span>`).join("")
+    : `<span>GRS elements</span><span class="na-t">layer not installed</span>`;
+  sect.push(`<section class="sect"><h3>Chemistry, gravity and radiation</h3><div class="kv">${chemRows}
+    <span>Albedo (TES)</span><span>${d.data?.albedo != null ? fmtN(d.data.albedo, 3) : `<span class="na-t">layer not installed</span>`}</span>
+    <span>Gravity anomaly</span><span>${d.data?.gravity_mgal != null ? `${d.data.gravity_mgal > 0 ? "+" : ""}${fmtN(d.data.gravity_mgal)} mGal (MRO GMM-3)` : `<span class="na-t">layer not installed</span>`}</span>
+    <span>Cosmic-ray dose</span><span>${md.gcr_ugy_day != null ? `${fmtN(md.gcr_ugy_day)} µGy/day · ${fmtN(md.gcr_msv_day, 2)} mSv/day (${md.gcr_vs_gale >= 1 ? "+" : ""}${fmtN(100 * (md.gcr_vs_gale - 1))} % vs Curiosity at Gale)${md.gcr_extrapolated ? ' <span class="warn-t">extrapolated</span>' : ""}` : "–"}</span>
+    <span>Space weather now</span><span>${S.swx?.level ? `<span class="${S.swx.level === "quiet" ? "ok-t" : S.swx.level === "storm" ? "bad-t" : "warn-t"}">${esc(S.swx.headline)}</span>` : "–"}</span>
+  </div><p class="hint">GRS cells are 5° wide. The dose is Curiosity's RAD record moved by the air column overhead (galactic cosmic rays only; solar particle events come on top).</p></section>`);
 
   // sources
   const ds = d.datasets || {};
@@ -1758,7 +1788,8 @@ function readHash() {
       S.crit = p[6];
       for (const x of document.querySelectorAll(".seg button[data-crit]")) x.setAttribute("aria-checked", String(x.dataset.crit === S.crit));
     }
-    for (const k of (p[7] || "").split("+")) { const cb = document.querySelector(`[data-ovl="${k}"]`); if (cb) cb.checked = true; }
+    S.hashOvls = (p[7] || "").split("+").filter(Boolean);       // the atlas layers are added later: they are ticked then
+    for (const k of S.hashOvls) { const cb = document.querySelector(`[data-ovl="${k}"]`); if (cb) cb.checked = true; }
     hashSel = p[8] || null;
     return true;
   }
@@ -1771,6 +1802,168 @@ function restoreFocusFromHash() {
   const [la, lo] = s.split(";").map(Number);
   if (isFinite(la) && isFinite(lo)) selectPoint(lo, la);
 }
+
+// ------------------------------------------------------------------------------------------------- science atlas
+// every whole-planet layer by kind of measurement (planet/atlas.py); the ones already in the list above are skipped
+const GROUP_COLOUR = { spectral: "#6aa0ff", chemical: "#8fd36a", water: "#3ccbff", thermal: "#e6a03c", topographic: "#c9a57a",
+  geophysical: "#d06ad0", atmospheric: "#f06060", activity: "#ff6a4a", missions: "#ffffff" };
+async function loadAtlas() {
+  let cat;
+  try { cat = await api("/api/atlas"); } catch { return; }
+  S.atlas = cat;
+  const have = new Set([...document.querySelectorAll("#layersBody .ovl [data-ovl]")].map((x) => x.dataset.ovl));
+  const box = $("atlasBox");
+  box.innerHTML = `<div class="lbl">Science atlas · whole planet</div>` + cat.groups.map((g) => {
+    const rows = g.layers.filter((L) => !have.has(L.id)).map((L) => {
+      if (L.needs) OVL_NEEDS[L.id] = L.needs;
+      const tip = [L.what, L.cite].filter(Boolean).join(" · ");
+      return `<label class="chk" title="${esc(tip)}"><input type="checkbox" data-ovl="${esc(L.id)}"><i class="sw" style="--c:${GROUP_COLOUR[g.id] || "#aaa"}"></i>${esc(L.name)}${L.count ? ` <small class="cnt">${fmtN(L.count)}</small>` : ""}${L.installed === false ? ` <small class="na-t">not installed</small>` : ""}</label>`;
+    }).join("");
+    return rows ? `<details class="agrp"${g.id === "spectral" ? " open" : ""}><summary>${esc(g.name)}</summary><div class="ovl">${rows}</div></details>` : "";
+  }).join("");
+  let ticked = false;
+  for (const el of box.querySelectorAll("[data-ovl]")) {
+    bindOvl(el);
+    if (S.hashOvls?.includes(el.dataset.ovl)) { el.checked = true; el.closest("details").open = true; ticked = true; }
+  }
+  if (ticked) { reloadTextures(); updateLegend(); }
+}
+
+// ------------------------------------------------------------------------------------------------- science objectives, missions
+async function loadScience() {
+  try {
+    const [o, m] = await Promise.all([api("/api/objectives"), api("/api/missions")]);
+    S.objectives = o.objectives || [];
+    S.missions = m.missions || [];
+    S.missionsAsOf = m.as_of;
+  } catch { return; }
+  $("objSel").innerHTML = S.objectives.map((o) => `<option value="${esc(o.id)}">${esc(o.title)}</option>`).join("");
+  $("objSel").onchange = renderObjective;
+  renderObjective();
+  $("nMis").textContent = S.missions.length;
+  renderMissions();
+  // where future missions go: their landing regions on the globe
+  clearMarkers("future");
+  for (const m of S.missions.filter((x) => misGroup(x) === "future")) {
+    for (const p of m.regions || (m.site?.lon != null ? [m.site] : [])) addMarker("future", p.lon, p.lat, `${m.name}${m.regions ? `: ${p.name}` : ""}`, () => { selectPoint(p.lon, p.lat); showTab("sci"); }, `${m.name} · ${m.status}`);
+  }
+}
+function renderObjective() {
+  const o = S.objectives?.find((x) => x.id === $("objSel").value);
+  if (!o) return;
+  $("objCard").innerHTML = `<div class="kind">${esc(o.goal)}</div><p>${esc(o.question)}</p>
+    <p class="hint"><b>Why humans:</b> ${esc(o.why_humans)}</p>
+    <div class="lbl">Example places</div><ol class="list">${o.examples.map((e, k) => `<li data-ex="${k}"><span class="t">${esc(e.name)}<small>${esc(e.why)}</small></span><span class="m">${fmtLL(e.lat, e.lon, 2)}${e.site ? "<br>EVA site" : ""}</span></li>`).join("")}</ol>
+    <p class="hint"><b>At stations:</b> ${esc(o.at_stations)}</p><p class="hint"><b>Safety:</b> ${esc(o.safety)}</p>`;
+  for (const li of $("objCard").querySelectorAll("[data-ex]")) {
+    li.onclick = () => { const e = o.examples[+li.dataset.ex]; flyTo(e.lon, e.lat, e.site ? 60 : 900); selectPoint(e.lon, e.lat); };
+  }
+  $("objRank").innerHTML = "";
+}
+$("btnObjLayers").onclick = () => {
+  const o = S.objectives?.find((x) => x.id === $("objSel").value);
+  if (!o) return;
+  for (const id of o.layers) {
+    const cb = document.querySelector(`[data-ovl="${id}"]`);
+    if (cb && !cb.checked) { cb.checked = true; cb.closest("details")?.setAttribute("open", ""); }
+  }
+  $("layers").classList.remove("collapsed");
+  $("layersToggle").setAttribute("aria-expanded", "true");
+  reloadTextures(); updateLegend(); saveHash();
+  toast(`Map layers for “${o.title}” are on (top left).`);
+};
+$("btnObjRank").onclick = async () => {
+  const ol = $("objRank");
+  ol.innerHTML = `<li class="hint">Scoring every candidate site and hub…</li>`;
+  try {
+    const r = await api(`/api/objective/rank?id=${encodeURIComponent($("objSel").value)}&limit=20`);
+    const top = Math.max(1e-6, r.ranked[0]?.score || 0);
+    ol.innerHTML = r.ranked.map((x) => {
+      const why = [...x.evidence.map((e) => `${e.count} × ${e.label.toLowerCase()} (nearest ${fmtKm(e.nearest_km)})`), ...x.data].slice(0, 3).join(" · ");
+      return `<li data-id="${esc(x.id)}" data-ll="${x.lon},${x.lat}"><span class="t">${esc(x.name)}<small>${esc(why || "no catalogued evidence within 100 km")}</small></span>
+        <span class="m"><i class="sbar"><b style="width:${Math.max(4, 100 * x.score / top)}%"></b></i>${x.score.toFixed(1)}</span></li>`;
+    }).join("");
+    for (const li of ol.querySelectorAll("li[data-id]")) {
+      li.onclick = () => {
+        const c = S.cand.find((x) => x.id === li.dataset.id);
+        if (c) { openCandidate(c); return; }
+        const [lo, la] = li.dataset.ll.split(",").map(Number);
+        flyTo(lo, la, 400); selectPoint(lo, la);
+      };
+    }
+  } catch (e) { ol.innerHTML = `<li class="hint bad-t">${esc(e.message)}</li>`; }
+};
+const misGroup = (m) => /^active/.test(m.status) ? "active" : /en route|planned|development|slipped|studied/.test(m.status) ? "future" : "past";
+let misFilter = "all";
+for (const b of $("misChips").querySelectorAll("button")) {
+  b.onclick = () => { misFilter = b.dataset.mis; for (const x of $("misChips").querySelectorAll("button")) x.classList.toggle("on", x === b); renderMissions(); };
+}
+for (const b of $("sciChips").querySelectorAll("button")) {
+  b.onclick = () => {
+    for (const x of $("sciChips").querySelectorAll("button")) x.classList.toggle("on", x === b);
+    $("sciObj").hidden = b.dataset.sci !== "obj";
+    $("sciMis").hidden = b.dataset.sci !== "mis";
+  };
+}
+function renderMissions() {
+  const list = (S.missions || []).filter((m) => misFilter === "all" || misGroup(m) === misFilter);
+  const line = (label, v) => v && v !== "-" ? `<small>${label}${esc(v)}</small>` : "";
+  $("misList").innerHTML = list.map((m) => `<li data-k="${S.missions.indexOf(m)}"><span class="t">${esc(m.name)}<small>${esc(m.agency)} · ${esc(m.kind)} · ${esc(m.years || "")}</small>
+      ${line("", m.science)}${line("In MarsNav: ", m.data_in_marsnav)}${line("For crews: ", m.for_crews)}</span>
+      <span class="m"><span class="st ${misGroup(m)}">${esc(m.status)}</span>${m.site?.lon != null ? `<br>${fmtLL(m.site.lat, m.site.lon, 2)}` : m.regions ? `<br>${m.regions.length} candidate regions` : ""}</span></li>`).join("");
+  $("misNote").textContent = `Status as of ${S.missionsAsOf}, from NASA, ESA, JAXA, CNSA and press reports cited per mission (planet/data/missions.json).`;
+  for (const li of $("misList").querySelectorAll("li[data-k]")) {
+    li.onclick = () => {
+      const m = S.missions[+li.dataset.k], p = m.site?.lon != null ? m.site : m.regions?.[0];
+      if (!p) return;
+      flyTo(p.lon, p.lat, ["rover", "lander", "helicopter"].includes(m.kind) ? 120 : 2500);
+      selectPoint(p.lon, p.lat);
+    };
+  }
+}
+
+// ------------------------------------------------------------------------------------------------- space weather
+const SWX_WORD = { quiet: "QUIET", watch: "WATCH", storm: "STORM", unknown: "–" };
+async function loadSwx() {
+  try { S.swx = await api("/api/spaceweather"); } catch { return; }
+  const w = S.swx, pill = $("swxPill");
+  pill.textContent = `SPACE WX ${SWX_WORD[w.level] || "–"}`;
+  pill.className = `pill ${w.level === "quiet" ? "ok" : w.level === "storm" ? "bad" : "warn"}`;
+  pill.title = `${w.headline}. ${(w.reasons || []).join(". ")}`;
+  if (!$("swxModal").hidden) renderSwx();
+}
+function renderSwx() {
+  const w = S.swx;
+  if (!w) { $("swxBody").innerHTML = `<p class="hint">The MarsNav server did not answer.</p>`; return; }
+  const g = w.geometry || {};
+  $("swxSub").textContent = `${w.source}${w.fetched_utc ? ` · fetched ${w.fetched_utc} (${w.age_h} h ago)` : ""}`;
+  const arr = (w.mars_arrivals || []).slice(-6).reverse(), sep = w.sep || [], fl = w.flares || [];
+  $("swxBody").innerHTML = `<div class="verdictbar ${w.level === "quiet" ? "GO" : w.level === "storm" ? "NO-GO" : "CAUTION"}">${esc(w.headline)}</div>
+    <ul class="srcs">${(w.reasons || []).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
+    ${w.action ? `<p><b>For EVAs:</b> ${esc(w.action)}</p>` : ""}
+    <div class="kv"><span>Sun-Earth-Mars angle</span><span>${fmtN(g.separation_deg)}° (${g.mars_minus_earth_deg >= 0 ? "Mars ahead of Earth" : "Mars behind Earth"})</span>
+      <span>Earth-Mars distance</span><span>${fmtN(g.distance_au, 2)} AU · ${fmtN(g.light_min, 1)} light-minutes</span></div>
+    <p class="hint">${esc(g.note || "")}</p>
+    <h3 class="lbl">CME arrivals at Mars (WSA-ENLIL)</h3>
+    ${arr.length ? `<table class="tbl">${arr.map((a) => `<tr><td>${esc(a.arrival_utc)}</td><td>${a.glancing ? "glancing" : "direct"}${a.speed_kms ? `, ${a.speed_kms} km/s` : ""}</td><td>${a.hours_from_now >= 0 ? `in ${fmtN(a.hours_from_now)} h` : `${fmtN(-a.hours_from_now)} h ago`}</td><td>${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">DONKI</a>` : ""}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
+    <h3 class="lbl">Solar particle events (near Earth)</h3>
+    ${sep.length ? `<table class="tbl">${sep.slice(0, 6).map((x) => `<tr><td>${esc(x.time_utc)}</td><td>${fmtN(x.hours_ago)} h ago</td><td>${esc((x.instruments || []).join(", "))}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
+    <h3 class="lbl">M and X flares</h3>
+    ${fl.length ? `<table class="tbl">${fl.slice(0, 6).map((x) => `<tr><td>${esc(x.peak_utc)}</td><td>${esc(x.class)}</td><td>${esc(x.source || "")}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
+    <p class="hint">${esc(w.basis || "")}</p>`;
+}
+$("swxPill").onclick = () => { renderSwx(); $("swxModal").hidden = false; };
+$("swxClose").onclick = () => { $("swxModal").hidden = true; };
+$("swxModal").addEventListener("click", (e) => { if (e.target === $("swxModal")) $("swxModal").hidden = true; });
+$("swxRefresh").onclick = async () => {
+  $("swxJob").textContent = "Asking NASA DONKI…";
+  try {
+    const { job } = await post("/api/spaceweather/refresh", {});
+    await pollJob(job, (lines) => { $("swxJob").textContent = lines[lines.length - 1]; });
+    await loadSwx();
+    renderSwx();
+  } catch (e) { $("swxJob").textContent = e.message; }
+};
 
 // ------------------------------------------------------------------------------------------------- loop
 let lastHash = 0, lastScale = 0, lastStat = { drawn: 0, wanted: 0 };
@@ -1800,8 +1993,11 @@ if (canvas.clientWidth < 820 || window.innerHeight < 820) {       // small scree
 }
 loadNames();
 updateLegend();
-loadDatasets().then(() => loadCandidates());
+loadDatasets().then(() => { loadCandidates(); loadAtlas(); });
 loadHubs().then(() => loadLocal());
+loadScience();
+loadSwx();
+setInterval(loadSwx, 30 * 60 * 1000);
 refreshStatus();
 setInterval(refreshStatus, 5000);
 requestAnimationFrame(frame);

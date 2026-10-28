@@ -146,7 +146,7 @@ def summary(now: datetime | None = None, days: int = 30) -> dict:
     now = now or datetime.now(timezone.utc)
     doc = _load()
     geo = geometry(now)
-    out = {"ok": doc is not None, "geometry": geo, "now_utc": now.strftime("%Y-%m-%dT%H:%MZ"),
+    out = {"ok": True, "have_data": doc is not None, "geometry": geo, "now_utc": now.strftime("%Y-%m-%dT%H:%MZ"),
            "source": "NASA CCMC DONKI (api.nasa.gov / kauai.ccmc.gsfc.nasa.gov)", "advisory": None}
     if doc is None:
         out.update(level="unknown", headline="No space-weather data on this computer yet",

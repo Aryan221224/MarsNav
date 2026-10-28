@@ -300,3 +300,22 @@ body.mars .topbar { box-shadow: inset 0 -2px 0 var(--caution); }
 
 /* decluttered labels: the dot stays, the text is hidden while it would overlap another label */
 #labels .mk.nolbl { font-size: 0; }
+
+/* science atlas, objectives, missions, space weather */
+.atlas { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); padding-top: 8px; }
+.agrp summary { cursor: pointer; font-size: 12.5px; color: var(--text-dim); padding: 3px 0; }
+.agrp[open] summary { color: var(--text); }
+.agrp .ovl { padding: 2px 0 6px 4px; }
+.agrp small.cnt { color: var(--text-faint); font-family: var(--font-data); font-size: 11px; }
+.objcard { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.objcard .kind { font-family: var(--font-label); letter-spacing: .06em; text-transform: uppercase; font-size: 11.5px; color: var(--accent); }
+.objcard p { margin: 0; }
+.sbar { display: inline-block; width: 54px; height: 7px; border-radius: 3px; background: var(--surface-3); vertical-align: middle; margin-right: 6px; overflow: hidden; }
+.sbar b { display: block; height: 100%; background: var(--accent); }
+.st { font-size: 11px; font-family: var(--font-label); letter-spacing: .04em; text-transform: uppercase; padding: 1px 5px; border-radius: 3px; border: 1px solid var(--line-2); white-space: nowrap; }
+.st.active { color: var(--go); border-color: #3ee07e66; } .st.future { color: var(--accent); } .st.past { color: var(--text-faint); }
+#misList .t small { display: block; }
+.mk.future { color: #ffd479; font-style: italic; } .mk.future::after { width: 7px; height: 7px; border-radius: 1px; transform: rotate(45deg); background: #ffd479; }
+#labels.far .mk.future { font-size: 0; }
+#swxBody .tbl { width: 100%; font-size: 12.5px; margin: 4px 0 8px; }
+#swxBody h3.lbl { margin: 10px 0 2px; }
