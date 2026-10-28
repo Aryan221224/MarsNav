@@ -39,8 +39,10 @@ def objective(oid: str) -> dict | None:
 
 
 def _data_terms(terms, lon, lat, elev_m) -> tuple[float, list]:
-    from . import atlas, datasets
     pts, why = 0.0, []
+    if not terms:
+        return pts, why
+    from . import atlas, datasets
     D = datasets.point(lon, lat)
     for key, w in terms:
         v = None

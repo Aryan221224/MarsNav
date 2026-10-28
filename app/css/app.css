@@ -287,3 +287,8 @@ table.t td.num { text-align: right; }
 #landOut .ok { color: #3ee07e; } #landOut .bad { color: #ff7470; } #landOut .warn { color: #ffc629; }
 
 a.btn { text-decoration: none; color: var(--text); }
+/* space weather in the clock bar: a button that looks like the other readouts */
+.clock button.item { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.clock button.item:hover .lbl { color: var(--text); }
+.clock .v.ok { color: var(--nominal); } .clock .v.warn { color: var(--caution); } .clock .v.bad { color: var(--warning); }
+.clock .item[hidden] { display: none; }

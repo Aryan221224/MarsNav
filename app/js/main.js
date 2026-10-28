@@ -121,6 +121,9 @@ async function boot() {
     setInterval(tickClock, 1000);
     flashClock();
     fillProvenance();
+    loadSpaceWeather();
+    setInterval(loadSpaceWeather, 30 * 60 * 1000);
+    $("ckSwxBox").addEventListener("click", showSpaceWeather);
     const landers = await call("landers");
     $("landerSel").innerHTML = landers.map((l) => `<option value="${l.id}"${l.id === "m2020" ? " selected" : ""} title="${l.src}">${l.label}${l.trn ? " · TRN" : ""}</option>`).join("");
     const truths = await call("truths");
@@ -138,6 +141,38 @@ async function boot() {
 }
 
 // ---------------------------------------------------------------------------------------------------- clocks --
+// space weather at Mars (planet/spaceweather.py, NASA DONKI) when the MarsNav server is there; a static copy of the
+// planner has no server and simply does not show it
+async function loadSpaceWeather() {
+  let w;
+  try {
+    const r = await fetch("/api/spaceweather");
+    if (!r.ok) return;
+    w = await r.json();
+  } catch { return; }
+  state.swx = w;
+  const word = { quiet: "QUIET", watch: "WATCH", storm: "STORM" }[w.level] ?? "NO DATA";
+  $("ckSwx").textContent = word;
+  $("ckSwx").className = `v ${w.level === "storm" ? "bad" : w.level === "watch" ? "warn" : w.level === "quiet" ? "ok" : ""}`;
+  $("ckSwxBox").hidden = false;
+  $("ckSwxBox").title = `${w.headline}. ${(w.reasons || []).join(". ")}${w.action ? `. ${w.action}` : ""}`;
+  if (state.routes) renderCards();
+}
+
+function showSpaceWeather() {
+  const w = state.swx;
+  if (!w) return;
+  const g = w.geometry || {};
+  $("modalTitle").textContent = "Space weather at Mars";
+  $("modalBody").innerHTML = `<p><b class="${w.level === "storm" ? "bad" : w.level === "watch" ? "warn" : "ok"}">${w.headline}</b></p>
+    <ul>${(w.reasons || []).map((x) => `<li>${x}</li>`).join("")}</ul>${w.action ? `<p><b>For this EVA:</b> ${w.action}</p>` : ""}
+    <p class="note">Mars is ${g.separation_deg ?? "?"}° from Earth as seen from the Sun, ${g.light_min ?? "?"} light-minutes away. ${g.note ?? ""}</p>
+    <p class="note">${w.fetched_utc ? `NASA DONKI data fetched ${w.fetched_utc} (${w.age_h} h ago).` : "No DONKI data on this computer yet."} ${w.basis ?? ""}
+    The full list of CME arrivals, particle events and flares is in Landing mode (SPACE WX).</p>
+    <p class="note">To rehearse the response, Execute has a "Solar particle event" fault.</p>`;
+  $("modal").hidden = false;
+}
+
 function tickClock() {
   const now = Date.now();
   const ctx = marsContext(now, state.base.lon, state.base.lat, state.clock);
@@ -599,7 +634,7 @@ function renderCards() {
           <div><span class="k">Rover battery</span><span class="v">${(r.res.rbatt ?? 0).toFixed(0)} Wh</span></div>` : `<div><span class="k">Sand</span><span class="v">${(100 * (r.sandFrac ?? 0)).toFixed(0)} %</span></div>`}
         </div>
         ${r.wheelLeft != null && r.wheelLeft < 0.2 ? `<div class="dq">Wheels at ${(100 * Math.max(0, r.wheelLeft)).toFixed(0)} % life after this drive: inspect or avoid rocky ground</div>` : ""}
-        <div class="note">Radiation ≈ ${r.doseMSv.toFixed(2)} mSv at the RAD surface average.</div>`;
+        <div class="note">Radiation ≈ ${r.doseMSv.toFixed(2)} mSv from cosmic rays at this altitude (Curiosity RAD, scaled by the air overhead)${state.swx?.level === "storm" ? '; <span class="bad">a solar particle event in progress would add to it</span>' : ""}.</div>`;
     }
     el.addEventListener("click", () => r?.ok && selectRoute(name));
     el.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && r?.ok && selectRoute(name));
