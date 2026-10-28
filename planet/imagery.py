@@ -36,6 +36,8 @@ LAYERS = {
                "name": "Viking MDIM 2.1 colour mosaic, 232 m (NASA Mars Trek / USGS)"},
     "mola": {"layer": "Mars_MGS_MOLA_ClrShade_merge_global_463m", "maxz": 7, "ext": "jpg",
              "name": "MOLA colour shaded relief, 463 m (NASA Mars Trek / USGS)"},
+    "hrsc_shade": {"layer": "Mars_MOLA_blend200ppx_HRSC_ClrShade_clon0dd_200mpp_lzw", "maxz": 8, "ext": "jpg",
+                   "name": "HRSC + MOLA colour shaded relief, 200 m (ESA Mars Express / NASA MGS; USGS, NASA Mars Trek)"},
     "themis_day": {"layer": "THEMIS_DayIR_ControlledMosaics_100m_v2_oct2018", "maxz": 9, "ext": "png", "grey": True,
                    "name": "THEMIS day-time IR, 100 m (ASU / USGS, NASA Mars Trek)"},
     "themis_night": {"layer": "THEMIS_NightIR_ControlledMosaics_100m_v2_oct2018", "maxz": 9, "ext": "png", "grey": True,
@@ -45,8 +47,13 @@ ESRI_SVC = {
     "ctx": {"svc": "CTX1", "maxz": 13, "name": "CTX global mosaic ~5 m (NASA/JPL/MSSS/The Murray Lab, Caltech)"},
     "hirise": {"svc": "HiRISE", "maxz": 17, "name": "HiRISE mosaic 25 cm-1 m (NASA/JPL/University of Arizona/USGS)"},
 }
-BASES = ("best", "ctx", "themis_day", "themis_night", "viking", "mola")
-OVERLAYS = ("geology", "ti", "grs", "ice01", "ice15", "ice5", "craters")        # + safety_<lander>, under the crater rims
+BASES = ("best", "ctx", "themis_day", "themis_night", "viking", "mola", "hrsc_shade")
+# drawing order: whole-planet fields first, then outlines, lines and points (planet/features.py), safety_<lander>, and the
+# crater rims on top of everything
+OVERLAYS = ("geology", "pressure", "gcr", "sunlight", "gravity", "albedo", "dci", "roughness", "tes_plag", "tes_cpx", "tes_glass",
+            "ti", "grs", "grs_fe", "grs_cl", "grs_k", "grs_th", "grs_si", "ice01", "ice15", "ice5",
+            "f_dunes", "f_chlorides", "f_valleys", "f_fans", "f_glacial", "f_gullies", "f_hydrous", "f_aqueous", "f_active",
+            "f_traverses", "f_landers", "craters")
 _lock = threading.Lock()
 
 
@@ -235,7 +242,7 @@ def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = ()) -> tupl
         else:
             provisional = True
     if rgb is None:
-        colour_layer = "mola" if layer == "mola" else "viking"
+        colour_layer = layer if layer in ("mola", "hrsc_shade") else "viking"
         base = _base_trek(colour_layer, z, y, x)
         if base is None:
             hs, dm = _hillshade_from_dem(z, y, x, with_meta=True)
@@ -282,7 +289,7 @@ def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = ()) -> tupl
     provisional = provisional or bool(getattr(_ortho_failed, "flag", False))
     offline_now = net.blocked()
     # ---- overlays
-    from . import datasets
+    from . import atlas, datasets, features
     for ov in ovls:
         if ov == "geology":
             im = _from_parent(lambda zz, yy, xx: _open(_fetch_cached("trek_geology", zz, yy, xx, TREK_GEOLOGY.format(z=zz, y=yy, x=xx), "png"), "RGBA"),
@@ -302,6 +309,20 @@ def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = ()) -> tupl
             px, sinfo = safety.tile_classes(a, dm, lander if lander in safety.LIMITS else "human")
             rgb = safety.overlay(rgb, px, sinfo["verified"])
             used.append({"name": f"landing safety for {lander} at {sinfo['baseline_m']} m", "frac": 1.0})
+        elif ov.startswith("f_") or ov in atlas.TREK_OVL or ov in atlas.MODEL_OVL:
+            if ov.startswith("f_"):
+                w_, s_, e_, n_ = bounds(z, y, x)
+                o = features.overlay_rgba(ov, w_, s_, e_, n_, TILE)
+                name = (features.legend(ov) or {}).get("title", ov)
+            else:
+                o = atlas.overlay_rgba(ov, z, y, x, TILE)
+                name = (atlas.legend(ov) or {}).get("title", ov)
+            if o is None:
+                provisional = True
+                continue
+            al = o[..., 3:4]
+            rgb = rgb * (1 - al) + o[..., :3] * al
+            used.append({"name": name, "frac": 1.0})
         else:
             o = datasets.overlay_rgba(ov, z, y, x, TILE)
             if o is None:
@@ -328,10 +349,11 @@ def parse(layer: str, ovl: str = "") -> tuple[str, tuple]:
         layer = "best"
     if layer not in BASES:
         layer = "best"
-    clean = [o for o in OVERLAYS if o in ovs and o != "craters"]
+    clean = [o for o in OVERLAYS if o in ovs and o not in ("craters", "f_traverses", "f_landers")]
     saf = next((o for o in ovs if o.startswith("safety_") and o.split("_", 1)[1] in LIMITS), None)
     if saf:
         clean.append(saf)
+    clean += [o for o in ("f_traverses", "f_landers") if o in ovs]  # rover tracks and landers over the safety map
     if "craters" in ovs:
         clean.append("craters")                                     # rims on top of everything
     return layer, tuple(clean)

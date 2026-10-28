@@ -1,0 +1,240 @@
+{
+ "id": "g_4p811s_137p384e",
+ "name": "Mount Sharp boxwork, Gale crater",
+ "short": "Mount Sharp boxwork",
+ "description": "Curiosity's boxwork campaign on Mount Sharp, Gale crater (2025-2026): the challenge's own example. Built by MarsNav from 5 HiRISE 1 m DTMs (94 % of the operations area) and CTX 20 m DTMs. Hub: a forward camp (pressurised rover) at Curiosity's sol 4530 stop; stations at the Altadena, Monte Grande (Valle de la Luna / Nevado Sajama) and Campo Marte drill sites, placed at the rover's own localisations. Cliff-bounded buttes and 39 % sand: with dead-reckoning navigation much of it is out of reach.",
+ "generated": {
+  "utc": "2026-10-28T22:46:18+00:00",
+  "lon": 137.38400000000001,
+  "lat": -4.811,
+  "km": 10.0,
+  "elev_m": -3583.9,
+  "sources": [
+   {
+    "name": "MOLA MEGDR 128 ppd (463 m)",
+    "frac": 1.0,
+    "res_m": 463
+   },
+   {
+    "name": "CTX stereo DTM 20 m",
+    "frac": 0.715,
+    "res_m": 20,
+    "products": [
+     "T01_000815_1749_XN_05S222W__J03_046137_1745_XN_05S222W",
+     "T01_000815_1749_XN_05S222W__J01_045293_1746_XN_05S222W",
+     "T01_000815_1749_XN_05S222W__G04_019698_1747_XI_05S222W",
+     "T01_000815_1749_XN_05S222W__K09_056897_1745_XN_05S222W",
+     "T01_000815_1749_XN_05S222W__N10_066405_1748_XI_05S222W",
+     "T01_000815_1749_XN_05S222W__F09_039280_1751_XN_04S222W",
+     "T01_000815_1749_XN_05S222W__P02_001752_1753_XI_04S222W",
+     "T01_000815_1749_XN_05S222W__P18_008147_1749_XN_05S222W",
+     "T01_000815_1749_XN_05S222W__P21_009149_1752_XI_04S222W",
+     "P22_009650_1772_XI_02S222W__K23_062317_1750_XI_05S222W",
+     "P22_009650_1772_XI_02S222W__K01_053600_1751_XN_04S222W",
+     "P22_009716_1773_XI_02S223W__K01_053600_1751_XN_04S222W",
+     "P22_009716_1773_XI_02S223W__G04_019698_1747_XI_05S222W",
+     "P22_009650_1772_XI_02S222W__P22_009716_1773_XI_02S223W",
+     "T01_000815_1749_XN_05S222W__N06_064730_1753_XN_04S222W"
+    ]
+   },
+   {
+    "name": "CTX orthoimage mosaic (6 m, resampled to 5 m)",
+    "frac": 1.0,
+    "res_m": 6
+   }
+  ],
+  "hirise": [
+   "DTEEC_019698_1750_019988_1750_U01",
+   "DTEEC_009149_1750_009294_1750_U01",
+   "DTEEC_001488_1750_001752_1750_U02",
+   "DTEEC_009650_1755_009716_1755_U01",
+   "DTEEC_024234_1755_024300_1755_U01"
+  ],
+  "ctx": [
+   "T01_000815_1749_XN_05S222W__J03_046137_1745_XN_05S222W",
+   "T01_000815_1749_XN_05S222W__J01_045293_1746_XN_05S222W",
+   "T01_000815_1749_XN_05S222W__G04_019698_1747_XI_05S222W",
+   "T01_000815_1749_XN_05S222W__K09_056897_1745_XN_05S222W",
+   "T01_000815_1749_XN_05S222W__N10_066405_1748_XI_05S222W",
+   "T01_000815_1749_XN_05S222W__F09_039280_1751_XN_04S222W",
+   "T01_000815_1749_XN_05S222W__P02_001752_1753_XI_04S222W",
+   "T01_000815_1749_XN_05S222W__P18_008147_1749_XN_05S222W",
+   "T01_000815_1749_XN_05S222W__P21_009149_1752_XI_04S222W",
+   "P22_009650_1772_XI_02S222W__K23_062317_1750_XI_05S222W",
+   "P22_009650_1772_XI_02S222W__K01_053600_1751_XN_04S222W",
+   "P22_009716_1773_XI_02S223W__K01_053600_1751_XN_04S222W",
+   "P22_009716_1773_XI_02S223W__G04_019698_1747_XI_05S222W",
+   "P22_009650_1772_XI_02S222W__P22_009716_1773_XI_02S223W",
+   "T01_000815_1749_XN_05S222W__N06_064730_1753_XN_04S222W"
+  ]
+ },
+ "projection": {
+  "name": "MartianMap_g_4p811s_137p384e",
+  "lat_ts": -4.811,
+  "clon": 137.384,
+  "note": "equirectangular, site-centred"
+ },
+ "snap_origin": [
+  -20000.0,
+  -265160.0
+ ],
+ "crater_center": [
+  137.38400000000001,
+  -4.811
+ ],
+ "base": {
+  "id": "HAB",
+  "name": "Forward camp: pressurised rover at Curiosity's sol 4530 stop",
+  "lon": 137.3870676,
+  "lat": -4.7974089,
+  "why": "Ground Curiosity parked on (sol 4530). The foothills are cliff-bounded and no place for a lander: the crew lands on the crater floor and drives up; the pressurised rover is the hub for these EVAs.",
+  "source": "Curiosity waypoint feed, sol 4530 (site 115, drive 2436)"
+ },
+ "ops_area": [
+  137.299349,
+  -4.895353,
+  137.468651,
+  -4.726647
+ ],
+ "regional_area": [
+  137.045395,
+  -5.148412,
+  137.722605,
+  -4.473588
+ ],
+ "clock": {
+  "name": "MSL",
+  "landing_utc": "2012-08-06T05:17:57Z",
+  "lon_east": 137.4416,
+  "note": "Mars Science Laboratory sols (sol 0 = landing day) at Bradbury Landing"
+ },
+ "sources": {
+  "regional_dem": "gen/g_4p811s_137p384e/regional_dem.tif",
+  "check_dem": "gen/g_4p811s_137p384e/check_blend200.tif",
+  "hires_dtms": [
+   {
+    "key": "DTEEC_019698_1750_019988_1750_U01",
+    "file": "gen/g_4p811s_137p384e/hirise_DTEEC_019698_1750_019988_1750_U01.tif",
+    "optional": true,
+    "quality": 1.0,
+    "source": "https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/ESP_019698_1750_ESP_019988_1750/DTEEC_019698_1750_019988_1750_U01.tif"
+   },
+   {
+    "key": "DTEEC_009149_1750_009294_1750_U01",
+    "file": "gen/g_4p811s_137p384e/hirise_DTEEC_009149_1750_009294_1750_U01.tif",
+    "optional": true,
+    "quality": 1.0,
+    "source": "https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/PSP_009149_1750_PSP_009294_1750/DTEEC_009149_1750_009294_1750_U01.tif"
+   },
+   {
+    "key": "DTEEC_001488_1750_001752_1750_U02",
+    "file": "gen/g_4p811s_137p384e/hirise_DTEEC_001488_1750_001752_1750_U02.tif",
+    "optional": true,
+    "quality": 1.0,
+    "source": "https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/PSP_001488_1750_PSP_001752_1750/DTEEC_001488_1750_001752_1750_U02.tif"
+   },
+   {
+    "key": "DTEEC_009650_1755_009716_1755_U01",
+    "file": "gen/g_4p811s_137p384e/hirise_DTEEC_009650_1755_009716_1755_U01.tif",
+    "optional": true,
+    "quality": 1.0,
+    "source": "https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/PSP_009650_1755_PSP_009716_1755/DTEEC_009650_1755_009716_1755_U01.tif"
+   },
+   {
+    "key": "DTEEC_024234_1755_024300_1755_U01",
+    "file": "gen/g_4p811s_137p384e/hirise_DTEEC_024234_1755_024300_1755_U01.tif",
+    "optional": true,
+    "quality": 1.0,
+    "source": "https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/ESP_024234_1755_ESP_024300_1755/DTEEC_024234_1755_024300_1755_U01.tif"
+   }
+  ],
+  "ortho": "gen/g_4p811s_137p384e/ortho_ctx5.tif",
+  "traverse": null,
+  "climate": "from:jezero"
+ },
+ "calibration_from": "jezero",
+ "dem_res_m": 20.0,
+ "landing": {
+  "lander": "human",
+  "label": "Human-class precision lander (50 m requirement)"
+ },
+ "out_dir": "sites/g_4p811s_137p384e",
+ "targets": [
+  {
+   "id": "N1",
+   "name": "Gediz Vallis (Vallis)",
+   "kind": "science",
+   "lon": 137.4362,
+   "lat": -4.8537,
+   "value": 0.5,
+   "dwell_min": 30,
+   "sigma_m": 200,
+   "why": "IAU-named Vallis, 8.3 km",
+   "source": "Gazetteer of Planetary Nomenclature, IAU WGPSN / USGS Astrogeology (planetarynames.wr.usgs.gov)"
+  },
+  {
+   "id": "ALTA",
+   "name": "Altadena (first boxwork drill)",
+   "kind": "science",
+   "lon": 137.3835414,
+   "lat": -4.7998472,
+   "value": 0.8,
+   "dwell_min": 45,
+   "sigma_m": 30,
+   "why": "Edge of the boxwork unit; drill target chosen sol 4560, hole and tailings imaged sols 4568-4569 (June 2025): the end of the campaign's first phase (sols 4534-4570).",
+   "source": "NASA Curiosity blog, sols 4568-4569 'A Close Look at the Altadena Drill Hole and Tailings'; position: Curiosity localisation on sol 4560 (site 116, drive 1944)",
+   "rover_stop": true,
+   "sol": 4560
+  },
+  {
+   "id": "MGRD",
+   "name": "Monte Grande hollow: Valle de la Luna and Nevado Sajama drills",
+   "kind": "science",
+   "lon": 137.3810041,
+   "lat": -4.8080076,
+   "value": 0.9,
+   "dwell_min": 60,
+   "sigma_m": 30,
+   "why": "A drilled pair: 'Valle de la Luna' in the floor of the large hollow 'Monte Grande' and 'Nevado Sajama' on the ridge beside it, to compare the ridge-forming rock with the hollow floor.",
+   "source": "NASA Curiosity blog, sols 4709-4715 'Drilling High and Low in the Boxwork Unit'; position: Curiosity localisation on sol 4711 (site 120, drive 82)",
+   "rover_stop": true,
+   "sol": 4711
+  },
+  {
+   "id": "CAMP",
+   "name": "Campo Marte drill and the Atacama block (sulfate unit)",
+   "kind": "science",
+   "lon": 137.3815811,
+   "lat": -4.814397,
+   "value": 0.7,
+   "dwell_min": 45,
+   "sigma_m": 30,
+   "why": "The layered sulfate unit above the boxwork: 'Atacama' lifted out of the ground on the drill (April 2026); Curiosity's 47th drill hole 'Campo Marte' beside it, first imaged in colour on sol 4897.",
+   "source": "NASA Curiosity blog, sols 4893-4899 'Drilling at Campo Marte' and sols 4908-4912; position: Curiosity localisation on sol 4893 (site 122, drive 462)",
+   "rover_stop": true,
+   "sol": 4893
+  }
+ ],
+ "keepouts": [
+  {
+   "id": "ROVER",
+   "name": "Curiosity rover (active asset)",
+   "flag": 1,
+   "radius_m": 50,
+   "points": [
+    [
+     137.3876138,
+     -4.8246648
+    ]
+   ],
+   "why": "Do not approach an active rover closer than 50 m [ASSUME].",
+   "source": "Curiosity waypoint feed sol 5045"
+  }
+ ],
+ "quality_note": "MOLA MEGDR 128 ppd (463 m): 100 %; CTX stereo DTM 20 m: 72 %; CTX orthoimage mosaic (6 m, resampled to 5 m): 100 %; HiRISE 1 m DTMs: DTEEC_019698_1750_019988_1750_U01, DTEEC_009149_1750_009294_1750_U01, DTEEC_001488_1750_001752_1750_U02, DTEEC_009650_1755_009716_1755_U01, DTEEC_024234_1755_024300_1755_U01",
+ "rover_context": {
+  "rover": "Curiosity",
+  "feed": "https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json",
+  "last_sol": 5045
+ }
+}

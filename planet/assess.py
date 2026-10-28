@@ -234,9 +234,18 @@ def dossier(lon: float, lat: float, lander: str = "human", az: float = 90.0, cri
     rows = evaluate(lat, lon, e16, D, crat, ice, L, crit)
     sc = score(rows)
     geo = datasets.geology_at(lon, lat)
+    from . import atlas, features, science
+    try:
+        objs = sorted((science.evaluate(o["id"], lon, lat, e16) for o in science.objectives().get("objectives", [])), key=lambda r: -r["score"])
+        for r in objs:
+            r["title"] = science.objective(r["objective"])["title"]
+    except Exception as e:  # noqa: BLE001 - a missing catalogue never breaks the dossier
+        objs = [{"error": f"{type(e).__name__}: {e}"}]
     return {"ok": True, "target": {"lon": lon, "lat": lat}, "criteria_set": crit, "criteria_label": CRITERIA.get(crit, CRITERIA["hls2"])["label"],
             "elev_m": e16, "landing": L, "data": D, "craters": crat, "craters_zone": crat_zone, "ice": ice, "geology": geo,
-            "environment": environment(lat, e16), "context": context(lon, lat), "criteria": rows, **sc,
+            "environment": environment(lat, e16), "model": atlas.point(lon, lat, e16), "context": context(lon, lat),
+            "science": features.context(lon, lat, 100.0) if features.available() else None, "objectives": objs,
+            "criteria": rows, **sc,
             "datasets": {k: {"installed": v["installed"], "name": v["name"], "cite": v["cite"]} for k, v in datasets.status().items()}}
 
 

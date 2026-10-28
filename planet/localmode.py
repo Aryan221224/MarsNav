@@ -395,9 +395,17 @@ def global_packs() -> dict:
         "geology": {"name": "Global geologic map (USGS SIM 3292)", "res": "1:20 000 000 map, tiles to 330 m", "kind": "geology",
                     "maxz": 7, "avg": _tile_avg("trek_geology", 12000), "default": True,
                     "why": "Map units for every point (polygons) and the coloured overlay (tiles)."},
-        "science": {"name": "Science layers: water ice, thermal inertia, GRS water, craters", "res": "3 km / 5 deg / every crater >= 1 km",
+        "science": {"name": "Science layers: water ice, thermal inertia, albedo, GRS chemistry, gravity, craters",
+                    "res": "3 km / 7 km / 5 deg / degree 120 / every crater >= 1 km",
                     "kind": "science", "bytes": int(sum(r["size_mb"] for r in ds.values()) * 1e6), "default": True,
-                    "why": "SWIM, TES, Mars Odyssey GRS and the Robbins & Hynek crater database."},
+                    "why": "SWIM, TES, Mars Odyssey GRS (H2O, Fe, Cl, K, Th, Si), MRO GMM-3 gravity and the Robbins & Hynek crater database."},
+        "atlas": {"name": "Mineral and surface maps (TES plagioclase, pyroxene, sheet silicates, dust cover; MOLA roughness)",
+                  "res": "4-16 px/deg", "kind": "atlas", "tiles": 0, "avg": 120000, "default": True,
+                  "why": "The published TES and MOLA colour maps from NASA Mars Trek. The mineral, ice, activity and mission feature "
+                         "catalogues ship with MarsNav and need nothing."},
+        "hrsc_shade": {"name": "HRSC + MOLA colour relief, whole planet", "res": "200 m", "kind": "tiles", "tile_kind": "trek_hrsc_shade",
+                       "maxz": L["hrsc_shade"]["maxz"], "avg": _tile_avg("trek_hrsc_shade", 35000), "default": False,
+                       "why": "Mars Express HRSC elevation blended with MOLA, as shaded colour relief. Large."},
         "reference": {"name": "Catalogues and names", "res": "every HiRISE / CTX DTM footprint, every IAU name", "kind": "reference",
                       "bytes": 60_000_000, "default": True,
                       "why": "Where high-resolution data exist (USGS STAC) and 2,000+ official place names."},
@@ -412,6 +420,9 @@ def global_packs() -> dict:
         if p["kind"] in ("tiles", "geology"):
             p["tiles"] = _global_tiles(p["maxz"])
             p["bytes"] = p["tiles"] * p["avg"] + (40_000_000 if p["kind"] == "geology" else 0)
+    from . import atlas
+    out["atlas"]["tiles"] = sum(_global_tiles(T["maxz"]) for T in atlas.TREK_OVL.values())
+    out["atlas"]["bytes"] = out["atlas"]["tiles"] * out["atlas"]["avg"]
     return out
 
 
@@ -784,7 +795,15 @@ def _install_global(gid: str, prog: _Progress, log) -> dict:
             except Exception as e:  # noqa: BLE001
                 lay = f"read with GDAL ({e})"
         return {"complete": lf is not None, "files": 1, "bytes": lf.stat().st_size if lf else n, "layout": lay}
-    if gid in ("viking", "mola_shade", "themis_day", "themis_night"):
+    if gid == "atlas":
+        from . import atlas
+        jobs = [(f"trek_{T['layer']}", z, y, x, atlas.TREK.format(layer=T["layer"], z=z, y=y, x=x), "png")
+                for T in atlas.TREK_OVL.values() for z, y, x in _all_tiles(T["maxz"])]
+        prog.note(f"  {len(jobs):,} map tiles of {len(atlas.TREK_OVL)} mineral and surface maps", log)
+        r = _fetch_tiles(jobs, prog, log)
+        return {"complete": r["failed"] == 0, "tiles": r["new"] + r["have"], "failed": r["failed"],
+                "bytes": sum(_dir_bytes(root() / "tiles" / f"trek_{T['layer']}") for T in atlas.TREK_OVL.values())}
+    if gid in ("viking", "mola_shade", "themis_day", "themis_night", "hrsc_shade"):
         layer = {"viking": "viking", "mola_shade": "mola"}.get(gid, gid)
         kind = f"trek_{layer}"
         jobs = _trek_jobs(layer, kind, _all_tiles(im.LAYERS[layer]["maxz"]))

@@ -157,12 +157,63 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
             from . import datasets
             return _ok({"ok": True, "datasets": datasets.status()})
         if p == "/api/legend":
-            from . import datasets
+            from . import atlas, datasets, features
             ov = q.get("ovl", "")
             if ov.startswith("safety"):
                 from . import safety
                 return _ok({"ok": True, "legend": {"title": "Landing safety", "classes": safety.LEGEND}})
+            if ov.startswith("f_"):
+                return _ok({"ok": True, "legend": features.legend(ov)})
+            if ov in atlas.TREK_OVL or ov in atlas.MODEL_OVL:
+                return _ok({"ok": True, "legend": atlas.legend(ov)})
             return _ok({"ok": True, "legend": datasets.legend(ov)})
+        if p == "/api/atlas":
+            from . import atlas, datasets
+            cat = atlas.catalogue()
+            inst = {k: v["installed"] for k, v in datasets.status().items()}
+            for g in cat["groups"]:
+                for L in g["layers"]:
+                    L["installed"] = inst.get(L["needs"], True) if L.get("needs") else True
+            return _ok({"ok": True, **cat})
+        if p == "/api/features":
+            from . import features
+            return _ok({"ok": True, **features.summary()})
+        if p == "/api/features/near":
+            from . import features
+            ids = {x for x in q.get("layers", "").split(",") if x} or None
+            lon, lat = float(q["lon"]), float(q["lat"])
+            return _ok({"ok": True, "features": features.in_radius(lon, lat, float(q.get("r", 50)), ids, int(q.get("limit", 60))),
+                        "context": features.context(lon, lat, float(q.get("r", 50)))})
+        if p == "/api/missions":
+            from . import science
+            return _ok({"ok": True, **science.missions()})
+        if p == "/api/objectives":
+            from . import science
+            return _ok({"ok": True, **science.objectives()})
+        if p == "/api/objective/rank":
+            from . import assess, science
+            c = assess.candidates()
+            pts = [[x["lon"], x["lat"], x["id"], x["name"]] for k in ("ez", "starship", "heritage") for x in c.get(k, [])]
+            f = config.PATHS["app_data"] / "sites.json"
+            for st in json.loads(f.read_text()) if f.exists() else []:
+                try:
+                    cfg = json.loads((config.PATHS["pipeline"] / "sites" / f"{st['id']}.json").read_text())
+                    w, so, e, n = cfg["ops_area"]
+                    pts.append([(w + e) / 2, (so + n) / 2, f"hub:{st['id']}", st.get("short") or st.get("name")])
+                except (OSError, ValueError, KeyError, TypeError):
+                    pass
+            with workers.request(budget=60, cancel=client_gone):
+                return _ok({"ok": True, "objective": science.objective(q["id"]), "ranked": science.rank(q["id"], pts)[:int(q.get("limit", 25))]})
+        if p == "/api/objective/eval":
+            from . import science
+            import numpy as np
+            lon, lat = float(q["lon"]), float(q["lat"])
+            e = float(megdr.sample16(np.array([lon]), np.array([lat]))[0])
+            return _ok({"ok": True, "objectives": [science.evaluate(o["id"], lon, lat, e) for o in science.objectives().get("objectives", [])]})
+        if p == "/api/spaceweather":
+            from . import spaceweather
+            spaceweather.ensure_fresh()
+            return _ok(spaceweather.summary())
         if p == "/api/assess":
             from . import assess
             with workers.request(budget=75, cancel=client_gone):
@@ -209,6 +260,9 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
                 from . import assess
                 pts = [[float(a[0]), float(a[1]), str(a[2]) if len(a) > 2 else ""] for a in data.get("points", [])][:400]
                 return _ok({"ok": True, "results": assess.screen(pts, str(data.get("crit", "hls2")))})
+            if p == "/api/spaceweather/refresh":
+                from . import spaceweather
+                return _ok({"ok": True, "job": jobs.start("spaceweather", spaceweather.refresh)})
             if p == "/api/datasets/install":
                 ids = [str(i) for i in data.get("ids") or []] or None
                 return _ok({"ok": True, "job": jobs.start_process("datasets", "planet.datasets:install", ids)})
