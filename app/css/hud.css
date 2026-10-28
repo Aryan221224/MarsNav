@@ -41,8 +41,8 @@ body.ready #wait { display: none; }
 
 /* ------------------------------------------------------------------ visor */
 #visor { color: var(--hud); font-family: var(--font-data); text-shadow: 0 0 3px #000, 0 0 6px #000; }
-#vTape { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: min(760px, 70vw); height: 54px; }
-#vSteer { position: absolute; top: 74px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+#vTape { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); width: min(760px, 70vw); height: 66px; }
+#vSteer { position: absolute; top: 86px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; }
 #vSteer svg { width: 74px; height: 74px; overflow: visible; }
 #vArrow { fill: none; stroke: var(--hud); stroke-width: 3; stroke-linejoin: round; transition: transform .25s; }
 #vArrow.home { stroke: var(--caution); }
@@ -125,3 +125,6 @@ body[data-mode="cuff"] #cuff { display: flex; flex-direction: column; gap: 10px;
 .cb.armed { background: var(--warning); color: #000; }
 .legs { width: 100%; border-collapse: collapse; font-family: var(--font-data); font-size: 13.5px; }
 .legs td { padding: 3px 4px; border-bottom: 1px solid var(--line); }
+
+.hint { color: var(--text-faint); font-size: 13px; }
+body.overlay #wait { display: none; }
