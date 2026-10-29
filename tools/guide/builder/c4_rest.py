@@ -45,7 +45,7 @@ table([["Layer", "Built with"],
         "the science atlas, missions and objectives, space weather, and the lookup of every layer at a point."],
        ["Data pipeline", "Python with numpy, scipy, rasterio / GDAL and Pillow (pipeline/): download with SHA-256 checks, "
         "terrain statistics, hazard layers, imagery, weather fit."],
-       ["Verification", "Node's test runner (64 engine and closed-loop tests), pytest (53 pipeline, downloader, science-atlas and place tests), "
+       ["Verification", "Node's test runner (65 engine and closed-loop tests), pytest (53 pipeline, downloader, science-atlas and place tests), "
         "validation scripts against Perseverance data, an end-to-end server self-test, and on every change a Windows build that is "
         "started and checked before it is published (GitHub Actions)."]],
       [1.45 * inch, CW - 1.45 * inch])
@@ -134,7 +134,7 @@ small("Each EVA is flown twice with the same random numbers and a hidden truth d
       "touching the reserve, the loop comes out ahead. Both arms use the same simulator.")
 H2("Automated tests")
 table([["Suite", "Command", "Result"],
-       ["Engine and closed loop (Node 20+)", "node --test tests/*.test.mjs", "64 of 64 pass (29 Oct 2026)"],
+       ["Engine and closed loop (Node 20+)", "node --test tests/*.test.mjs", "65 of 65 pass (29 Oct 2026)"],
        ["Pipeline, downloader, science atlas, place", "python -m pytest tests -q", "53 of 53 pass (29 Oct 2026)"],
        ["Validation vs Perseverance", "node validation/validate.mjs", "results above (26 Oct 2026), about 30 s; needs the raw NASA inputs in data_cache"],
        ["Closed-loop campaign", "node validation/closed_loop_campaign.mjs", "0 / 40 vs 31 / 40; reproduced exactly on 29 Oct 2026"],
@@ -180,7 +180,7 @@ table([["Criterion", "Evidence in MarsNav"],
        ["Creativity", "Walk-home guarantee inside the search; soft soil priced by its tail (CVaR); position error as a planning "
         "input; walking-scale terrain from 1 m stereo; a closed loop that learns the crew and the suit; every layer at any point; "
         "the same EVA on visor, dashboard and cuff; Mars mode."],
-       ["Validity", "Validated against Perseverance; a negative result reported; 117 automated tests; a paired 40-EVA campaign "
+       ["Validity", "Validated against Perseverance; a negative result reported; 118 automated tests; a paired 40-EVA campaign "
         "with a significance test; byte-identical rebuilds; a Windows build tested on a clean machine at every change; assumptions tagged."],
        ["Relevance", "Every point of the challenge statement (above), demonstrated at Perseverance's own field site."],
        ["Presentation", "A native desktop app with a guided Tour, 3D rehearsal and three crew displays; this guide; focused documents in docs/."]],
@@ -223,7 +223,7 @@ code("pip install -r requirements.txt\n"
      "bash tools/build_all.sh     # fetch + SHA-256 check, terrain, layers, weather fit, imagery")
 small("Raw rasters are read from data_cache/raw/, a _data_raw/ folder next to the project, or $MM_RAW. Exact URLs and "
       "checksums are in pipeline/sources.json. A full rebuild reproduces the shipped layers byte for byte.")
-small("Tests: node --test tests/*.test.mjs (64), python -m pytest tests -q (53), node validation/validate.mjs, "
+small("Tests: node --test tests/*.test.mjs (65), python -m pytest tests -q (53), node validation/validate.mjs, "
       "node validation/closed_loop_campaign.mjs, python tools/smoke_exe.py, and selftest.bat (Chapter 16).")
 
 # ================================================================== 19. TROUBLESHOOTING
@@ -242,6 +242,7 @@ table([["Symptom", "What to do"],
        ["The map stops responding", "Wait a few seconds: the supervisor replaces a stalled engine within 30-60 s (3 s if it exits). Help, Engine status shows its health."],
        ["SPACE WX says there is no data", "NASA's DONKI service could not be reached, or limited the demonstration key. Press Fetch the latest from NASA DONKI later, or set your own key in MM_NASA_API_KEY. The advisory never guesses."],
        ["A crew display says it is waiting", "Open it from the EVA planner (HUD, or the buttons in Execute) in the same MarsNav, then start an EVA. In a browser, allow pop-ups for the page."],
+       ["The visor says “3D view unavailable”", "The 3D terrain needs WebGL: in a browser, turn hardware acceleration on. The visor works without it (V gives the plain visor)."],
        ["A line of the place data says reading…", "A remote lookup (the USGS geologic map or a Mars Trek map) is still answering; it fills in by itself. In Mars mode it says the map is not in the local packs."]],
       [1.95 * inch, CW - 1.95 * inch])
 H2("Logs and the self-test")

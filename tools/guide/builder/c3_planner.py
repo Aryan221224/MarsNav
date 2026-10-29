@@ -193,20 +193,23 @@ chapter("Crew displays", "helmet visor, rover dashboard and wrist cuff",
 H2("Opening them")
 bullets(["In the EVA planner: <b>HUD</b> on the map tools opens the visor; <b>Helmet visor</b>, <b>Rover dash</b> and "
          "<b>Wrist cuff</b> in Execute open each one. Every display is its own window: keys <b>1</b>, <b>2</b> and <b>3</b> "
-         "switch between them and <b>F</b> goes full screen.",
+         "switch between them and <b>F</b> goes full screen. On the visor, <b>V</b> switches the 3D view on and off and "
+         "<b>C</b> looks ahead again after a look around.",
          "They follow whatever flies the EVA: the simulator, live suit telemetry or you in the drive window. They get the plan "
          "and every snapshot live, and the cuff's commands act on the planner's loop. A display opened first waits for the "
          "planner and connects by itself.",
-         "In the 3D drive window, <b>H</b> draws the visor see-through over the first-person view.",
+         "In the 3D drive window, <b>H</b> draws the visor see-through over the drive window's own first-person view.",
          "For a place with no EVA, <b>HUD</b> in Landing mode's dossier and <b>Crew displays</b> on the planner's place card "
          "open them as a survey of that point (below)."])
 story.append(CondPageBreak(4.8 * inch))     # the heading stays with its figure
 H2("Helmet visor")
-figure("g15_visor", "The helmet visor during a simulated EVA to Amalik at 120x: heading 254° with the next stop 1.88 km away "
-       "(turn right), consumables with the walk-home need ticked, the walk-home time and margin, the facts about the ground "
+figure("g15_visor", "The helmet visor during a simulated EVA to Amalik at 120x, over the site's terrain in 3D from the crew's "
+       "eyes: the route painted on the ground and the stop's pole on the delta front, heading 288° with the next stop 1.72 km "
+       "away (ahead), consumables with the walk-home need ticked, the walk-home time and margin, the facts about the ground "
        "under the crew (bottom left) and the mini map.")
 table([["Part", "What it shows"],
-       ["Heading tape", "The 120° ahead with the next stop (diamond), home (H) and the sun. Heading comes from the track: SUITS telemetry has no compass."],
+       ["3D view", "The site's terrain from the crew's eyes (1.8 m standing, 2.25 m in the rover's seat), following its position and heading: the 10 m terrain with the orbital and HiRISE images, the crater rim on the skyline, the route painted on the ground in white (a re-plan in cyan, the return in red), the stops and the habitat as poles. Drag to look around: the tape and the arrow turn with the view."],
+       ["Heading tape", "The 120° ahead of the view with the next stop (diamond), home (H) and the sun. Heading comes from the track: SUITS telemetry has no compass."],
        ["Steering cue", "An arrow to the next stop with its distance, bearing, time at the current pace and turn left / right / ahead; amber when the next stop is home."],
        ["Mode tag", "TRAVERSE, STATION, RETURN or EVA DONE."],
        ["Consumables", "O₂, CO₂ scrubber, cooling water and battery; the white tick is what the walk home from here needs."],
@@ -216,9 +219,11 @@ table([["Part", "What it shows"],
        ["Mini map", "The route, the re-plan or the return, the track, the stations, the habitat and the crew with its position error; lines only."]],
       [1.15 * inch, CW - 1.15 * inch])
 figure("g15b_visor_leak", "The same visor seconds after a suit leak is injected: WARNING · SUIT PRESSURE DECAY with its action, the "
-       "mode RETURN, and the steering cue turned amber towards home.", width=CW * 0.8)
+       "mode RETURN, the steering cue turned amber towards the habitat (HAB on the skyline) and the return route in red.", width=CW * 0.8)
 callout("Why the visor looks like this", "Black is see-through on a real visor, so it draws nothing it does not need and keeps "
-        "the centre of view clear. Normal symbols use one calm colour; amber and red appear only for cautions and warnings. "
+        "the centre of view clear. On a screen the 3D terrain stands in for the world behind the visor, darkened at the edges "
+        "where the numbers are; <b>V</b> gives the plain visor. Normal symbols use one calm colour; amber and red appear only "
+        "for cautions and warnings. "
         "This follows the display practice of NASA's SUITS challenge and NASA-STD-3001, as the planner's own display does.", "cyan")
 story.append(CondPageBreak(4.8 * inch))
 H2("Rover dashboard")
@@ -242,12 +247,13 @@ bullets(["Large targets for gloves. <b>ACK ALERTS</b> and <b>SILENCE</b> act on 
          "The header gives mission time, the mode and the local time on the mission clock."])
 H2("A survey of any place")
 P("Opened from Landing mode or from the planner's place card, the displays show a place with no EVA running. The visor gives "
-  "the local solar time, the sun, the time to sunset, the season, the elevation and the Earth's radio delay; the dashboard "
+  "the local solar time, the sun, the time to sunset, the season, the elevation and the Earth's radio delay, over the place "
+  "in 3D when it is inside a built EVA site (the 3D terrain is built per site; elsewhere the visor says so). The dashboard "
   "and the visor map the catalogued features and names within 50 km on Mars imagery, with range rings and the sun's "
   "direction; the cuff lists the facts, the nearest features and every layer.")
 figrow([("g19_survey_rover", None, "Rover dashboard"), ("g19b_survey_visor", None, "Helmet visor")],
        "A survey of the Mount Sharp boxwork, opened from Landing mode: no EVA, the features within 50 km on Mars imagery, and "
-       "the facts about the place.")
+       "the facts about the place; the visor stands on the boxwork in 3D, facing north, with Mount Sharp rising on the right.")
 P("During an EVA the planner sends every layer at the crew's position again after 400 m of travel or ten minutes, and the "
   "site's terrain under the crew once a second. Without the MarsNav engine (the planner served as plain web files) the "
   "displays still follow the EVA, without the place facts.")

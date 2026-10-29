@@ -19,11 +19,14 @@
     <button role="radio" data-mode="cuff" title="Wrist cuff tablet the crew carries (3)">Wrist cuff</button>
   </div>
   <span id="link" class="link">waiting</span>
+  <button id="v3dBtn" class="vonly" aria-pressed="true" title="The terrain in 3D behind the visor, from the crew's eyes (V). Drag to look around, C to look ahead again">3D view</button>
   <button id="fs" title="Full screen (F)">⛶</button>
 </nav>
 
-<!-- ============================================================ helmet visor: black is transparent on a real visor -->
+<!-- ============================ helmet visor: black is transparent on a real visor; here the 3D terrain stands in for the world -->
 <section id="visor" class="mode" aria-label="Helmet visor HUD">
+  <div id="v3d" hidden><canvas aria-label="The terrain ahead, in 3D from the crew's eyes"></canvas></div>
+  <div id="v3dNote" class="vnote" hidden></div>
   <canvas id="vTape" aria-label="Heading tape"></canvas>
   <div id="vSteer"><svg viewBox="-50 -50 100 100" aria-hidden="true"><path id="vArrow" d="M0,-34 L16,10 L0,2 L-16,10 Z"/></svg>
     <div id="vNext" class="vtext">--</div></div>

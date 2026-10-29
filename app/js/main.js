@@ -1147,7 +1147,7 @@ function hudPlan() {
   const ch = hudChannel();
   if (!ch) return;
   const r = state.routes?.[state.selected];
-  ch.postMessage({ type: "plan", site: state.site?.short ?? state.site?.name, siteId: state.site?.id, base: state.base,
+  ch.postMessage({ type: "plan", site: state.site?.short ?? state.site?.name, siteId: state.site?.id, data: DATA, base: state.base,
     clock: state.site?.clock ?? null, profile: $("profile").value, routeName: state.selected, departMs: state.cfg?.departMs ?? null,
     route: r?.ok ? r.pts.filter((_, k) => k % 3 === 0).map((p) => [p.lon, p.lat]) : [],
     stations: routeStops().map((st) => ({ lon: st.lon, lat: st.lat, name: st.name, id: st.id ?? null,

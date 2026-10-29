@@ -75,6 +75,19 @@ body.ready #wait { display: none; }
 #vEnv .vf .k { font-family: var(--font-label); letter-spacing: .1em; font-size: 11.5px; color: var(--hud-dim); text-transform: uppercase; }
 #vEnv .vf .v { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #vEnv .vhead { font-family: var(--font-label); letter-spacing: .14em; font-size: 12px; color: var(--hud-dim); border-bottom: 1px solid var(--hud-faint); margin-bottom: 2px; }
+/* the 3D terrain behind the symbology, standing in for the world seen through the visor; the edges, where the
+   columns of numbers sit, are darkened so the symbology stays readable on bright ground and sky */
+#v3d { position: absolute; inset: 0; cursor: grab; }
+#v3d:active { cursor: grabbing; }
+#v3d canvas { display: block; width: 100%; height: 100%; }
+#v3d::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(to bottom, #000a, #0000 24%, #0000 66%, #000b), linear-gradient(to right, #0009, #0000 24%, #0000 76%, #0009); }
+#visor > :not(#v3d) { pointer-events: none; }                 /* drags reach the 3D view through the symbology */
+.vnote { position: absolute; right: 22px; top: 52px; font-size: 12px; color: var(--hud-dim); max-width: 46vw; text-align: right; }
+#modes #v3dBtn { background: none; border: 1px solid var(--line); border-radius: 4px; cursor: pointer; padding: 2px 8px; font-family: var(--font-label);
+  font-weight: 600; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); }
+#modes #v3dBtn[aria-pressed="true"] { background: #d8a57a29; color: #e8bd97; }
+body:not([data-mode="visor"]) .vonly, body.overlay .vonly { display: none; }
 
 /* ------------------------------------------------------------------ rover dashboard */
 #rover { background: var(--panel); padding: 10px; }

@@ -19,7 +19,7 @@ stats([("66", "candidate landing sites screened on real data: NASA's 48 Explorat
        ("5", "named EVA routes in about 3 s on one laptop core, every one inside hard limits"),
        ("0 / 40", "simulated EVAs dipped into the reserve with MarsNav's closed loop, against 31 / 40 flying the filed plan"),
        ("Offline", "Mars mode: every map tile and dataset served from this computer; outside data requests refused and counted"),
-       ("117", "automated tests pass (64 engine and closed-loop, 53 pipeline, science atlas and place); every build is tested on a clean Windows PC"),
+       ("118", "automated tests pass (65 engine and closed-loop, 53 pipeline, science atlas and place); every build is tested on a clean Windows PC"),
        ("0.086°", "sun-angle error of the Mars clock against Perseverance's MEDA sensor, over 5,616 samples"),
        ("21 / 30", "real Perseverance detours where MarsNav's hazard map agrees the rover chose safer ground"),
        ("1 click", "to run: a native Windows app, no install, no Python, works on a fresh PC"),

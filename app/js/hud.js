@@ -5,12 +5,16 @@
 //   cuff   wrist tablet: next stop with the rover's own photograph of it, procedure checklist, big numbers, and the
 //          commands a gloved hand needs (acknowledge, silence, drop a pin, two-step return)
 // ?mode=visor|rover|cuff picks one; ?overlay=1 draws the visor see-through over another view (the drive window).
+// Behind the visor's symbology runs the site's terrain in 3D from the crew's eyes (js/view3d.js), following the crew's
+// position and heading: drag to look around, C to look ahead again, V (or the 3D button) to switch it off.
 // Every display also shows the place the crew is on (js/placeview.js, /api/place): air, dose, gravity, ground, dust,
 // ice, geology, science nearby; the planner sends it for the crew's position. ?lon=&lat=&name= opens the displays for
 // any place on Mars without an EVA (Landing mode "HUD", the planner's place card): a survey of that place.
 import { marsContext, missionClock, M2020_CLOCK } from "../engine/marstime.js";
 import { fmtDuration } from "../engine/util.js";
+import { browserIO, loadTerrain } from "../engine/terrain.js";
 import { loadPlace, nearFeatures, placeCompass, placeFacts, placeFmtKm, placeHhmm, placeHtml, timeHere } from "./placeview.js";
+import { View3D } from "./view3d.js";
 
 const $ = (id) => document.getElementById(id);
 const R_MARS = 3396190;
@@ -128,10 +132,11 @@ function render() {
   const here = S.snap ? local(S.snap.lon, S.snap.lat) : [0, 0];
   const there = nx ? local(nx.lon, nx.lat) : here;
   const at = S.snap && Number.isFinite(S.snap.lon) ? { lon: S.snap.lon, lat: S.snap.lat } : S.plan.base;
-  const nav = { here, there, d: dist(here, there), brg: bearing(here, there), ...mo, nx, ctx, t: timeHere(S.snap?.ms ?? Date.now(), at.lon, at.lat) };
+  const nav = { here, there, d: dist(here, there), brg: bearing(here, there), ...mo, nx, ctx, t: timeHere(S.snap?.ms ?? Date.now(), at.lon, at.lat), look: viewHeading() };
   if (S.mode === "visor") visor(nav);
   else if (S.mode === "rover") rover(nav);
   else cuff(nav);
+  view3d(nav).catch((e) => console.error(e));
 }
 
 // ---------------------------------------------------------------------------------------------------- visor --
@@ -157,12 +162,13 @@ function visor(n) {
     placeMap($("vMini"), n, { visor: true });
     return;
   }
-  const rel = n.heading == null ? 0 : (((n.brg - n.heading) + 540) % 360) - 180;
+  const aim = n.look ?? n.heading;                                     // where the view looks: the heading, or a look around
+  const rel = aim == null ? 0 : (((n.brg - aim) + 540) % 360) - 180;
   const arrow = $("vArrow");
   arrow.setAttribute("transform", `rotate(${rel.toFixed(1)})`);
   arrow.classList.toggle("home", !!n.nx?.home);
   const eta = n.speed > 0.15 ? n.d / n.speed : null;
-  $("vNext").innerHTML = n.nx ? `${n.nx.home ? "HOME · " : ""}${esc(n.nx.name)}<small>${fmtM(n.d)} · ${Math.round(n.brg)}°${eta ? ` · ${hm(eta)}` : ""}${n.heading == null ? "" : rel > 8 ? " · turn right" : rel < -8 ? " · turn left" : " · ahead"}</small>` : "--";
+  $("vNext").innerHTML = n.nx ? `${n.nx.home ? "HOME · " : ""}${esc(n.nx.name)}<small>${fmtM(n.d)} · ${Math.round(n.brg)}°${eta ? ` · ${hm(eta)}` : ""}${aim == null ? "" : rel > 8 ? " · turn right" : rel < -8 ? " · turn left" : " · ahead"}</small>` : "--";
   if (!s) {
     $("vLeft").innerHTML = "";
     $("vRight").innerHTML = `<div class="vrow"><span class="k">EVA</span><span class="v">not started</span></div>`;
@@ -194,14 +200,15 @@ function visor(n) {
   miniMap($("vMini"), n, { visor: true });
 }
 
-/** Heading tape: the 120 deg ahead, with the next stop (diamond), home (H) and the sun. */
+/** Heading tape: the 120 deg ahead (of the 3D view's direction when it is on), with the next stop (diamond), home (H)
+ *  and the sun. */
 function tape(cv, n) {
   const W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
   if (cv.width !== W * dpr) { cv.width = W * dpr; cv.height = H * dpr; }
   const g = cv.getContext("2d");
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, W, H);
-  const hd = n.heading ?? 0, span = 120, px = W / span;
+  const hdg = n.look ?? n.heading, hd = hdg ?? 0, span = 120, px = W / span;
   const col = getComputedStyle(document.body).getPropertyValue("--hud").trim() || "#9dffcf";
   g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 1.5;
   g.font = "13px 'IBM Plex Mono', monospace"; g.textAlign = "center";
@@ -214,7 +221,7 @@ function tape(cv, n) {
   }
   g.beginPath(); g.moveTo(W / 2 - 7, 46); g.lineTo(W / 2, 36); g.lineTo(W / 2 + 7, 46); g.stroke();
   g.font = "600 15px 'IBM Plex Mono', monospace";
-  g.fillText(n.heading == null ? "---" : String(Math.round(hd) % 360).padStart(3, "0"), W / 2, 62);
+  g.fillText(hdg == null ? "---" : String(Math.round(hd) % 360).padStart(3, "0"), W / 2, 62);
   g.font = "13px 'IBM Plex Mono', monospace";
   const mark = (b, draw) => { const X = x(b); if (X > 4 && X < W - 4) draw(X); };
   if (n.nx) mark(n.brg, (X) => { g.beginPath(); g.moveTo(X, 30); g.lineTo(X + 6, 37); g.lineTo(X, 44); g.lineTo(X - 6, 37); g.closePath(); g.stroke(); });
@@ -546,6 +553,149 @@ for (const b of document.querySelectorAll("[data-cmd]")) {
   });
 }
 
+// ------------------------------------------------------------------------------------------------- 3D view --
+// The world through the visor: the site's terrain in 3D from the crew's eyes, 1.8 m above the ground where the crew is,
+// facing the way it is going (the planner's 3D view, js/view3d.js, in its "crew" mode). It loads only the 10 m and the
+// 100 m elevation and the orbital image; a survey shows it when the place is inside a built EVA site. Not drawn over
+// the drive window (?overlay=1), which has its own 3D world.
+const V = { on: !document.body.classList.contains("overlay") && pref("marsnav-hud-3d") !== "off", view: null, site: null, key: "", busy: false,
+  eye: null, track: "", builtAt: 0, aimDrawn: NaN, drawnAt: 0 };
+
+function pref(k, v) {
+  try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { /* storage blocked */ }
+  return null;
+}
+
+/** The two elevation layers and the orbital image of a site (data = the site's data folder URL). */
+async function loadSite(data) {
+  const io = browserIO(data);
+  const T = await loadTerrain({ ...io, json: async (f) => {
+    const m = await io.json(f);
+    if (f === "manifest.json") m.layers = { elev_dm: m.layers.elev_dm, reg_elev_dm: m.layers.reg_elev_dm };
+    return m;
+  } });
+  const imagery = await fetch(new URL("imagery.json", data)).then((r) => r.json());
+  const ortho = await new Promise((res) => {
+    const im = new Image();
+    im.onload = () => res(im); im.onerror = () => res(null);
+    im.src = new URL(imagery.ortho5.file, data).href;
+  });
+  return { data, T, imagery, ortho, grid: T.manifest.grids.ops10 };
+}
+
+/** The data folder of a built site, by id (for a survey of a place inside one). */
+async function siteFolder(id) {
+  const root = new URL("data/", location.href);
+  const list = await fetch(new URL("sites.json", root)).then((r) => r.json());
+  const s = list.find((x) => x.id === id);
+  return s ? new URL(s.path || "", root).href : null;
+}
+
+/** Where the eye is meant to be now: lon, lat and heading (radians east of north). */
+function eyeTarget(n) {
+  const P = S.plan, s = S.snap;
+  if (PLACE) return { lon: PLACE.lon, lat: PLACE.lat, yaw: 0 };
+  const at = s && Number.isFinite(s.lon) ? s : P.base;
+  let yaw = n.heading != null ? n.heading * DEG : V.eye?.yaw;
+  if (yaw == null) yaw = n.nx && n.d > 1 ? n.brg * DEG : 0;       // before the EVA: at the habitat, facing the first stop
+  return { lon: at.lon, lat: at.lat, yaw };
+}
+
+async function view3d(n) {
+  const wrap = $("v3d"), note = $("v3dNote"), btn = $("v3dBtn");
+  btn.setAttribute("aria-pressed", String(V.on));
+  const want = V.on && S.mode === "visor" && !document.body.classList.contains("overlay");
+  const say = (t) => { note.hidden = !t; note.textContent = t || ""; };
+  if (!want) { wrap.hidden = true; say(""); return; }
+  const P = S.plan, eye = eyeTarget(n);
+  let data = P.data ?? null;
+  if (PLACE) {
+    const inside = S.place?.sites?.inside;
+    if (!S.place) { say("3D view: reading the place…"); return; }
+    if (!inside) { wrap.hidden = true; say("3D view: this place is outside the built EVA sites (the 3D terrain is built per site)"); return; }
+    data = V.placeData ??= await siteFolder(inside.id).catch(() => null);
+  }
+  if (!data) { wrap.hidden = true; say(""); return; }
+  const stations = (P.stations || []).map(({ lon, lat, name }) => ({ lon, lat, name }));
+  const key = JSON.stringify([data, P.base, P.route?.length, P.route?.[0], P.route?.at?.(-1), stations.map((x) => x.name)]);
+  const v = V.view;
+  // rebuild for a new site or plan, or when the crew walks off the detailed terrain (the window follows the crew)
+  const off = v?.local && !v.contains(eye.lon, eye.lat, 150) && Date.now() - V.builtAt > 10000;
+  if ((key !== V.key || off) && !V.busy) {
+    V.busy = true;
+    V.key = key;
+    if (!v?.local) say("3D view: loading the site's terrain…");
+    try {
+      if (V.site?.data !== data) V.site = await loadSite(data);
+      V.view ??= new View3D(wrap, null, null);
+      V.view.call = async (type, a) => V.site.T[type](a);
+      V.view.map = { ortho: V.site.ortho, overlay: null, base: data };
+      V.view.mode = "crew";
+      wrap.hidden = false;                      // a visible canvas, so the view is built at the window's size
+      const ok = await V.view.open({ grid: V.site.grid, imagery: V.site.imagery, base: P.base,
+        route: (P.route || []).map(([lon, lat]) => ({ lon, lat })), stations, pins: [], diag: null,
+        ms: S.snap?.ms ?? P.departMs ?? Date.now(), focus: [{ lon: eye.lon, lat: eye.lat }], habitat: !PLACE });
+      if (!ok) throw new Error(V.view.initError ? "this browser has WebGL turned off" : "no 3D");
+      V.builtAt = Date.now();
+      V.track = "";
+      V.eye = null;
+      V.err = "";
+    } catch (e) {
+      V.err = `3D view unavailable: ${e.message}`;
+      V.key = key;                              // not retried every second; a new plan or site tries again
+    } finally {
+      V.busy = false;
+    }
+  }
+  if (V.err) { wrap.hidden = true; say(V.err); return; }
+  if (!V.view?.local) return;
+  wrap.hidden = false;
+  // the path the crew should be on when it is not the filed plan: re-plan in cyan, the return home in red
+  const path = activePath(), tk = path.kind === "plan" ? "" : `${path.kind}:${path.pts.length}:${path.pts[0]}`;
+  if (tk !== V.track) {
+    V.track = tk;
+    V.view.setTrack(tk ? path.pts.map(([lon, lat]) => ({ lon, lat })) : null, path.kind === "return" ? 0xff7470 : 0x3ccbff);
+  }
+  V.goal = eye;
+  say(Math.abs(V.view.look.yaw) > 0.05 || Math.abs(V.view.look.pitch + 0.05) > 0.05 ? "Looking around · C: look ahead" : Date.now() - V.builtAt < 12000 ? "3D from your eyes · drag to look around" : "");
+}
+
+/** The direction the 3D view looks (deg from north): the crew's heading plus any look around; null when it is off. */
+function viewHeading() {
+  if (!V.view?.local || !V.eye || $("v3d").hidden) return null;
+  return (((V.eye.yaw + V.view.look.yaw) / DEG) % 360 + 360) % 360;
+}
+
+/** Every frame: the eye glides to where the crew is and turns to its heading (telemetry arrives a few times a second). */
+let lastFrame = performance.now();
+function eyeFrame(now) {
+  requestAnimationFrame(eyeFrame);
+  const dt = Math.min(0.25, (now - lastFrame) / 1000), v = V.view, g = V.goal;
+  lastFrame = now;
+  if (!v?.local || !g || $("v3d").hidden) return;
+  const e = V.eye;
+  const jump = !e || Math.hypot((g.lon - e.lon) * Math.cos(g.lat * DEG), g.lat - e.lat) * R_MARS * DEG > 200;
+  let moved = jump;
+  if (jump) V.eye = { ...g };
+  else {
+    const k = 1 - Math.exp(-dt / 0.35), dyaw = (((g.yaw - e.yaw) / DEG + 540) % 360 - 180) * DEG;
+    moved = Math.abs(g.lon - e.lon) > 1e-9 || Math.abs(g.lat - e.lat) > 1e-9 || Math.abs(dyaw) > 1e-4;
+    if (moved) V.eye = { lon: e.lon + (g.lon - e.lon) * k, lat: e.lat + (g.lat - e.lat) * k, yaw: e.yaw + dyaw * k };
+  }
+  if (moved) v.setEye(V.eye.lon, V.eye.lat, V.eye.yaw, S.plan?.profile === "rover" && !PLACE ? 2.25 : 1.8);
+  // the heading tape and the steering cue follow the view as it turns or is dragged around
+  const aim = V.eye.yaw + v.look.yaw;
+  if (!(Math.abs(aim - V.aimDrawn) < 0.005) && now - V.drawnAt > 50) { V.aimDrawn = aim; V.drawnAt = now; render(); }
+}
+requestAnimationFrame(eyeFrame);
+
+function toggle3D() {
+  V.on = !V.on;
+  pref("marsnav-hud-3d", V.on ? "on" : "off");
+  render();
+}
+$("v3dBtn").addEventListener("click", toggle3D);
+
 // ------------------------------------------------------------------------------------------------------ misc --
 function flashNote(text) {
   const l = $("link");
@@ -572,6 +722,8 @@ addEventListener("keydown", (e) => {
   else if (e.key === "2") setMode("rover");
   else if (e.key === "3") setMode("cuff");
   else if (e.key === "f" || e.key === "F") $("fs").click();
+  else if ((e.key === "v" || e.key === "V") && S.mode === "visor") toggle3D();
+  else if ((e.key === "c" || e.key === "C") && S.mode === "visor") V.view?.recentre();
 });
 addEventListener("resize", render);
 render();

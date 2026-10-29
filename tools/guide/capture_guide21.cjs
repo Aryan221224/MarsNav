@@ -2,14 +2,14 @@
 // The 2.0 figures come from capture_guide.py (the desktop window); these are page captures without the window frame.
 //
 //   MarsNav.exe --headless --port 8765          (or: python launcher/martian_map.py --headless --no-browser)
-//   node tools/guide/capture_guide21.js [landing] [planner] [hud]        (needs Playwright with Chromium)
+//   node tools/guide/capture_guide21.cjs [landing] [planner] [hud]        (needs Playwright with Chromium)
 //
 // Pictures go to data_cache/guide/*.png; python tools/guide/builder/build.py crops them into tools/guide/assets/img and
-// builds the PDF. BASE=http://127.0.0.1:<port> points it at another server.
+// builds the PDF. BASE=http://127.0.0.1:<port> points it at another server, OUT=<folder> puts the pictures elsewhere.
 const path = require("path");
 const fs = require("fs");
 const { chromium } = require("playwright");
-const OUT = path.join(__dirname, "..", "..", "data_cache", "guide");
+const OUT = process.env.OUT || path.join(__dirname, "..", "..", "data_cache", "guide");
 fs.mkdirSync(OUT, { recursive: true });
 const BASE = process.env.BASE || "http://127.0.0.1:8765";
 const parts = process.argv.slice(2);
@@ -22,6 +22,9 @@ const W = 1800, H = 1030;
   const watch = (p, t) => { p.on("pageerror", (e) => errs.push(`${t}: ${e.message}`)); };
   const marks = async (p, sels) => p.evaluate((sels) => sels.map(([s, n]) => { const e = document.querySelector(s); if (!e) return [s, null]; const r = e.getBoundingClientRect(); return [n, +((r.x + r.width / 2) / innerWidth).toFixed(3), +((r.y + r.height / 2) / innerHeight).toFixed(3)]; }), sels);
   const ready = (p) => p.waitForFunction(() => document.getElementById("busy").hidden && document.querySelector("#cards .card"), null, { timeout: 240000 });
+  // the visor's 3D terrain is built (and has settled on the crew's position)
+  const view3d = (p) => p.waitForFunction(() => !document.getElementById("v3d").hidden && !/loading/.test(document.getElementById("v3dNote").textContent), null, { timeout: 90000 })
+    .then(() => p.waitForTimeout(1500));
   // ------------------------------------------------------------------ Landing mode overview with markers
   if (want("landing")) {
     const L = await ctx.newPage(); watch(L, "landing");
@@ -116,6 +119,7 @@ const W = 1800, H = 1030;
     await Hd.goto(`${BASE}/hud.html?mode=visor`);
     await Hd.waitForFunction(() => document.body.classList.contains("ready"), null, { timeout: 20000 });
     await P.click("#tabExec"); await P.selectOption("#simSpeed", "120"); await P.click("#btnRun"); await P.waitForTimeout(16000);
+    await view3d(Hd);
     await Hd.screenshot({ path: `${OUT}/g15_visor.png` });
     await Hd.keyboard.press("2"); await Hd.setViewportSize({ width: 1400, height: 820 }); await Hd.waitForTimeout(2500);
     await Hd.screenshot({ path: `${OUT}/g16_rover.png` });
@@ -130,6 +134,7 @@ const W = 1800, H = 1030;
     // a suit leak: the visor in RETURN
     await P.click('[data-fault="leak"]'); await P.waitForTimeout(4000);
     await Hd.keyboard.press("1"); await Hd.setViewportSize({ width: 1280, height: 720 }); await Hd.waitForTimeout(2000);
+    await view3d(Hd);
     await Hd.screenshot({ path: `${OUT}/g15b_visor_leak.png` });
     await Hd.close(); await P.close();
     // survey of a place (no EVA)
@@ -138,6 +143,7 @@ const W = 1800, H = 1030;
     await Sv.goto(`${BASE}/hud.html?mode=rover&lon=137.384&lat=-4.811&name=Mount%20Sharp%20boxwork`); await Sv.waitForTimeout(14000);
     await Sv.screenshot({ path: `${OUT}/g19_survey_rover.png` });
     await Sv.click('#modes [data-mode="visor"]'); await Sv.setViewportSize({ width: 1280, height: 720 }); await Sv.waitForTimeout(2500);
+    await view3d(Sv);
     await Sv.screenshot({ path: `${OUT}/g19b_survey_visor.png` });
     await Sv.click('#modes [data-mode="cuff"]'); await Sv.setViewportSize({ width: 480, height: 1500 }); await Sv.waitForTimeout(3000);
     await Sv.screenshot({ path: `${OUT}/g19c_survey_cuff.png` });

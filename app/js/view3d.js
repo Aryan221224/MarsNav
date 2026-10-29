@@ -2,6 +2,7 @@
 // Local terrain: the 10 m elevation around the route, draped with the CTX ortho and the 2 m HiRISE relief tiles (and the
 // active overlay). Far terrain: the whole-crater 100 m DEM, so the skyline in helmet view is the real crater rim.
 // Mars curvature is applied (drop = d^2 / 2R) and vertical exaggeration defaults to 1 (true scale).
+// The crew displays (hud.js) use the same view behind the helmet visor, following the crew (setEye).
 import * as THREE from "../vendor/three.module.min.js";
 import { lonlatToXY, R_MARS } from "../engine/geo.js";
 import { marsState, jdTT, sunPosition } from "../engine/marstime.js";
@@ -161,7 +162,7 @@ export class View3D {
     }, { passive: false });
   }
 
-  /** ctx: { grid, imagery, base, route (pts with lon, lat, elev), stations, pins, crew, diag, ms } */
+  /** ctx: { grid, imagery, base, route (pts with lon, lat, elev), stations, pins, crew, diag, ms, focus, habitat } */
   async open(ctx) {
     if (!this._init()) return false;
     if (this.lost) throw new Error("the graphics context is lost; try again in a moment");
@@ -186,10 +187,10 @@ export class View3D {
   }
 
   async _build() {
-    const { grid: g, route, stations, base } = this.ctx;
+    const { grid: g, route, stations, base, focus } = this.ctx;
     for (const o of [...this.group.children]) { this.group.remove(o); this._dispose(o); }
-    // window around the route (or stations), padded 700 m, at least 3 km
-    const pts = [...(route || []).map((p) => lonlatToXY(p.lon, p.lat)), ...[base, ...(stations || [])].filter(Boolean).map((p) => lonlatToXY(p.lon, p.lat))];
+    // window around the route (or stations, and the crew's position on the crew displays), padded 700 m, at least 3 km
+    const pts = [...(route || []).map((p) => lonlatToXY(p.lon, p.lat)), ...[base, ...(stations || []), ...(focus || [])].filter(Boolean).map((p) => lonlatToXY(p.lon, p.lat))];
     let xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
     let x0 = Math.min(...xs) - 700, x1 = Math.max(...xs) + 700, y0 = Math.min(...ys) - 700, y1 = Math.max(...ys) + 700;
     const cxm = (x0 + x1) / 2, cym = (y0 + y1) / 2, half = Math.max(1500, (x1 - x0) / 2, (y1 - y0) / 2);
@@ -308,6 +309,16 @@ export class View3D {
     return this.tiles.get(file);
   }
 
+  /** Ground height between the local terrain's vertices (bilinear), for what has to sit on the surface itself. */
+  _groundSmooth(x, y) {
+    const L = this.local, g = this.ctx.grid;
+    const c = Math.max(0, Math.min(L.nc - 1.001, ((x - g.x0) / g.res - 0.5 - L.c0) / L.step));
+    const r = Math.max(0, Math.min(L.nr - 1.001, ((g.y0 - y) / g.res - 0.5 - L.r0) / L.step));
+    const c0 = Math.floor(c), r0 = Math.floor(r), fc = c - c0, fr = r - r0;
+    const z = (i, j) => { const v = L.z[i * L.nc + j]; return Number.isFinite(v) ? v : this.zRef; };
+    return (z(r0, c0) * (1 - fc) + z(r0, c0 + 1) * fc) * (1 - fr) + (z(r0 + 1, c0) * (1 - fc) + z(r0 + 1, c0 + 1) * fc) * fr;
+  }
+
   _onGround(lon, lat, lift = 0) {
     const [x, y] = lonlatToXY(lon, lat);
     return this._w(x, y, this._groundAt(x, y) + lift / this.exag);
@@ -343,7 +354,7 @@ export class View3D {
       this.group.add(m, s);
       if (text) { const l = this._label(text); l.position.copy(top).add(new THREE.Vector3(0, 12, 0)); this.group.add(l); this.labels.push(l); }
     };
-    if (base) {
+    if (base && this.ctx.habitat !== false) {              // a survey of a place has no habitat at its centre
       const b = this._onGround(base.lon, base.lat, 0);
       const hab = new THREE.Mesh(new THREE.CylinderGeometry(8, 8, 7, 24), new THREE.MeshLambertMaterial({ color: 0xf2f5f8 }));
       hab.position.set(b.x, b.y + 3.5, b.z);
@@ -355,29 +366,77 @@ export class View3D {
     if (diag?.pnr) pole(diag.pnr, 0xff7470, 45, "POINT OF NO RETURN");
     this.routeOrbit = new THREE.Group();
     this.routeHelmet = new THREE.Group();
-    this.group.add(this.routeOrbit, this.routeHelmet);
+    this.routeCrew = new THREE.Group();
+    this.group.add(this.routeOrbit, this.routeHelmet, this.routeCrew);
     if (route?.length > 1) {
-      const tube = (lift, r, color, into) => {
-        const pts = [];
-        let last = null;
-        for (const p of route) {
-          const v = this._onGround(p.lon, p.lat, lift);
-          if (!last || v.distanceTo(last) > 12) { pts.push(v); last = v; }
-        }
-        if (pts.length < 2) return null;
-        const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
-        into.add(new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(2500, pts.length * 2), r, 6), new THREE.MeshBasicMaterial({ color })));
-        return curve;
-      };
       // white core riding on top of a wider dark casing (legible on every Mars tone, research doc 17)
-      tube(2, 8, 0x0b0f14, this.routeOrbit);
-      tube(6.5, 5, 0xf2f5f8, this.routeOrbit);
-      tube(0.25, 0.32, 0x0b0f14, this.routeHelmet);
-      this.curve = tube(0.45, 0.2, 0xf2f5f8, this.routeHelmet);
+      this._tube(route, 2, 8, 0x0b0f14, this.routeOrbit);
+      this._tube(route, 6.5, 5, 0xf2f5f8, this.routeOrbit);
+      this._tube(route, 0.25, 0.32, 0x0b0f14, this.routeHelmet);
+      this.curve = this._tube(route, 0.45, 0.2, 0xf2f5f8, this.routeHelmet);
+      // the crew view stands beside the route, not on it: a band painted on the ground reads better than a pipe
+      this._ribbon(route, 1.2, 0.35, 0xf2f5f8, 0.8, this.routeCrew);
     }
     this.crewMesh = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 12), new THREE.MeshBasicMaterial({ color: 0xd8a57a }));
     this.crewMesh.visible = false;
     this.group.add(this.crewMesh);
+    this.trackMesh = null;
+    if (this.trackSpec) this.setTrack(...this.trackSpec);
+  }
+
+  /** A tube along `ll` (points with lon, lat) lifted `lift` m off the ground, added to `into`; returns its curve. */
+  _tube(ll, lift, r, color, into) {
+    const pts = [];
+    let last = null;
+    for (const p of ll) {
+      const v = this._onGround(p.lon, p.lat, lift);
+      if (!last || v.distanceTo(last) > 12) { pts.push(v); last = v; }
+    }
+    if (pts.length < 2) return null;
+    const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
+    into.add(new THREE.Mesh(new THREE.TubeGeometry(curve, Math.min(2500, pts.length * 2), r, 6), new THREE.MeshBasicMaterial({ color })));
+    return curve;
+  }
+
+  /** A flat band `width` m wide, `lift` m above the ground along `ll` (points with lon, lat), added to `into`. */
+  _ribbon(ll, width, lift, color, opacity, into) {
+    const xy = [];
+    let last = null;
+    for (const p of ll) {
+      const [x, y] = lonlatToXY(p.lon, p.lat);
+      if (last) {
+        const n = Math.ceil(Math.hypot(x - last[0], y - last[1]) / 4);
+        for (let k = 1; k <= n; k++) xy.push([last[0] + (x - last[0]) * k / n, last[1] + (y - last[1]) * k / n]);
+      } else xy.push([x, y]);
+      last = [x, y];
+    }
+    if (xy.length < 2) return null;
+    const pos = new Float32Array(xy.length * 6), idx = [];
+    for (let i = 0; i < xy.length; i++) {
+      const [x, y] = xy[i], [xa, ya] = xy[Math.max(0, i - 1)], [xb, yb] = xy[Math.min(xy.length - 1, i + 1)];
+      const L = Math.hypot(xb - xa, yb - ya) || 1, nx = -(yb - ya) / L * width / 2, ny = (xb - xa) / L * width / 2;
+      const a = this._w(x + nx, y + ny, this._groundSmooth(x + nx, y + ny) + lift / this.exag);
+      const b = this._w(x - nx, y - ny, this._groundSmooth(x - nx, y - ny) + lift / this.exag);
+      pos.set([a.x, a.y, a.z, b.x, b.y, b.z], i * 6);
+      if (i) idx.push(2 * i - 2, 2 * i - 1, 2 * i, 2 * i - 1, 2 * i + 1, 2 * i);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    m.renderOrder = 2;
+    into.add(m);
+    return m;
+  }
+
+  /** The crew view's path when it is not the filed plan (a re-plan or the return home), in its own colour. */
+  setTrack(ll, color) {
+    this.trackSpec = ll?.length > 1 ? [ll, color] : null;
+    if (this.trackMesh) { this.routeCrew.remove(this.trackMesh); this._dispose(this.trackMesh); this.trackMesh = null; }
+    if (!this.trackSpec || !this.routeCrew) return;
+    this.trackMesh = this._ribbon(ll, 1.4, 0.45, color, 0.9, this.routeCrew);
+    this.render();
   }
 
   _sun() {
@@ -422,6 +481,32 @@ export class View3D {
     this.render();
   }
 
+  /** Crew view (the helmet visor): the eye `h` m above the ground at lon / lat (1.8 m standing, 2.25 m in the rover's
+   *  seat), facing `heading` (radians east of north). Dragging looks around from there (look.yaw is then the offset
+   *  from the heading); recentre() looks ahead. */
+  setEye(lon, lat, heading, h = 1.8) {
+    this.mode = "crew";
+    const [x, y] = lonlatToXY(lon, lat);
+    this.eye = this._w(x, y, this._groundSmooth(x, y) + h / this.exag);
+    this.heading = heading;
+    this.render();
+  }
+
+  recentre() {
+    this.look.yaw = 0;
+    this.look.pitch = -0.05;
+    this.render();
+  }
+
+  /** Whether lon / lat is on the detailed terrain, at least `margin` m inside its edge. */
+  contains(lon, lat, margin = 300) {
+    if (!this.local) return false;
+    const [x, y] = lonlatToXY(lon, lat), g = this.ctx.grid, L = this.local;
+    const wx0 = g.x0 + (L.c0 + 0.5) * g.res, wy0 = g.y0 - (L.r0 + 0.5) * g.res;
+    const wM = (L.nc - 1) * L.step * g.res, hM = (L.nr - 1) * L.step * g.res;
+    return x > wx0 + margin && x < wx0 + wM - margin && y < wy0 - margin && y > wy0 - hM + margin;
+  }
+
   play(on) {
     this.playing = on;
     if (!on) return;
@@ -437,7 +522,7 @@ export class View3D {
   render() {
     if (!this.renderer || !this.scene || this.lost) return;
     const cam = this.camera;
-    if (this.routeOrbit) { this.routeOrbit.visible = this.mode === "orbit"; this.routeHelmet.visible = this.mode !== "orbit"; }
+    if (this.routeOrbit) { this.routeOrbit.visible = this.mode === "orbit"; this.routeHelmet.visible = this.mode === "helmet"; this.routeCrew.visible = this.mode === "crew"; }
     if (this.mode === "orbit") {
       const o = this.orbit;
       cam.position.set(o.target.x + o.dist * Math.sin(o.phi) * Math.sin(o.theta), o.target.y + o.dist * Math.cos(o.phi),
@@ -446,7 +531,7 @@ export class View3D {
       for (const l of this.labels || []) { const s = o.dist / 45; l.scale.set(s * l.userData.aspect, s, 1); l.visible = true; }
     } else if (this.eye) {
       cam.position.copy(this.eye);
-      const { yaw, pitch } = this.look;
+      const { pitch } = this.look, yaw = this.look.yaw + (this.mode === "crew" ? this.heading : 0);
       cam.lookAt(this.eye.x + Math.sin(yaw) * Math.cos(pitch), this.eye.y + Math.sin(pitch), this.eye.z - Math.cos(yaw) * Math.cos(pitch));
       for (const l of this.labels || []) { const d = l.position.distanceTo(cam.position), s = d / 30; l.scale.set(s * l.userData.aspect, s, 1); }
     }

@@ -47,6 +47,24 @@ export class Terrain {
   horizon(k, j) {
     return this.raw.horizon[k * this.hzGrid.n + j] / this.meta.horizon.scale;
   }
+
+  /** Elevation (m) of the 10 m grid every `step` cells over rows r0..r1, columns c0..c1: the 3D view's local terrain. */
+  elevWindow({ r0, c0, r1, c1, step }) {
+    const g = this.grid, e = this.f32("elev_dm");
+    const nr = Math.floor((r1 - r0) / step) + 1, nc = Math.floor((c1 - c0) / step) + 1;
+    const z = new Float32Array(nr * nc);
+    for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) z[i * nc + j] = e[(r0 + i * step) * g.width + c0 + j * step];
+    return { z, nr, nc, r0, c0, step };
+  }
+
+  /** The whole regional (100 m) elevation every `step` cells: the 3D view's far terrain and skyline. */
+  regionalWindow({ step }) {
+    const g = this.regGrid, e = this.f32("reg_elev_dm");
+    const nr = Math.floor((g.height - 1) / step) + 1, nc = Math.floor((g.width - 1) / step) + 1;
+    const z = new Float32Array(nr * nc);
+    for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) z[i * nc + j] = e[i * step * g.width + j * step];
+    return { z, nr, nc, step, grid: g.toJSON() };
+  }
 }
 
 export async function loadTerrain(io) {
