@@ -141,3 +141,11 @@ console.log(JSON.stringify(out));""")
     assert js["n85"]["polar"] == "day" and js["s85"]["polar"] == "night"   # northern spring: the north pole is lit
     assert js["gale"]["seasonN"] == "spring" and js["gale"]["season"] == "autumn"
     assert 3 < js["gale"]["lightMin"] < 23
+
+
+def test_thermal_inertia_class_knows_polar_ice():
+    from planet import datasets
+    assert datasets.ti_class(3753.0, 85.0).startswith("ice")             # the north residual cap (TES: ~3,750 SI)
+    assert datasets.ti_class(1500.0, 20.0) == "rocky or bedrock"         # the same value at low latitude is rock
+    assert datasets.ti_class(250.0, 80.0) == "sand, duricrust or mixed rock"
+    assert datasets.ti_class(None) == "unknown"

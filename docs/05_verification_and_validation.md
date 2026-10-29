@@ -5,7 +5,7 @@ Verification checks that the software does what it was designed to do; validatio
 | Command | What it runs | Result |
 |---|---|---|
 | `node --test tests/*.test.mjs` | Engine unit tests, integration tests on real Jezero data and the CTX-only site, closed-loop, navigation and bridge tests, Mars Year | 64 pass |
-| `python3 -m pytest tests -q` | Pipeline tests (including Python/JS parity), the concurrent-download test, the science atlas, and the place lookup (charts, gravity, liquid water, offline, built sites, time at the place vs the Python Mars24 port) | 52 pass |
+| `python3 -m pytest tests -q` | Pipeline tests (including Python/JS parity), the concurrent-download test, the science atlas, and the place lookup (charts, gravity, liquid water, offline, built sites, time at the place vs the Python Mars24 port, polar ice) | 53 pass |
 | `node validation/validate.mjs` | Validation against Perseverance data | `validation/REPORT.md` |
 | `node validation/closed_loop_campaign.mjs` | 40 paired closed-loop vs open-loop EVAs | `validation/CLOSED_LOOP.md` |
 | `MarsNav.exe --selftest` (`selftest.bat`) | The desktop server under load for 150 s: map tiles, API, a route job; a raster worker and the server itself killed on purpose | Every check passes, including from an empty data folder (first run on a new PC) |

@@ -126,7 +126,7 @@ python tools\smoke_exe.py dist\MarsNav\MarsNav.exe   :: start the built program,
 
 ```sh
 node --test tests/*.test.mjs          # 64 engine and closed-loop tests (Node 20+)
-python -m pytest tests -q             # 52 pipeline, downloader, science-atlas and place tests (pip install -r requirements.txt)
+python -m pytest tests -q             # 53 pipeline, downloader, science-atlas and place tests (pip install -r requirements.txt)
 node validation/validate.mjs          # validation against Perseverance data (about 30 s)
 node validation/rover_case_study.mjs  # same trips as Perseverance, MarsNav vs the rover (about 15 s)
 node validation/closed_loop_campaign.mjs   # 40 paired closed-loop EVAs (about 70 s)

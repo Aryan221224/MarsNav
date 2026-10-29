@@ -137,7 +137,7 @@ def evaluate(lat, lon, elev_m, D, crat, ice, L, crit="hls2"):
     ti = (D.get("ti") or {}).get("value") if D.get("ti") else None
     if D.get("ti") is not None:
         rows.append(_row("dust", "Surface", "No thick fine dust (bearing strength, dust on hardware)",
-                         "no data" if ti is None else f"{ti:.0f} SI · {datasets.ti_class(ti)}", f">= {C['ti_min']:.0f} SI",
+                         "no data" if ti is None else f"{ti:.0f} SI · {datasets.ti_class(ti, lat)}", f">= {C['ti_min']:.0f} SI",
                          "unknown" if ti is None else "go" if ti >= 150 else "caution" if ti >= C["ti_min"] else "nogo",
                          "TES thermal inertia, Putzig & Mellon 2007"))
     if ice is not None:

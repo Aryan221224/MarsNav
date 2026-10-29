@@ -455,9 +455,11 @@ def _one(did, fname, lon, lat):
     return None if not math.isfinite(v) else v
 
 
-def ti_class(ti: float | None) -> str:
+def ti_class(ti: float | None, lat: float | None = None) -> str:
     if ti is None:
         return "unknown"
+    if lat is not None and abs(lat) >= 70 and ti >= 1000:
+        return "ice: polar cap or ice-cemented ground"     # water ice (~2000 SI) and not rock, this close to a pole
     if ti < 100:
         return "thick fine dust"
     if ti < 200:
@@ -564,7 +566,7 @@ def point(lon: float, lat: float) -> dict:
     out["ice"] = None if not installed("swim") else {"0-1 m": ci["ci01"], "1-5 m": ci["ci15"], ">5 m": ci["ci5"],
                                                       "covered": abs(lat) <= 60}
     ti = _one("ti", "ti.npy", lon, lat)
-    out["ti"] = None if not installed("ti") else {"value": ti, "class": ti_class(ti)}
+    out["ti"] = None if not installed("ti") else {"value": ti, "class": ti_class(ti, lat)}
     h2o = _one("grs", "h2o.npy", lon, lat)
     out["grs_h2o_wt"] = None if not installed("grs") else h2o
     if installed("grs_el"):
