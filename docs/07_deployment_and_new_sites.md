@@ -6,7 +6,7 @@ MarsNav ships as a portable Windows desktop app: `dist\MarsNav\` (or `MarsNav-Wi
 
 | Target | Steps |
 |---|---|
-| Laptop (demo, habitat workstation, judging) | Download `MarsNav-Windows.zip` (155 MB) from the [latest release](https://github.com/Aryan221224/MarsNav/releases/latest). Unzip it anywhere you can save files and double-click `MarsNav.exe`. For no internet at all: Data > Local mode, download, then switch on Mars mode. The zip is built and tested on a clean Windows machine by `.github/workflows/windows-exe.yml` on every push, with the same recipe as `build_exe.bat` (`tools/build_windows.py`). |
+| Laptop (demo, habitat workstation, judging) | Download `MarsNav-Windows.zip` (about 160 MB) from the [latest release](https://github.com/Aryan221224/MarsNav/releases/latest). Unzip it anywhere you can save files and double-click `MarsNav.exe`. For no internet at all: Data > Local mode, download, then switch on Mars mode. The zip is built and tested on a clean Windows machine by `.github/workflows/windows-exe.yml` on every push, with the same recipe as `build_exe.bat` (`tools/build_windows.py`). |
 | EVA planner only, any OS | 1. `python3 -m http.server 8765 --directory app` 2. Open `http://localhost:8765` (Landing mode needs `MarsNav.exe` or `launcher/martian_map.py`) |
 | Habitat local network | Serve `app/` from any static web server (nginx, Caddy, the habitat file server). Every tablet on the network gets the same plan data. |
 | Crew tablet, out of radio range | Open the app once on the habitat network; the service worker caches the shell and each data file as it loads. Later visits work with no network. Bump `VERSION` in `app/sw.js` after a data update. |

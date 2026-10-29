@@ -128,7 +128,7 @@ chapter("Quick start", "two minutes from download to Mars",
 H2("What you need")
 table([["Item", "Requirement"],
        ["Computer", "Windows 10 or 11, 64-bit. 4 GB RAM (8 GB recommended)."],
-       ["Disk", "About 300 MB for the program (a 155 MB download), plus room for data the app downloads (the tile cache is "
+       ["Disk", "About 300 MB for the program (a download of about 160 MB), plus room for data the app downloads (the tile cache is "
         "capped at 20 GB; Local mode packs are optional and sized before you download)."],
        ["Window engine", "Microsoft Edge WebView2, which is part of Windows 10 and 11. On a PC without it, MarsNav opens in "
         "a Microsoft Edge app window instead (no tabs, no address bar)."],
