@@ -4,6 +4,8 @@ GET  /api/planet/status                     data sources, cache, online state
 GET  /tiles/dem/{z}/{y}/{x}.mmd             elevation tile (MMD1, gzip)
 GET  /tiles/img/{z}/{y}/{x}.jpg?layer=best  imagery tile (best | viking | mola)
 GET  /api/point?lon=&lat=                   elevation, slope, data sources, nearest named features
+GET  /api/place?lon=&lat=&crit=             every layer at one place: ground, water, minerals, environment, science,
+                                            missions, data coverage, built sites, quick screen (planet/place.py)
 GET  /api/search?q=                         IAU named features
 GET  /api/coverage?w=&s=&e=&n=              footprints of HiRISE / CTX DTMs in a box
 GET  /api/landing?lon=&lat=&lander=&az=     global landing-site screen (ellipse + engineering constraints)
@@ -136,6 +138,10 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
                 r = dem.point(lon, lat, z)
             r["names"] = names.nearest(lon, lat, k=3)
             return _ok({"ok": True, **r})
+        if p == "/api/place":
+            from . import place
+            with workers.request(budget=30, cancel=client_gone):
+                return _ok(place.everything(float(q["lon"]), float(q["lat"]), q.get("crit", "hls2"), float(q.get("wait", 4))))
         if p == "/api/search":
             return _ok({"ok": True, "results": names.search(q.get("q", ""), int(q.get("limit", 20)))})
         if p == "/api/coverage":

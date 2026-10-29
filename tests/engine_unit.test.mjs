@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { marsState, jdTT, lmstHours, ltstHours, sunPosition, msFromM2020Sol, m2020SolFromMs, M2020, ttMinusUtc, earthMarsLight } from "../engine/marstime.js";
+import { marsState, jdTT, lmstHours, ltstHours, sunPosition, msFromM2020Sol, m2020SolFromMs, M2020, ttMinusUtc, earthMarsLight, marsYear } from "../engine/marstime.js";
 import { ahp, fromUpper, L1_MATRIX, SAFETY_MATRICES, S1_MATRIX, safetyLeafWeights, defaultL1, RI } from "../engine/ahp.js";
 import { cvarFactor, normInv, normCdf, riskValue, pExceed } from "../engine/risk.js";
 import { walkSpeedKmh, minettiCost, marsWalkCost, o2KgPerH, co2KgPerH, suitHeat, vehicleSpeedKmh, PROFILES, WALK } from "../engine/physio.js";
@@ -57,6 +57,16 @@ test("Earth-Mars light time: 11 min 22 s at Perseverance's landing (NASA), 0.415
 });
 
 // ---------------------------------------------------------------------------------------------------- AHP ----
+test("Mars Year (Clancy et al. 2000; Piqueux et al. 2015): MY 1 from 11 April 1955, MY 36-39 at their published starts", () => {
+  const my = (iso) => { const st = marsState(jdTT(Date.parse(iso))); return marsYear(st.msd, st.Ls); };
+  assert.equal(my("1955-04-12T12:00:00Z"), 1);
+  assert.equal(my("2021-02-08T12:00:00Z"), 36);       // Ls 0 of MY 36: 7 Feb 2021
+  assert.equal(my("2021-02-06T00:00:00Z"), 35);
+  assert.equal(my("2022-12-27T12:00:00Z"), 37);       // 26 Dec 2022
+  assert.equal(my("2024-11-13T12:00:00Z"), 38);       // 12 Nov 2024
+  assert.equal(my("2026-10-29T00:00:00Z"), 39);       // MY 39 began 29 Sep 2026
+});
+
 test("AHP: perfectly consistent matrix gives exact weights and CR 0", () => {
   const w = [0.5, 0.3, 0.2];
   const A = w.map((a) => w.map((b) => a / b));

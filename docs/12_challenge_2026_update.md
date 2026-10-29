@@ -14,6 +14,7 @@ NASA published the full statement of *Interplanetary Survival Guide: Martian Map
 | Safety first; a route that avoids obstacles such as rock formations | Hard limits, walk-home guarantee, five routes | none | unchanged; the Mount Sharp site shows it on cliff-bounded buttes |
 | Display: inside the habitat, a tablet, **a HUD on the helmet visor**, or another format | One habitat-style console; a first-person drive window | No visor HUD, no tablet, no rover dashboard | **Crew displays**: helmet-visor HUD, rover dashboard and wrist cuff, live from the planner; the visor also overlays the drive window |
 | Point-of-view images so the astronaut knows what to expect | None | missing | **The rover's own photographs** from each station (Perseverance and Curiosity raw images), in the planner, the station panel and the cuff |
+| Know the place: what the data say about the location the crew picks | A dossier after "Assess" (landing criteria); the readout on a site | Only a slow assessment, and only for landing | **Everything at any place**: one click anywhere on Mars, or on a built site, shows every layer at once. The crew displays show it for the ground under the crew. |
 | Rovers carrying crew, or astronauts in pairs | Unpressurised rover, rescue-rover rule, EV1 / EV2 telemetry | Partly | The forward-camp hub (pressurised rover) at Mount Sharp; the cuff and visor for each crew member |
 | Inspiration from other worlds' maps | Lunar slope limit, Apollo walking data | none | unchanged |
 
@@ -71,6 +72,30 @@ Built with MarsNav's own site generator (`planet/sitegen.py`) at 4.811°S, 137.3
 
 What the planner found is a real result about this terrain. The foothills are cut by buttes and scarps: every steep patch flagged as a cliff is at least 8 m high, with a median of 24 m. Mean walking slope is 18.7°, and 39 % of the area is sand. With dead-reckoning-class navigation (position error up to 80 m), the cliff stand-offs leave only 17 % of the site reachable from the generator's habitat, and none of the drill sites. An orbital navigation constellation (about 8 m) opens 54 %. So the hub is a forward camp: a pressurised rover at Curiosity's sol-4530 stop, since no lander should come down on these foothills. From there a suited crew reaches Altadena (0.59 km, 1.3 h, 76 % margin) and Campo Marte (2.46 km, 3.4 h, 37 %). Monte Grande stays refused: the hollow is ringed by ridge walls the 10 m map treats as cliffs. The unpressurised-rover profile is refused everywhere here, because the ground is past its slope limits.
 
+## Everything at any place
+
+Click any point, anywhere on the globe or on a built EVA site, and every layer MarsNav holds about it appears at once, without running an assessment. `planet/place.py` gathers it (`GET /api/place?lon=&lat=`) and `app/js/placeview.js` draws it, the same way in Landing mode, in the planner's place card and on the crew displays.
+
+| Section | What it holds | From |
+|---|---|---|
+| Where | Position (east and west longitude), USGS 1:5M chart quadrangle (MC-01 to MC-30), named features, the built site it lies in | IAU Gazetteer, USGS charts, `app/data/sites.json` |
+| Time here now | Local true and mean solar time, sun elevation and direction, sunrise and sunset, daylight length, noon sun, season in each hemisphere, Ls and Mars Year, dust-storm season, sunlight above the air, Earth distance and radio delay. Computed live in the browser. | Mars24 (Allison & McEwen 2000), JPL Keplerian elements |
+| Survival here | Mean air pressure, whether pure liquid water can exist and where it boils, air shielding, cosmic-ray dose (per day and over a 500-sol stay), surface gravity, sunlight above the air and at the ground, space weather now | MOLA, RAD (Hassler 2014; Guo 2017), Mars GM, J2 and spin (Konopliv 2016), MRO GMM-3, NASA DONKI |
+| Ground | Thermal inertia and its class, geologic unit, albedo, dust cover, roughness at 0.6, 2.4 and 9.2 km, the crater it is in, crater counts within 10 and 100 km | TES (Putzig & Mellon 2007; Ruff & Christensen 2002), MOLA (Kreslavsky & Head 2000), USGS SIM 3292, Robbins & Hynek |
+| Water and ice | SWIM ice consistency at 0-1 m, 1-5 m and below 5 m; the nearest ice-consistent ground and its share of the 100 km around; GRS hydrogen | SWIM (Morgan et al.), Mars Odyssey GRS |
+| Composition | Plagioclase, pyroxene and glass / clay (TES); iron, chlorine, potassium, thorium, silicon (GRS); hydrous and aqueous mineral detections nearby | Bandfield 2002, Boynton 2007, Carter 2013, Ehlmann & Edwards 2014 |
+| Science here | Catalogued features within 100 km with the nearest of each; Special Region warning; the seven objectives scored at the point | `planet/features.py`, `planet/science.py` |
+| Missions and sites nearby | Landed and targeted missions by distance and direction, NASA Exploration Zones, Starship candidates | `planet/data/missions.json`, `candidates.json` |
+| Best data here | HiRISE 1 m and CTX 20 m elevation models whose footprint covers the point, and the finest resolution a hub built here would get | USGS STAC catalogue |
+
+Everything comes from data on the computer, or its caches, in well under a second. The two remote lookups run in parallel with a 4 s budget: the geologic unit (USGS OGC API) and the Trek colour maps. A lookup still running is marked pending and the app asks again. Landing mode keeps its quick screen and "Assess landing site" for the landing ellipse; the place data sit below it and stay when the dossier arrives.
+
+**How the colour maps are read.** The TES mineral and dust-cover maps are published as rainbow images (purple, blue, green, yellow, red from low to high) under a hillshade. Hillshade changes brightness but not hue, so the hue of the 3 × 3 pixels at the point gives its position on the scale, 0 to 1. It is shown as very low to very high, never as a percentage. Roughness is an RGB composite, one channel per baseline. Checked on known places: Syrtis Major reads very high for plagioclase and pyroxene; Arabia Terra, Tharsis and Olympus Mons read high for dust; Meridiani reads smooth; Acidalia reads high for glass / clay; Hellas has no TES data, as published.
+
+**On a built site** the planner's place card adds that site's own terrain model at the cell: elevation, terrain class, walking slope, step height, sand, wheel-slip risk, nearest cliff, hazard index, the no-go reason, position error, radio line of sight to the habitat, walk-home time, and whether HiRISE 1 m or CTX 20 m data back it. It also shows the distance and direction from the habitat, the rover's photographs when a station is within 150 m, and buttons to add the point as a station or open it on the crew displays.
+
+The Mars Year shown anywhere in the app was wrong (63 instead of 39): `marsYear()` started MY 1 at the wrong sol. It now starts at MSD 28892.7 (11 April 1955), and a test checks the published starts of MY 36 to 39.
+
 ## Crew displays
 
 `app/hud.html` shows the EVA the planner is flying (simulator, live SUITS telemetry or the drive window) on three displays. It receives the plan and every snapshot over a BroadcastChannel, and sends the cuff's commands back.
@@ -78,8 +103,16 @@ What the planner found is a real result about this terrain. The foothills are cu
 - **Helmet visor.** Black is see-through on a real visor and the centre of view stays clear. It shows a heading tape with the next stop, home and the sun; a steering cue with distance, bearing and ETA; consumables with the walk-home need marked; walk-home time and margin; MET, position error, comm, sun and sunset, and dose; the top alert with its action; the station step; and a mini map. Heading comes from the track, because SUITS telemetry has no compass. Press H in the drive window to wear it over the first-person view.
 - **Rover dashboard.** Speed gauge, heading, slope ahead, cross-track error, position error and radio. A north-up map shows the filed, re-planned or return route with the track. It also shows rover power, crew suit status and alerts, and along the bottom the next stop, walk home, worst margin, sunset and MET.
 - **Wrist cuff.** Large targets for gloves: the top alert, O₂, walk home and margin; the next stop with the rover's photograph of it; the procedure checklist; acknowledge, silence, drop pin and a two-step return that act on the planner's loop; consumables; and the cue card.
+- **The place under the crew, on all three.** The planner sends every layer at the crew's position, fetched again after 400 m or 10 minutes, and the site's terrain cell once a second.
+  - **Visor:** a short "here" list at the bottom left: air, dose rate, gravity, water's boiling point, ground, dust, ice, geologic unit.
+  - **Dashboard:** the site's slope, sand, slip and cliff distance next to them, and a "Data here" tab with every layer.
+  - **Cuff:** the facts as tiles, the local time line, the nearest catalogued features, and every layer folded.
+- **Survey of any place.** `hud.html?lon=&lat=&name=` opens the three displays for a place with no EVA. They are opened from Landing mode ("HUD") or the planner's place card ("Crew displays"). The visor shows local time, sun, time to sunset, season, elevation and Earth delay. The dashboard and visor map the catalogued features and names within 50 km, with range rings and the sun's direction.
 
-Checked in a headless browser on the real app. The visor followed a simulated Jezero EVA, switched to RETURN with the warning and its action when a suit leak was injected, and the cuff's acknowledge cleared the three open alerts in the planner. No console errors.
+Checked in a headless browser on the real app. The visor followed a simulated Jezero EVA, switched to RETURN with the warning and its action when a suit leak was injected, and the cuff's acknowledge cleared the three open alerts in the planner. No console errors. Also checked:
+- a place clicked at Jezero and at Gale in Landing mode, with its survey on all three displays;
+- a point clicked on the Mount Sharp site;
+- a simulated Mount Sharp EVA with the place data on the visor, the dashboard (both tabs) and the cuff.
 
 ## Photographs from the ground
 
@@ -91,7 +124,7 @@ It keeps Navcam and Mastcam / Mastcam-Z frames of the ground and horizon. Sun im
 
 - **DONKI live.** NASA's demo key was rate-limited on the shared development network and the CCMC host dropped connections. The space-weather parser is tested on DONKI's documented record shapes, not on a live response. On a crew or user computer both routes are normally open.
 - **Mission status** comes from NASA, ESA, JAXA and press reports through web search on 28 October 2026; Wikipedia could not be read (rate-limited). Statuses that change (en route, planned, cancelled) cite a source in the file.
-- **TES mineral maps** are Trek's published colour maps without a numeric scale, so their legends say "low → high" with the published value ranges in the note; values at a point are not read from them.
+- **TES mineral maps** are Trek's published colour maps without a numeric scale. Their legends say "low → high", with the published value ranges in the note. At a point, the value is read back from the colour as a position on that scale (very low to very high), not as an abundance.
 - **Crustal magnetic field** is not included: no openly licensed global grid could be found (the Langlais et al. 2019 model is distributed on request).
 - **The dose model** is RAD's measured slope near 700-950 Pa. Far outside it (high volcanoes, the deepest basins) values are flagged as extrapolations, and solar particle events are not in the map.
 - **The user guide PDF** (`MarsNav_User_Guide.pdf`) describes v2.0. The screens added here are documented in this file and the README.

@@ -169,6 +169,58 @@ def overlay_rgba(ovl: str, z: int, y: int, x: int, size: int = 256):
     return np.stack(chans, axis=2)
 
 
+HUE_LOW = 263.0                                  # the purple at the bottom of Trek's rainbow scales (80, 0, 209)
+WORDS = ((0.2, "very low"), (0.4, "low"), (0.6, "moderate"), (0.8, "high"), (1.01, "very high"))
+
+
+def _word(v: float) -> str:
+    return next(w for t, w in WORDS if v < t)
+
+
+def sample_trek(ovl: str, lon: float, lat: float) -> dict | None:
+    """The value of one Trek colour map at a place, read back from its published colours (3 x 3 pixels of the 0.35 deg
+    level). The rainbow maps (TES minerals, dust cover) run purple-blue-green-yellow-red from low to high, under a hillshade
+    that changes brightness but not hue: the hue gives the position on the scale, 0 to 1. Black, grey and transparent
+    pixels are no data. Roughness is an RGB composite: each channel is the roughness at one baseline, 0 to 1."""
+    import colorsys
+
+    from .imagery import _fetch_cached, _open
+    T = TREK_OVL.get(ovl)
+    if not T:
+        return None
+    z = T["maxz"]
+    d = 180.0 / (1 << z)
+    lon = ((lon + 180.0) % 360.0) - 180.0
+    x, y = int((lon + 180.0) // d), int(min(179.9999, 90.0 - lat) // d)
+    im = _open(_fetch_cached(f"trek_{T['layer']}", z, y, x, TREK.format(layer=T["layer"], z=z, y=y, x=x), "png"), "RGBA")
+    if im is None:
+        return None
+    a = np.asarray(im, np.float32) / 255.0
+    n = a.shape[0]
+    c = int((lon + 180.0 - x * d) / d * n)
+    r = int((90.0 - lat - y * d) / d * n)
+    win = a[max(0, r - 1):r + 2, max(0, c - 1):c + 2].reshape(-1, 4)
+    win = win[win[:, 3] > 0.5]
+    if T.get("rgb"):
+        win = win[win[:, :3].min(axis=1) < 0.98]              # white: no data (the poles)
+        if not len(win):
+            return None
+        rgb = win[:, :3].mean(axis=0)
+        return {"km_0_6": round(float(rgb[2]), 2), "km_2_4": round(float(rgb[1]), 2), "km_9_2": round(float(rgb[0]), 2),
+                "word": _word(float(rgb.mean())), "title": T["title"], "relative": True}
+    vals = []
+    for p in win:
+        h, s, v = colorsys.rgb_to_hsv(*map(float, p[:3]))
+        if v < 0.15 or s < 0.3:
+            continue
+        h *= 360.0
+        vals.append(1.0 if h > 300 else max(0.0, min(1.0, (HUE_LOW - h) / HUE_LOW)))
+    if not vals:
+        return None
+    v = float(np.median(vals))
+    return {"rel": round(v, 2), "word": _word(v), "title": T["title"], "relative": True}
+
+
 def point(lon: float, lat: float, elev_m: float | None) -> dict:
     """Model values at one place (for the dossier)."""
     out = {"sunlight_wm2": round(float(sunlight(np.array([lat]))[0]), 1)}

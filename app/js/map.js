@@ -355,6 +355,16 @@ export class MapView {
       ctx.fillStyle = "#3ccbff"; ctx.fill(); ctx.strokeStyle = "#0b0f14"; ctx.lineWidth = 2; ctx.stroke();
       this._label(ctx, sx + 9, sy + 4, `PIN ${k + 1}`, "#3ccbff", 7);
     });
+    // the point being inspected in the place card: a crosshair ring
+    if (this.probe) {
+      const [sx, sy] = this.llScreen(this.probe.lon, this.probe.lat);
+      ctx.lineWidth = 3; ctx.strokeStyle = "#0b0f14";
+      ctx.beginPath(); ctx.arc(sx, sy, 9, 0, 2 * Math.PI); ctx.stroke();
+      ctx.lineWidth = 1.8; ctx.strokeStyle = "#ffd23c";
+      ctx.beginPath(); ctx.arc(sx, sy, 9, 0, 2 * Math.PI);
+      for (const [a, b, c, d] of [[-16, 0, -5, 0], [5, 0, 16, 0], [0, -16, 0, -5], [0, 5, 0, 16]]) { ctx.moveTo(sx + a, sy + b); ctx.lineTo(sx + c, sy + d); }
+      ctx.stroke();
+    }
     // targets
     for (const t of this.targets) {
       if (t.kind === "base") continue;

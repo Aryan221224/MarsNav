@@ -10,6 +10,7 @@
 // disk cache. Geometry is built relative to each tile's centre (floating origin), so a 20 m crater is as steady as the
 // globe. Units: kilometres.
 import * as THREE from "../vendor/three.module.min.js";
+import { loadPlace, placeHtml, timeHere, timeHtml } from "./placeview.js";
 
 const $ = (id) => document.getElementById(id);
 const R = 3396.19;                       // Mars sphere radius, km (IAU 2015; same as the data's datum)
@@ -924,7 +925,7 @@ function selectPoint(lon, lat, cand = null) {
   lon = wrap180(lon);
   const tok = ++selToken;
   S.focus = { lon, lat, cand, name: cand?.name || null };
-  S.dossier = null; S.landing = null; S.iceTarget = null; S.quick = null;
+  S.dossier = null; S.landing = null; S.iceTarget = null; S.quick = null; S.place = null;
   clearMarkers("pick"); clearMarkers("ice");
   if (!cand) addMarker("pick", lon, lat, "◆");
   $("dEmpty").hidden = true; $("dBody").hidden = false;
@@ -940,23 +941,52 @@ function selectPoint(lon, lat, cand = null) {
   $("hubCard").hidden = true; $("siteDone").innerHTML = ""; $("siteLog").hidden = true;
   $("btnAddRoute").disabled = false;
   $("dSections").innerHTML = "";
+  $("dPlace").innerHTML = `${timeSection()}<div class="pv-loading">Reading every data layer at this place…</div>`;
+  tickPlaceTime();
   rebuildOverlays(); renderCandList(); saveHash();
   quickLook(tok);
+}
+// Everything at the selected place (planet/place.py): shown for any point on Mars, before and after an assessment
+function timeSection() {
+  return `<section class="pv-sec" data-pv="time"><h3>Time here now <small>Mars24 clock, live</small></h3><div id="pvTime"></div></section>`;
+}
+function tickPlaceTime() {
+  const el = $("pvTime"), f = S.focus;
+  if (el && f) el.innerHTML = timeHtml(timeHere(Date.now(), f.lon, f.lat));
+}
+setInterval(tickPlaceTime, 1000);
+function renderPlace() {
+  if (!S.place) return;
+  $("dPlace").innerHTML = `<h3 class="pv-group">All data at this place <small>every layer MarsNav holds, for any point on Mars</small></h3>${timeSection()}` +
+    placeHtml(S.place, { fold: true, links: true, open: S.dossier ? ["where", "env"] : undefined });
+  tickPlaceTime();
+  $("btnJson").disabled = false;
 }
 async function quickLook(tok) {
   const f = S.focus; if (!f) return;
   const z = Math.max(6, Math.min(12, currentZoom() + 1));
-  const [pt, sc] = await Promise.all([
-    api(`/api/point?lon=${f.lon}&lat=${f.lat}&z=${z}`).catch((e) => ({ err: e.message })),
-    post("/api/screen", { points: [[f.lon, f.lat, "pick"]], crit: S.crit }).then((r) => r.results[0]).catch(() => null),
-  ]);
+  S.place = null;                                     // a criteria change asks again: the quick screen comes with the place
+  const qtok = S.quickTok = (S.quickTok || 0) + 1;
+  loadPlace(f.lon, f.lat, (d) => {
+    if (tok !== selToken || qtok !== S.quickTok) return;
+    S.place = d; renderPlace();
+    if (S.quick && !S.dossier) { S.quick.sc = d.screen; renderQuick(f); }
+  }, { crit: S.crit, stillWanted: () => tok === selToken && qtok === S.quickTok }).catch((e) => {
+    if (tok === selToken && qtok === S.quickTok) $("dPlace").innerHTML = `${timeSection()}<p class="pv-loading">Place data unavailable: ${esc(e.message)}. The server keeps working; select the point again.</p>`;
+    tickPlaceTime();
+  });
+  const pt = await api(`/api/point?lon=${f.lon}&lat=${f.lat}&z=${z}`).catch((e) => ({ err: e.message }));
   if (tok !== selToken || S.dossier) return;
-  S.quick = { pt, sc };
+  S.quick = { pt, sc: S.place?.screen ?? null };
+  renderQuick(f);
+}
+function renderQuick(f) {
+  const { pt, sc } = S.quick;
   if (!f.cand && pt.names?.length) { f.name = `Near ${pt.names[0].name}`; $("dName").textContent = f.name; }
   if (sc) {
     setGauge(sc.score, sc.verdict, true);
     setVerdict(sc.verdict, `Preliminary, from global data. Assess for the landing ellipse, surface, water and environment.`, true);
-  } else setVerdict(null, "Global screen unavailable. Assess for the full dossier.");
+  } else setVerdict(null, S.place ? "Global screen unavailable. Assess for the full dossier." : "Reading the global data…");
   const rows = sc ? sc.rows.map((r) => `<div class="crit"><i class="${r.status}"></i><span class="l">${esc(CRIT_SHORT[r.id] || r.id)}</span><span class="v">${esc(r.value)}</span></div>`).join("") : "";
   const src = (pt.sources || []).filter((s) => (s.frac ?? 1) > 0.01).map((s) => esc(s.name || s)).join(", ") || "MOLA";
   $("dSections").innerHTML = candidateSection(f.cand) + `
@@ -1006,6 +1036,16 @@ function setVerdict(v, small, prelim = false) {
 }
 
 $("btnAssess").onclick = () => assess();
+// the crew displays for this place (helmet visor, rover dashboard, wrist cuff): hud.html reads the place itself
+$("btnCrew").onclick = () => {
+  const f = S.focus; if (!f) return;
+  const u = new URL("hud.html", location.href);
+  u.searchParams.set("lon", f.lon.toFixed(5)); u.searchParams.set("lat", f.lat.toFixed(5));
+  u.searchParams.set("name", f.cand?.name || f.name || "Selected place");
+  u.searchParams.set("mode", "visor");
+  const w = window.open(u.href, "marsnav-hud-place", "popup=yes,width=1280,height=760");
+  if (!w) toast("The browser blocked the display window: allow pop-ups for this page.");
+};
 $("dCoords").onclick = async () => {
   if (!S.focus) return;
   const t = `${S.focus.lat.toFixed(5)}, ${S.focus.lon.toFixed(5)}`;
@@ -1176,6 +1216,7 @@ function renderDossier(d) {
   </ul></section>`);
 
   $("dSections").innerHTML = sect.join("");
+  renderPlace();
   // wire the buttons made above
   $("btnShowSafety")?.addEventListener("click", () => {
     const cb = document.querySelector('[data-ovl="safety"]');
@@ -1259,11 +1300,12 @@ function snapshot() {
   try { renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.85); } catch { return null; }
 }
 $("btnJson").onclick = () => {
-  const d = S.dossier; if (!d) return;
-  const out = { app: "MarsNav · Landing mode", ...d };
+  const d = S.dossier;
+  if (!d && !S.place) return;
+  const out = { app: "MarsNav · Landing mode", ...(d || { name: S.focus?.name, generated: new Date().toISOString() }), place: S.place };
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
-  a.download = `hub-dossier-${(d.name || "site").replace(/[^\w-]+/g, "_")}-${d.generated.slice(0, 10)}.json`;
+  a.download = `${d ? "hub-dossier" : "place"}-${(out.name || "site").replace(/[^\w-]+/g, "_")}-${out.generated.slice(0, 10)}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 };
@@ -1271,12 +1313,17 @@ $("btnReport").onclick = () => {
   const d = S.dossier; if (!d) return;
   const img = snapshot();
   const secs = $("dSections").cloneNode(true);
+  const place = $("dPlace").cloneNode(true);
+  for (const x of place.querySelectorAll("details")) x.open = true;
+  secs.append(...place.childNodes);
   for (const b of secs.querySelectorAll("button")) b.remove();
   const css = `body{font:13px/1.45 Barlow,Segoe UI,Arial,sans-serif;color:#111;margin:28px;max-width:900px}h1{font-size:22px;margin:0}h3{font-size:14px;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #222;padding-bottom:2px;margin:18px 0 6px;display:flex;justify-content:space-between}h3 small{font-weight:400;text-transform:none;color:#555}
     .v{font-weight:700;font-size:18px;padding:6px 10px;border:2px solid;display:inline-block;margin:8px 0}.GO{color:#0a7a3a}.CAUTION{color:#9a6b00}.NO-GO{color:#b3261e}
     .crit{display:grid;grid-template-columns:14px 1fr;gap:0 8px;padding:4px 0;border-bottom:1px solid #ddd}.crit>i{width:10px;height:10px;border-radius:50%;margin-top:4px;background:#999}.crit>i.go{background:#1a9e55}.crit>i.caution{background:#e0a100}.crit>i.nogo{background:#d33}
     .crit .l{font-weight:600}.crit .v,.crit .s{grid-column:2;font-weight:400;font-size:12px;border:0;padding:0;margin:0;display:block}.s{color:#555}.kv{display:grid;grid-template-columns:170px 1fr;gap:3px 10px}.kv>span:nth-child(odd){color:#555}
     .fracbar{display:flex;height:10px;margin:4px 0}.fracbar i{display:block}.meter{display:grid;grid-template-columns:60px 1fr 50px;gap:8px;align-items:center}.meter .tr{height:8px;background:#ddd;position:relative}.meter .tr i{position:absolute;top:0;bottom:0}
+    .pv-kv{display:grid;grid-template-columns:170px 1fr;gap:3px 10px}.pv-kv>span:nth-child(odd){color:#555}.pv-sec>summary,.pv-sec>h3,.pv-group{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #222;margin:18px 0 6px;list-style:none}.pv-sec small,.pv-group small{font-weight:400;text-transform:none;color:#555}
+    .pv-meter,.pv-rel,.pv-obj{display:grid;grid-template-columns:110px 1fr 90px;gap:8px;align-items:center}.pv-meter .tr,.pv-rel .tr,.pv-obj .tr{height:8px;background:#ddd;position:relative}.pv-meter .tr i,.pv-rel .tr i,.pv-obj .tr i{position:absolute;top:0;bottom:0;left:0;background:#555}.pv-rel .tr.tri i{position:static;display:block;height:2px;margin:1px 0}.pv-na,.pv-hint,.pv-lbl{color:#666}.pv-warn{color:#9a6b00}.pv-bad{color:#b3261e}.pv-ok{color:#0a7a3a}
     .list{list-style:none;padding:0;margin:0}.tag,.badge{font-size:11px}.hint,.na-t{color:#666}.ok-t{color:#0a7a3a}.warn-t{color:#9a6b00}.bad-t{color:#b3261e}.lbl{font-weight:700;font-size:11px;text-transform:uppercase;color:#444;margin-top:6px}
     img{width:100%;border:1px solid #999;margin:10px 0}.bar{display:flex;gap:10px;align-items:center}@media print{.noprint{display:none}body{margin:12mm}}`;
   const verdictClass = d.verdict || "";

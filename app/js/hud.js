@@ -5,21 +5,41 @@
 //   cuff   wrist tablet: next stop with the rover's own photograph of it, procedure checklist, big numbers, and the
 //          commands a gloved hand needs (acknowledge, silence, drop a pin, two-step return)
 // ?mode=visor|rover|cuff picks one; ?overlay=1 draws the visor see-through over another view (the drive window).
+// Every display also shows the place the crew is on (js/placeview.js, /api/place): air, dose, gravity, ground, dust,
+// ice, geology, science nearby; the planner sends it for the crew's position. ?lon=&lat=&name= opens the displays for
+// any place on Mars without an EVA (Landing mode "HUD", the planner's place card): a survey of that place.
 import { marsContext, missionClock, M2020_CLOCK } from "../engine/marstime.js";
 import { fmtDuration } from "../engine/util.js";
+import { loadPlace, nearFeatures, placeCompass, placeFacts, placeFmtKm, placeHhmm, placeHtml, timeHere } from "./placeview.js";
 
 const $ = (id) => document.getElementById(id);
 const R_MARS = 3396190;
 const DEG = Math.PI / 180;
 const qs = new URLSearchParams(location.search);
-const S = { mode: qs.get("mode") || "visor", plan: null, snap: null, hist: [], clock: M2020_CLOCK, armed: 0, last: 0 };
+const S = { mode: qs.get("mode") || "visor", plan: null, snap: null, hist: [], clock: M2020_CLOCK, armed: 0, last: 0, place: null, placeVer: 0, drawn: {} };
 if (qs.get("overlay") === "1") document.body.classList.add("overlay");
 
+// a place on its own (no EVA): the displays survey it
+const PLACE = qs.has("lon") && qs.has("lat") && isFinite(+qs.get("lon")) && isFinite(+qs.get("lat"))
+  ? { lon: +qs.get("lon"), lat: +qs.get("lat"), name: qs.get("name") || "Selected place" } : null;
+if (PLACE) {
+  document.body.classList.add("placeonly");
+  for (const sel of [".ctiles", ".cbtns", "#cProc", "#cCons", "#cLegs", "#cAlert"]) document.querySelector(sel)?.classList.add("eva-only");
+  S.plan = { placeOnly: true, site: PLACE.name, base: { lon: PLACE.lon, lat: PLACE.lat, name: PLACE.name }, stations: [], route: [], guidance: [], profile: "rover" };
+  const get = () => loadPlace(PLACE.lon, PLACE.lat, (d) => { S.place = d; S.placeVer++; render(); })
+    .catch((e) => { S.placeErr = e.message; render(); });
+  get();
+  setInterval(get, 15 * 60 * 1000);                  // space weather and the clock-dependent parts stay current
+}
+
 // ------------------------------------------------------------------------------------------------ channel ----
-const CH = new BroadcastChannel("marsnav-hud");
-CH.onmessage = (ev) => {
+const CH = PLACE ? null : new BroadcastChannel("marsnav-hud");
+if (CH) CH.onmessage = (ev) => {
   const m = ev.data;
-  if (m.type === "plan") {
+  if (m.type === "place") {
+    S.place = m.place;
+    S.placeVer++;
+  } else if (m.type === "plan") {
     S.plan = m;
     S.clock = m.clock ? missionClock(m.clock) : M2020_CLOCK;
     S.hist = [];
@@ -38,7 +58,7 @@ CH.onmessage = (ev) => {
   }
   render();
 };
-const hello = () => { if (!S.plan) { CH.postMessage({ type: "hello" }); setTimeout(hello, 2000); } };
+const hello = () => { if (!S.plan && CH) { CH.postMessage({ type: "hello" }); setTimeout(hello, 2000); } };
 hello();
 setInterval(render, 1000);                                                   // the clock and the link state age on their own
 
@@ -68,7 +88,7 @@ function motion() {
 /** The next destination: the first stop not yet done (or dropped), else the habitat. */
 function nextStop() {
   const P = S.plan, s = S.snap;
-  if (!P) return null;
+  if (!P || P.placeOnly) return null;
   const home = { name: P.base?.name || "Habitat", lon: P.base.lon, lat: P.base.lat, home: true };
   if (s && (s.returning || s.done)) return home;
   const done = new Set((s?.stops || []).filter((x) => x.done || x.dropped).map((x) => x.name));
@@ -97,16 +117,18 @@ function render() {
   document.body.classList.toggle("ready", ready);
   const age = (Date.now() - S.last) / 1000;
   const link = $("link");
-  link.textContent = !S.snap ? (ready ? "plan received · no EVA running" : "waiting for the planner")
+  link.textContent = PLACE ? (S.place ? `survey · ${PLACE.name}` : S.placeErr ? `place data unavailable: ${S.placeErr}` : "reading the place…")
+    : !S.snap ? (ready ? "plan received · no EVA running" : "waiting for the planner")
     : age > 10 ? `no update for ${Math.round(age)} s` : `${S.snap.live ? "live telemetry" : "simulator"} · ${S.plan?.site ?? ""}`;
-  link.className = `link ${S.snap && age <= 10 ? (S.snap.live ? "live" : "sim") : ""}`;
+  link.className = `link ${PLACE ? (S.place ? "sim" : "") : S.snap && age <= 10 ? (S.snap.live ? "live" : "sim") : ""}`;
   if (!ready) return;
   const ctx = marsContext(S.snap?.ms ?? Date.now(), S.plan.base.lon, S.plan.base.lat, S.clock);
   const mo = motion();
   const nx = nextStop();
   const here = S.snap ? local(S.snap.lon, S.snap.lat) : [0, 0];
   const there = nx ? local(nx.lon, nx.lat) : here;
-  const nav = { here, there, d: dist(here, there), brg: bearing(here, there), ...mo, nx, ctx };
+  const at = S.snap && Number.isFinite(S.snap.lon) ? { lon: S.snap.lon, lat: S.snap.lat } : S.plan.base;
+  const nav = { here, there, d: dist(here, there), brg: bearing(here, there), ...mo, nx, ctx, t: timeHere(S.snap?.ms ?? Date.now(), at.lon, at.lat) };
   if (S.mode === "visor") visor(nav);
   else if (S.mode === "rover") rover(nav);
   else cuff(nav);
@@ -116,6 +138,25 @@ function render() {
 function visor(n) {
   const s = S.snap;
   tape($("vTape"), n);
+  const vf = facts(8);
+  $("vEnv").innerHTML = vf.length ? `<div class="vhead">HERE${S.place?.where?.quadrangle ? ` · ${esc(S.place.where.quadrangle.name)}` : ""}</div>` +
+    vf.map((f) => `<div class="vf"><span class="k">${esc(f.k)}</span><span class="v ${f.cls}">${esc(f.v)}</span></div>`).join("") : "";
+  if (PLACE) {
+    const t = n.t;
+    $("vArrow").setAttribute("transform", "rotate(0)");
+    $("vNext").innerHTML = `${esc(PLACE.name)}<small>${fmtLL(PLACE.lat, PLACE.lon)} · survey, no EVA</small>`;
+    $("vLeft").innerHTML = "";
+    $("vRight").innerHTML = [
+      ["Local time", placeHhmm(t.ltst), " LTST"], ["Sun", t.day ? `${t.sun.elevation.toFixed(0)}°` : "night", t.day ? ` · ${placeCompass(t.sun.azimuth)}` : ""],
+      [t.day ? "Sunset in" : "Sunrise in", t.polar ? `polar ${t.polar}` : hm(3600 * (t.day ? t.toSetH : t.toRiseH) * 1.0275), ""],
+      ["Season", t.season, ` · Ls ${t.Ls.toFixed(0)}°`], ["Elevation", S.place?.elevation?.m != null ? `${S.place.elevation.m}` : "--", " m"],
+      ["Earth", t.lightMin.toFixed(1), " light-min"],
+    ].map(([k, v, u]) => `<div class="vrow"><span class="k">${k}</span><span class="v">${v}<small>${u}</small></span></div>`).join("");
+    $("vAlert").className = ""; $("vAlert").innerHTML = ""; $("vProc").innerHTML = "";
+    $("vMode").textContent = "SURVEY"; $("vMode").classList.remove("ret");
+    placeMap($("vMini"), n, { visor: true });
+    return;
+  }
   const rel = n.heading == null ? 0 : (((n.brg - n.heading) + 540) % 360) - 180;
   const arrow = $("vArrow");
   arrow.setAttribute("transform", `rotate(${rel.toFixed(1)})`);
@@ -176,8 +217,8 @@ function tape(cv, n) {
   g.fillText(n.heading == null ? "---" : String(Math.round(hd) % 360).padStart(3, "0"), W / 2, 62);
   g.font = "13px 'IBM Plex Mono', monospace";
   const mark = (b, draw) => { const X = x(b); if (X > 4 && X < W - 4) draw(X); };
-  mark(n.brg, (X) => { g.beginPath(); g.moveTo(X, 30); g.lineTo(X + 6, 37); g.lineTo(X, 44); g.lineTo(X - 6, 37); g.closePath(); g.stroke(); });
-  if (S.plan && !n.nx?.home) {
+  if (n.nx) mark(n.brg, (X) => { g.beginPath(); g.moveTo(X, 30); g.lineTo(X + 6, 37); g.lineTo(X, 44); g.lineTo(X - 6, 37); g.closePath(); g.stroke(); });
+  if (S.plan && n.nx && !n.nx.home) {
     const hb = bearing(n.here, local(S.plan.base.lon, S.plan.base.lat));
     mark(hb, (X) => g.fillText("H", X, 44));
   }
@@ -195,9 +236,22 @@ function rover(n) {
   $("rSig").textContent = s ? `±${Math.round(2 * s.sigma)} m (2σ)` : "--";
   $("rLos").innerHTML = s ? (s.los ? "line of sight" : `<span class="c-caution">none${s.rs?.losLostMin ? ` · ${Math.round(s.rs.losLostMin)} min` : ""}</span>`) : "--";
   const eta = n.speed > 0.15 ? n.d / n.speed : null;
-  $("rNext").textContent = n.nx ? `${n.nx.home ? "Home: " : ""}${n.nx.name} · ${fmtM(n.d)} at ${Math.round(n.brg)}°${eta ? ` · ${hm(eta)}` : ""}` : "--";
+  $("rNext").textContent = PLACE ? `${PLACE.name} · ${fmtLL(PLACE.lat, PLACE.lon)}` : n.nx ? `${n.nx.home ? "Home: " : ""}${n.nx.name} · ${fmtM(n.d)} at ${Math.round(n.brg)}°${eta ? ` · ${hm(eta)}` : ""}` : "--";
   $("rMet").textContent = s ? hm(s.t) : "--";
-  $("rSun").textContent = s?.rs?.sunsetMinLeft != null ? hm(s.rs.sunsetMinLeft * 60) : "--";
+  $("rSun").textContent = s?.rs?.sunsetMinLeft != null ? hm(s.rs.sunsetMinLeft * 60) : n.t.toSetH != null ? hm(3600 * n.t.toSetH * 1.0275) : n.t.day ? "--" : "night";
+  const c = s?.here;
+  $("rHere").innerHTML = [
+    ...(c ? [["Terrain", c.terrain], ["Slope", `${c.slopeW.toFixed(1)}°`], ["Sand / slip", `${c.sand.toFixed(2)} / ${c.slipRisk.toFixed(2)}`],
+      ["Cliff", c.cliffDist >= 1020 ? "> 1 km" : `${Math.round(c.cliffDist)} m`, c.cliffDist < 60 ? "c-caution" : ""], c.veto ? ["No-go", c.veto, "c-warning"] : null] : []),
+    ...facts(10).map((f) => [f.k, f.v, f.cls]),
+  ].filter(Boolean).map(([k, v, cls]) => `<div class="rrow"><span class="k">${esc(k)}</span><span class="v ${cls || ""}" title="${esc(v)}">${esc(v)}</span></div>`).join("")
+    || `<div class="hint">${PLACE ? "Reading the place…" : "Place data come from the planner (MarsNav server)."}</div>`;
+  if (PLACE) {
+    $("rPower").innerHTML = `<div class="hint">Survey of a place: no EVA, no vehicle telemetry. Plan an EVA in the planner to drive it here.</div>`;
+    $("rCrew").innerHTML = `<div class="hint">${esc(timeLine(n.t))}</div>`;
+    $("rAlerts").innerHTML = S.place?.spaceweather?.have_data ? `<div class="al l${S.place.spaceweather.level === "storm" ? 3 : S.place.spaceweather.level === "quiet" ? 1 : 2}">${esc(S.place.spaceweather.headline)}</div>` : `<div class="hint">No alerts: no EVA running.</div>`;
+  }
+  dataPane($("rData"), true);
   if (s) {
     const wm = worstMargin(s);
     $("rBack").textContent = hm(s.back);
@@ -213,8 +267,11 @@ function rover(n) {
   const cv = $("rMap");
   const W = cv.clientWidth, H = cv.clientHeight, dpr = window.devicePixelRatio || 1;
   if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
-  miniMap(cv, n, { visor: false });
-  $("rMapNote").textContent = `${S.plan.site} · ${{ return: "return route", replan: "re-planned route", plan: "filed plan" }[activePath().kind]} · north up`;
+  if (PLACE) { placeMap(cv, n, { visor: false }); $("rMapNote").textContent = `${PLACE.name} · catalogued features within 50 km · north up`; }
+  else {
+    miniMap(cv, n, { visor: false });
+    $("rMapNote").textContent = `${S.plan.site} · ${{ return: "return route", replan: "re-planned route", plan: "filed plan" }[activePath().kind]} · north up`;
+  }
 }
 
 function gauge2(name, rem, need, margin) {
@@ -302,6 +359,19 @@ function cuff(n) {
   const st = n.nx ? S.plan.stations.find((x) => x.name === n.nx.name) : null;
   const pov = st?.pov || [];
   const eta = n.speed > 0.15 ? n.d / n.speed : null;
+  const near = nearFeatures(S.place, 5);
+  $("cHere").innerHTML = `<h3>Here${S.place?.where?.quadrangle ? ` · ${esc(S.place.where.quadrangle.id)} ${esc(S.place.where.quadrangle.name)}` : ""}</h3>
+    <div class="cfacts">${facts(12).map((f) => `<div><span class="k">${esc(f.k)}</span><span class="v ${f.cls}">${esc(f.v)}</span></div>`).join("") || `<div><span class="k">Place</span><span class="v">reading…</span></div>`}</div>
+    <div class="hint" style="margin-top:6px">${esc(timeLine(n.t))}</div>
+    ${near.length ? `<ol class="cnear">${near.map((r) => `<li>${esc(r.label)} <span class="hint">${placeFmtKm(r.km)}</span></li>`).join("")}</ol>` : ""}`;
+  dataPane($("cData"), false);
+  if (PLACE) {
+    $("cMet").textContent = placeHhmm(n.t.ltst);
+    $("cLink").textContent = `LTST · ${placeHhmm(n.t.lmst)} LMST · MY ${n.t.marsYear}`;
+    $("cMode").textContent = "SURVEY";
+    $("cNext").innerHTML = `<h3>Survey</h3><div class="big">${esc(PLACE.name)}</div><div>${fmtLL(PLACE.lat, PLACE.lon)}${S.place?.elevation?.m != null ? ` · ${S.place.elevation.m} m` : ""}</div>`;
+    return;
+  }
   $("cNext").innerHTML = n.nx ? `<h3>${n.nx.home ? "Going home" : "Next stop"}</h3><div class="big">${esc(n.nx.name)}</div>
     <div>${fmtM(n.d)} at ${Math.round(n.brg)}°${eta ? ` · about ${hm(eta)}` : ""}</div>
     ${pov.length ? `<div class="pov">${pov.slice(0, 2).map((p) => `<div><img src="${esc(p.src)}" alt="${esc(p.alt || "Rover image near this stop")}" loading="lazy"><div class="cap">${esc(p.caption || "")}</div></div>`).join("")}</div>` : ""}` : "";
@@ -316,9 +386,78 @@ function cuff(n) {
   rb.textContent = armed ? "Confirm return" : "Return now";
 }
 
+// ------------------------------------------------------------------------------------------------- the place --
+/** The facts about the crew's place that matter in a suit (js/placeview.js), at most k. */
+function facts(k) {
+  return placeFacts(S.place).slice(0, k);
+}
+function timeLine(t) {
+  return `${placeHhmm(t.ltst)} LTST · sun ${t.day ? `${t.sun.elevation.toFixed(0)}° ${placeCompass(t.sun.azimuth)}` : "down"} · ` +
+    `${t.polar ? `polar ${t.polar}` : `rises ${placeHhmm(t.sunrise)}, sets ${placeHhmm(t.sunset)}`} · ${t.season} (Ls ${t.Ls.toFixed(0)}°, MY ${t.marsYear}) · Earth ${t.lightMin.toFixed(1)} light-min`;
+}
+/** Every layer at the place, folded (rebuilt only when new data arrive, so open sections and scrolling stay). */
+function dataPane(el, wide) {
+  if (!el || S.drawn[el.id] === S.placeVer) return;
+  S.drawn[el.id] = S.placeVer;
+  el.innerHTML = S.place ? `${wide ? "" : "<h3>All data here</h3>"}${placeHtml(S.place, { fold: true, open: wide ? ["where", "env", "ground", "water"] : [] })}`
+    : `<div class="pv-loading">${PLACE ? "Reading the place…" : "Every data layer at the crew's position arrives from the planner (it needs the MarsNav server)."}</div>`;
+}
+/** Map of the place for a survey: range rings at 10, 25 and 50 km, catalogued features, missions and names around it. */
+function placeMap(cv, n, { visor }) {
+  const g = cv.getContext("2d"), W = cv.width, H = cv.height;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const hud = visor ? "#9dffcf" : "#f2f5f8", dim = visor ? "#2f6b52" : "#3a4a5e";
+  if (!visor) { g.fillStyle = "#05080c"; g.fillRect(0, 0, W, H); }
+  const R = 52000, k = Math.min(W, H) / 2 / R, cx = W / 2, cy = H / 2;
+  const X = (lon, lat) => { const [x, y] = local(lon, lat); return [cx + x * k, cy - y * k]; };
+  g.strokeStyle = dim; g.lineWidth = 1; g.font = "11px 'IBM Plex Mono', monospace"; g.fillStyle = dim; g.textAlign = "left";
+  for (const r of [10000, 25000, 50000]) {
+    g.beginPath(); g.arc(cx, cy, r * k, 0, 2 * Math.PI); g.stroke();
+    g.fillText(`${r / 1000} km`, cx + r * k * 0.707 + 3, cy - r * k * 0.707 - 3);
+  }
+  const boxes = [];                                                 // labels never overlap: a label that would is left out
+  const label = (txt, x, y) => {
+    const w = g.measureText(txt).width, b = [x - 2, y - 11, x + w + 2, y + 3];
+    if (b[2] > W || boxes.some((o) => b[0] < o[2] && b[2] > o[0] && b[1] < o[3] && b[3] > o[1])) return;
+    boxes.push(b); g.fillText(txt, x, y);
+  };
+  const COL = { aqueous: "#36d2b4", hydrous: "#3c8cff", chlorides: "#e0d36a", valleys: "#7fb2ff", fans: "#c99a5e", glacial: "#bfe7ff", gullies: "#ff9f6a",
+    active: "#ff5a3c", dunes: "#d8a57a", traverses: "#3ee07e", landers: "#ffffff" };
+  const items = (S.place?.science?.nearest || []).filter((r) => r.km <= 50);
+  for (const r of items) {
+    const [x, y] = X(r.lon, r.lat);
+    g.fillStyle = visor ? hud : COL[r.layer] || "#b8c2ce";
+    g.beginPath(); g.arc(x, y, visor ? 2.5 : 4, 0, 2 * Math.PI); g.fill();
+  }
+  for (const nm of (S.place?.where?.names || []).filter((x) => x.dist_km <= 50)) {
+    const [x, y] = X(nm.lon, nm.lat);
+    g.fillStyle = visor ? hud : "#e8bd97"; g.font = visor ? "10px 'IBM Plex Mono', monospace" : "italic 12px Barlow, sans-serif";
+    label(nm.name, x + 4, y - 4);
+  }
+  if (!visor) {
+    g.fillStyle = "#b8c2ce"; g.font = "12px Barlow, sans-serif";
+    for (const r of items) { const [x, y] = X(r.lon, r.lat); label(r.label.slice(0, 40), x + 7, y + 4); }
+  }
+  g.strokeStyle = "#ffd23c"; g.lineWidth = 2;
+  g.beginPath(); g.arc(cx, cy, 7, 0, 2 * Math.PI); g.moveTo(cx - 13, cy); g.lineTo(cx - 4, cy); g.moveTo(cx + 4, cy); g.lineTo(cx + 13, cy);
+  g.moveTo(cx, cy - 13); g.lineTo(cx, cy - 4); g.moveTo(cx, cy + 4); g.lineTo(cx, cy + 13); g.stroke();
+  if (n.t.day) {                                                   // the sun's direction
+    const a = n.t.sun.azimuth * DEG, rr = Math.min(W, H) / 2 - 10;
+    g.fillStyle = "#ffd23c"; g.beginPath(); g.arc(cx + rr * Math.sin(a), cy - rr * Math.cos(a), 5, 0, 2 * Math.PI); g.fill();
+  }
+  g.fillStyle = hud; g.font = "600 13px 'IBM Plex Mono', monospace"; g.textAlign = "center"; g.fillText("N", cx, 14);
+}
+const fmtLL = (lat, lon) => `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? "N" : "S"} ${Math.abs(lon).toFixed(4)}°${lon >= 0 ? "E" : "W"}`;
+for (const b of document.querySelectorAll("[data-rtab]")) b.addEventListener("click", () => {
+  for (const x of document.querySelectorAll("[data-rtab]")) x.setAttribute("aria-selected", String(x === b));
+  $("rData").hidden = b.dataset.rtab !== "data";
+});
+
 for (const b of document.querySelectorAll("[data-cmd]")) {
   b.addEventListener("click", () => {
     const c = b.dataset.cmd;
+    if (!CH) return;
     if (c === "return") {
       if (Date.now() - S.armed < 5000) { CH.postMessage({ type: "return" }); S.armed = 0; }
       else S.armed = Date.now();

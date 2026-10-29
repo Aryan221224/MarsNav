@@ -3,7 +3,8 @@ import { MapView } from "./map.js";
 import { Timeline } from "./timeline.js";
 import { ahp, L1_IDS, L1_NAMES, L1_MATRIX, L1_REASONS } from "../engine/ahp.js";
 import { marsContext, missionClock, M2020_CLOCK, fmtHours, earthMarsLight } from "../engine/marstime.js";
-import { setProjection, lonlatToXY } from "../engine/geo.js";
+import { setProjection, lonlatToXY, haversine, bearing } from "../engine/geo.js";
+import { loadPlace, placeHtml, timeHere, timeHtml, placeCompass } from "./placeview.js";
 import { View3D } from "./view3d.js";
 import { fmtDuration } from "../engine/util.js";
 import { speak, tone, primeAudio } from "./speech.js";
@@ -712,16 +713,8 @@ function wireMap() {
       runLanding(lon, lat);
       return;
     }
-    if (!state.addMode) return;
-    const g = state.meta.grid, [rr, cc] = rcOfLonLatGrid(g, lon, lat);
-    if (!(rr >= 0 && cc >= 0 && rr < g.height && cc < g.width)) {
-      $("planMsg").innerHTML = '<span class="warn">That point is outside this site\'s detailed terrain. Add points inside the mapped area, or use Landing mode to build a hub site there.</span>';
-      return;
-    }
-    let n = state.stations.length + 1;
-    while (state.stations.some((x) => x.name === `Point ${n}`)) n++;
-    addStation({ id: `P${Date.now().toString(36)}`, name: `Point ${n}`, lon, lat, dwell_min: 20, value: 0.3 });
-    scheduleReplan();
+    if (!state.addMode) { showPlaceCard(lon, lat); return; }
+    addPointStation(lon, lat);
     state.addMode = false;
     $("btnAddMode").setAttribute("aria-pressed", "false");
     $("btnAddMode").classList.remove("primary");
@@ -1024,6 +1017,105 @@ function showPov(st) {
   $("modal").hidden = false;
 }
 
+function addPointStation(lon, lat, name = null) {
+  if (!T_inside(state.meta.grid, lon, lat)) {
+    $("planMsg").innerHTML = '<span class="warn">That point is outside this site\'s detailed terrain. Add points inside the mapped area, or use Landing mode to build a hub site there.</span>';
+    return false;
+  }
+  let n = state.stations.length + 1;
+  while (state.stations.some((x) => x.name === `Point ${n}`)) n++;
+  addStation({ id: `P${Date.now().toString(36)}`, name: name || `Point ${n}`, lon, lat, dwell_min: 20, value: 0.3 });
+  scheduleReplan();
+  return true;
+}
+
+// ------------------------------------------------------------------------------------ everything at a point --
+// Click any point of the site: this site's own terrain model there (slope, steps, sand, wheel slip, cliffs, radio to
+// the habitat, walk home, the no-go reason, which elevation data it rests on), the rover's photographs if a station is
+// close, the time and sun at the spot, and every planet-wide layer (planet/place.py via /api/place: ground, water,
+// minerals, radiation, gravity, science, missions). The planet layers need the MarsNav server; the rest works anywhere.
+let placeTok = 0;
+const fmtMeters = (m) => !Number.isFinite(m) ? "–" : m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
+function namedNear(lon, lat, maxM = 250) {
+  const all = [...state.stations, ...(state.meta.targets || []), ...(state.meta.landmarks || [])].filter((t) => Number.isFinite(t?.lon));
+  let best = null;
+  for (const t of all) {
+    const d = haversine(lon, lat, t.lon, t.lat);
+    if (d <= maxM && (!best || d < best.d)) best = { t, d };
+  }
+  return best;
+}
+function siteCellHtml(c) {
+  if (!c) return `<section class="pv-sec"><h3>This site's terrain</h3><p class="pv-hint">Outside the detailed terrain of this site: the planet-wide data below still apply.</p></section>`;
+  const rows = [
+    ["Elevation", `${c.elevation.toFixed(0)} m <span class="pv-na">site elevation model</span>`],
+    ["Terrain", c.terrain],
+    ["Slope", `${c.slopeW.toFixed(1)}° <span class="pv-na">walking scale, 90th percentile per cell</span>`],
+    ["Steps", `${c.step.toFixed(2)} m`],
+    ["Sand", c.sand.toFixed(2)],
+    ["Wheel-slip risk", `<span class="${c.slipRisk > 0.5 ? "pv-warn" : ""}">${c.slipRisk.toFixed(2)}</span>`],
+    c.clutter != null ? ["Rock cover", `${c.clutter.toFixed(2)}`] : null,
+    ["Nearest cliff", c.cliffDist >= 1020 ? "more than 1 km" : `<span class="${c.cliffDist < 60 ? "pv-warn" : ""}">${c.cliffDist.toFixed(0)} m</span>`],
+    ["Hazard index", c.hazard.toFixed(2)],
+    ["No-go", c.veto ? `<span class="pc-veto">${c.veto}</span>` : '<span class="pv-ok">no</span>'],
+    ["Position error", `±${(2 * c.sigma).toFixed(0)} m (2σ)`],
+    ["Radio to habitat", c.los ? '<span class="pv-ok">line of sight</span>' : '<span class="pv-warn">no line of sight: relay or rover needed</span>'],
+    ["Walk home", Number.isFinite(c.walkbackS) ? fmtDuration(c.walkbackS).slice(0, 5) : '<span class="pv-na">plan an EVA to compute</span>'],
+    ["Elevation data", c.confidence > 0.5 ? "HiRISE 1 m (metre-scale hazards measured)" : "CTX 20 m (hazards under ~40 m not seen)"],
+  ].filter(Boolean);
+  return `<section class="pv-sec" data-pv="cell"><h3>This site's terrain <small>the planner's model of this cell</small></h3><div class="pv-kv">${rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join("")}</div></section>`;
+}
+async function showPlaceCard(lon, lat) {
+  const card = $("placeCard"), tok = ++placeTok;
+  state.probe = { lon, lat };
+  state.map.probe = state.probe; state.map.draw();
+  const b = state.base, dM = haversine(b.lon, b.lat, lon, lat), brg = bearing(b.lon, b.lat, lon, lat);
+  const nn = namedNear(lon, lat);
+  const name = nn ? (nn.d < 25 ? nn.t.name : `Near ${nn.t.name}`) : "Selected point";
+  const st = nn && nn.d < 150 ? nn.t : null, pov = povOf(st);
+  const c = await call("cell", { lon, lat }).catch(() => null);
+  if (tok !== placeTok) return;
+  card.hidden = false;
+  card.innerHTML = `<div class="pc-head"><span class="pc-name">${escH(name)}</span><button class="pc-x" id="pcClose" title="Close (Esc)" aria-label="Close">×</button>
+      <span class="pc-sub">${Math.abs(lat).toFixed(5)}°${lat >= 0 ? "N" : "S"} ${Math.abs(lon).toFixed(5)}°${lon >= 0 ? "E" : "W"} · ${fmtMeters(dM)} ${placeCompass(brg)} of the habitat (${Math.round(brg)}°)</span>
+      <div class="pc-btns"><button class="btn sm" id="pcAdd"${c ? "" : " disabled"}>Add as station</button>
+        <button class="btn sm" id="pcHud" title="This point on the crew displays: helmet visor, rover dashboard, wrist cuff">Crew displays</button>
+        ${pov.length ? `<button class="btn sm" id="pcPov">Photos · ${pov.length}</button>` : ""}</div></div>
+    ${siteCellHtml(c)}
+    ${pov.length ? `<section class="pv-sec"><h3>What you'll see <small>${escH(pov[0].rover)} at ${escH(st.name)}</small></h3><div class="pc-pov">${pov.slice(0, 2).map((i) => `<img src="${new URL(i.file, DATA).href}" alt="${escH(povCaption(i))}" loading="lazy">`).join("")}</div></section>` : ""}
+    <section class="pv-sec" data-pv="time"><h3>Time here now <small>Mars24 clock, live</small></h3><div id="pcTime"></div></section>
+    <div id="pcPlanet"><div class="pv-loading">Reading every planet-wide data layer at this point…</div></div>`;
+  tickPlaceCard();
+  $("pcClose").onclick = closePlaceCard;
+  $("pcAdd").onclick = () => { if (addPointStation(lon, lat, nn && nn.d < 25 ? nn.t.name : null)) closePlaceCard(); };
+  $("pcHud").onclick = () => {
+    const u = new URL("../hud.html", import.meta.url);
+    u.searchParams.set("lon", lon.toFixed(6)); u.searchParams.set("lat", lat.toFixed(6));
+    u.searchParams.set("name", `${name} · ${state.site?.short ?? state.site?.name ?? ""}`); u.searchParams.set("mode", "visor");
+    if (!window.open(u.href, "marsnav-hud-place", "popup=yes,width=1280,height=760")) $("planMsg").innerHTML = '<span class="bad">The browser blocked the display window. Allow pop-ups for this page.</span>';
+  };
+  if (pov.length) $("pcPov").onclick = () => showPov(st);
+  loadPlace(lon, lat, (d) => {
+    if (tok !== placeTok) return;
+    state.placeData = d;
+    $("pcPlanet").innerHTML = `<h3 class="pv-group">Planet-wide data at this point</h3>` + placeHtml(d, { fold: true, open: ["env", "ground", "water"] });
+  }, { stillWanted: () => tok === placeTok }).catch((e) => {
+    if (tok === placeTok) $("pcPlanet").innerHTML = `<p class="pv-loading">Planet-wide layers need the MarsNav server (${escH(e.message)}). The site terrain above is from this site's own data.</p>`;
+  });
+}
+function tickPlaceCard() {
+  const el = $("pcTime");
+  if (el && state.probe && !$("placeCard").hidden) el.innerHTML = timeHtml(timeHere(Date.now(), state.probe.lon, state.probe.lat));
+}
+setInterval(tickPlaceCard, 1000);
+function closePlaceCard() {
+  placeTok++;
+  $("placeCard").hidden = true;
+  state.probe = null; state.map.probe = null; state.map.draw();
+}
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("placeCard").hidden) closePlaceCard(); });
+const escH = (x) => String(x ?? "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+
 // ---------------------------------------------------------------------------------- crew displays (hud.html) --
 // The same EVA on the displays a crew would carry: a helmet-visor HUD, a rover dashboard and a wrist cuff. They get
 // the plan and every snapshot over a BroadcastChannel and send back the cuff's commands (acknowledge, silence, pin,
@@ -1038,6 +1130,7 @@ function hudChannel() {
     try {
       if (m.type === "hello") {
         hudPlan();
+        if (state.hudPlace) ch.postMessage({ type: "place", place: state.hudPlace });
         if (state.sim?.snap) hudSnap(state.sim.snap);
       } else if (!state.sim?.snap) {
         ch.postMessage({ type: "note", text: "No EVA running: start one in Execute (simulator, live suit or drive window)." });
@@ -1061,11 +1154,31 @@ function hudPlan() {
     summary: r?.ok ? { t: r.t, dist: r.dist, doseMSv: r.doseMSv, minMargin: r.minMargin } : null,
     guidance: r?.ok ? r.legs.map((l) => ({ from: l.from, to: l.to, guidance: l.guidance })) : [],
     swx: state.swx ? { level: state.swx.level, headline: state.swx.headline } : null });
+  hudPlace(state.base.lon, state.base.lat);
+}
+/** Every layer at the crew's position for the displays: fetched again after 400 m of travel or 10 minutes. */
+function hudPlace(lon, lat) {
+  const last = state.hudPlaceAt;
+  if (state.hudPlaceBusy || (last && haversine(last.lon, last.lat, lon, lat) < 400 && Date.now() - last.t < 600e3)) return;
+  state.hudPlaceBusy = true;
+  state.hudPlaceAt = { lon, lat, t: Date.now() };
+  loadPlace(lon, lat, (d) => { state.hudPlace = d; state.hudCh?.postMessage({ type: "place", place: d }); })
+    .catch(() => { /* no server (static build): the displays go without */ })
+    .finally(() => { state.hudPlaceBusy = false; });
 }
 function hudSnap(s) {
   const ch = hudChannel();
   if (!ch) return;
-  ch.postMessage({ type: "snap", snap: { t: s.t, ms: s.ms, lon: s.lon, lat: s.lat, sigma: s.sigma, remaining: s.remaining, margins: s.margins,
+  if (Number.isFinite(s.lon)) {
+    hudPlace(s.lon, s.lat);
+    if (!state.hudCellT || Date.now() - state.hudCellT > 1000) {      // the site's terrain under the crew, once a second
+      state.hudCellT = Date.now();
+      call("cell", { lon: s.lon, lat: s.lat }).then((c) => { state.hudCell = c; }).catch(() => { state.hudCell = null; });
+    }
+  }
+  const c = state.hudCell;
+  ch.postMessage({ type: "snap", snap: { here: c ? { terrain: c.terrain, slopeW: c.slopeW, sand: c.sand, slipRisk: c.slipRisk, cliffDist: c.cliffDist, veto: c.veto, elevation: c.elevation } : null,
+    t: s.t, ms: s.ms, lon: s.lon, lat: s.lat, sigma: s.sigma, remaining: s.remaining, margins: s.margins,
     back: s.back, dist: s.dist, returning: s.returning, done: s.done, los: s.los, shade: s.shade, alerts: s.alerts, counts: s.counts,
     station: s.station, stops: s.loop?.stops ?? null, livePlan: s.livePlan, returnPts: s.returnPts, rs: s.rs ?? null, live: !!s.live,
     res: s.res, cap: s.cap, track: s.track?.slice(-60) ?? null } });

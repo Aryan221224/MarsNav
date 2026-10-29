@@ -49,6 +49,16 @@ A Marswalk is a closed-loop survival problem. The crew cannot call Earth for hel
 
 **Crew displays.** The same EVA, live, on a helmet-visor HUD (heading tape, steering cue, walk-home margin, consumables, alerts; it can also overlay the first-person drive window), a rover dashboard (speed, slope ahead, power, route map) and a wrist cuff (the next stop with the rover's own photograph of it, the procedure checklist, acknowledge, pin and a two-step return). Every station at Jezero and Mount Sharp has the rover's raw Navcam and Mastcam frames from that spot: what the crew will see when they arrive.
 
+**Everything at any place.** Click any point on Mars, on the globe or on a built site, and every layer appears at once, with no assessment to run:
+- **Where:** chart quadrangle and names.
+- **Time:** local solar time, sun, sunrise and sunset, season and Mars Year, live.
+- **Survival:** air pressure, whether liquid water can exist and where it boils, air shielding, cosmic-ray dose, gravity and sunlight.
+- **Ground:** thermal inertia, geologic unit, albedo, dust cover, roughness and craters.
+- **Water and composition:** ice at three depths, the nearest ice, GRS hydrogen, TES minerals and GRS elements.
+- **Science and context:** catalogued features and objective scores, missions nearby, and the best elevation data covering the point.
+
+On a site the card adds the planner's own terrain model at that cell and the rover's photographs. The helmet visor, rover dashboard and wrist cuff show the same facts for the ground under the crew, and any place can be opened on them as a survey.
+
 **The challenge's example: the Mount Sharp boxwork.** Built from five HiRISE 1 m models, with Curiosity's track to sol 5045 and its boxwork drill sites (Altadena, Monte Grande, Campo Marte) placed at the rover's own positions. MarsNav's answer is a real finding. Cliff-bounded buttes (every one at least 8 m high) and 39 % sand leave most of the foothills out of reach with dead-reckoning navigation, so the hub is a forward camp in a pressurised rover. From there a suited crew reaches Altadena in 1.3 h and Campo Marte in 3.4 h.
 
 **Local mode and Mars mode: no Earth link.** Local mode measures and downloads the whole-planet datasets at native resolution and every high-resolution product around each site. Mars mode then refuses every internet request, counts what it refused, and keeps everything working from local copies. The EVA planner needs no internet at any time.

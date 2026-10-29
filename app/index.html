@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" href="favicon-64.png">
 <link rel="apple-touch-icon" href="logo-192.png">
 <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/place.css">
 <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
@@ -304,7 +305,8 @@
       <label><input type="checkbox" id="chkAlt" checked> Alternative routes</label>
       </div>
     </div>
-    <div class="readout" id="readout">Move over the map for terrain details.</div>
+    <div class="readout" id="readout">Move over the map for terrain details. Click any point for everything known there.</div>
+    <div class="placecard" id="placeCard" hidden aria-label="Everything at the selected point"></div>
     <div class="legend" id="legend" hidden></div>
     <div class="scale" id="scale"><div class="b" id="scaleBar"></div><span id="scaleTxt"></span></div>
     <div class="busy" id="busy">Loading terrain&hellip;</div>

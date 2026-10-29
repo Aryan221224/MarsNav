@@ -4,9 +4,9 @@
 // the server cannot be reached. (v1 was cache-first forever, so after any update a browser kept running a stale mix of
 // old and new scripts - which broke the 3D view and hid fixes.) The live planet tile stream (/tiles/) and the launcher
 // API (/api/) are never cached here: the launcher keeps its own disk cache of tiles.
-const VERSION = "marsnav-v10";
+const VERSION = "marsnav-v11";
 const SHELL = ["./", "index.html", "css/app.css", "js/main.js", "js/worker.js", "js/map.js", "js/timeline.js", "js/speech.js",
-  "js/view3d.js", "js/landing.js", "landing.html", "css/landing.css", "planet.html", "drive.html", "css/drive.css", "js/drive.js", "js/desktop.js", "hud.html", "css/hud.css", "js/hud.js", "css/theme.css", "vendor/fonts/Barlow-Regular.woff", "vendor/fonts/Barlow-Medium.woff", "vendor/fonts/Barlow-SemiBold.woff", "vendor/fonts/Barlow-Bold.woff", "vendor/fonts/Barlow-Italic.woff", "vendor/fonts/BarlowCondensed-Medium.woff", "vendor/fonts/BarlowCondensed-SemiBold.woff", "vendor/fonts/BarlowCondensed-Bold.woff", "vendor/fonts/IBMPlexMono-Regular.woff", "vendor/fonts/IBMPlexMono-Medium.woff", "logo-96.png", "favicon-64.png", "vendor/three.module.min.js", "manifest.webmanifest", "data/sites.json"];
+  "js/view3d.js", "js/landing.js", "landing.html", "css/landing.css", "planet.html", "drive.html", "css/drive.css", "js/drive.js", "js/desktop.js", "hud.html", "css/hud.css", "js/hud.js", "js/placeview.js", "css/place.css", "css/theme.css", "vendor/fonts/Barlow-Regular.woff", "vendor/fonts/Barlow-Medium.woff", "vendor/fonts/Barlow-SemiBold.woff", "vendor/fonts/Barlow-Bold.woff", "vendor/fonts/Barlow-Italic.woff", "vendor/fonts/BarlowCondensed-Medium.woff", "vendor/fonts/BarlowCondensed-SemiBold.woff", "vendor/fonts/BarlowCondensed-Bold.woff", "vendor/fonts/IBMPlexMono-Regular.woff", "vendor/fonts/IBMPlexMono-Medium.woff", "logo-96.png", "favicon-64.png", "vendor/three.module.min.js", "manifest.webmanifest", "data/sites.json"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(VERSION).then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => null)))).then(() => self.skipWaiting()));

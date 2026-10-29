@@ -24,6 +24,7 @@ The five Space Apps judging criteria, and the evidence in this project for each.
 - **Science first, then the route**: objectives rank every candidate site by the catalogued minerals, ice and activity near it, and the dossier says what lies within 100 km.
 - **Navigation decides access**: at Mount Sharp the same cliffs leave 17 % of the site reachable with dead reckoning and 54 % with an orbital navigation constellation; MarsNav shows why, and puts the hub where a pressurised rover can park.
 - **One EVA, every display**: the planner's closed loop drives a visor HUD, a rover dashboard and a wrist cuff at once, and the cuff's commands act on the loop.
+- **Every layer, any place**: one click anywhere on Mars, or on a built site, shows all the data at that point. That covers ground, ice, minerals, air, water's boiling point, dose, gravity, science and missions nearby, and the local time and sun. The crew displays carry the same facts for the ground under the crew.
 
 ## Validity: is it scientifically and technically sound?
 
@@ -52,6 +53,7 @@ The challenge statement, point by point (docs/06 has the full trace):
 | "include space weather data" | NASA DONKI CME arrivals at Mars, particle events, flares; EVA advisory; dose by altitude |
 | "a heads-up display on the helmet visor... a tablet" | Helmet-visor HUD, rover dashboard, wrist cuff, habitat console |
 | "point-of-view images" | The rover's own photographs from each station |
+| "a map... tool or interface for astronauts" to know a location | Every layer at any point clicked on Mars or on a site (`/api/place`), on screen and on the visor, dashboard and cuff |
 
 ## Presentation: how well is it communicated?
 

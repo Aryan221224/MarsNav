@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="favicon-64.png">
 <link rel="apple-touch-icon" href="logo-192.png">
 <link rel="stylesheet" href="css/landing.css">
+<link rel="stylesheet" href="css/place.css">
 <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
@@ -229,7 +230,8 @@
         <button class="btn" id="btnSafe" hidden>Move to nearest safe spot</button>
         <button class="btn" id="btnHub" disabled>Set as hub…</button>
         <button class="btn ghost" id="btnReport" disabled title="Printable dossier (save as PDF)">Report</button>
-        <button class="btn ghost" id="btnJson" disabled title="Download the dossier as JSON">JSON</button>
+        <button class="btn ghost" id="btnJson" disabled title="Download every data layer at this place (and the dossier, once assessed) as JSON">JSON</button>
+        <button class="btn ghost" id="btnCrew" title="This place on the crew displays: helmet visor HUD, rover dashboard and wrist cuff">HUD</button>
       </div>
       <div id="dProgress" class="progress" hidden><i></i><span>Assessing…</span></div>
       <div id="dSections"></div>
@@ -245,6 +247,7 @@
         <pre id="siteLog" class="log" hidden></pre>
         <div id="siteDone"></div>
       </section>
+      <div id="dPlace"></div>
     </div>
   </aside>
 </main>
