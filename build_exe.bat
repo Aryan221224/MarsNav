@@ -85,44 +85,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
-rem One-folder build (not one-file): a one-file exe unpacks ~220 MB into the system temp folder on every start, leaves it
-rem behind whenever it is killed, and cannot start at all when that drive is full. The one-folder build starts at once
-rem and writes nothing to the system drive. Its libraries live in MarsNav_runtime\ next to MarsNav.exe.
+rem The PyInstaller recipe lives in tools\build_windows.py, shared with the GitHub Actions build of the release zip.
 echo.
 echo Building MarsNav.exe with PyInstaller...
-if exist ".buildwork\dist" rmdir /s /q ".buildwork\dist"
-"%VENV_PY%" -m PyInstaller --noconfirm --onedir --windowed --name MarsNav ^
-    --contents-directory MarsNav_runtime ^
-    --icon "%cd%\launcher\marsnav.ico" ^
-    --version-file "%cd%\launcher\version_info.txt" ^
-    --paths . ^
-    --paths pipeline ^
-    --paths launcher ^
-    --collect-submodules planet ^
-    --hidden-import desktop ^
-    --hidden-import wintheme ^
-    --hidden-import build_imagery ^
-    --hidden-import build_layers ^
-    --hidden-import build_terrain ^
-    --hidden-import fetch_data ^
-    --hidden-import fit_meda ^
-    --hidden-import mars_geo ^
-    --hidden-import mars_time ^
-    --hidden-import sitecfg ^
-    --hidden-import targets ^
-    --hidden-import scipy.sparse.csgraph ^
-    --hidden-import scipy.ndimage ^
-    --hidden-import clr ^
-    --collect-data certifi ^
-    --collect-all rasterio ^
-    --collect-all affine ^
-    --collect-all webview ^
-    --collect-all pythonnet ^
-    --collect-all clr_loader ^
-    --exclude-module PyQt5 --exclude-module PyQt6 --exclude-module PySide2 --exclude-module PySide6 ^
-    --exclude-module gi --exclude-module cefpython3 --exclude-module pytest ^
-    --distpath .buildwork\dist --workpath .buildwork --specpath .buildwork ^
-    launcher\martian_map.py
+"%VENV_PY%" tools\build_windows.py
 
 if not exist ".buildwork\dist\MarsNav\MarsNav.exe" (
     echo.
@@ -133,7 +99,7 @@ if not exist ".buildwork\dist\MarsNav\MarsNav.exe" (
 
 echo.
 echo Assembling the portable program for other PCs (dist\MarsNav and dist\MarsNav-Windows.zip)...
-"%VENV_PY%" launcher\make_portable.py ".buildwork\dist\MarsNav" "%cd%" 2.0.0
+"%VENV_PY%" launcher\make_portable.py ".buildwork\dist\MarsNav" "%cd%" 2.1.0
 if errorlevel 1 (
     echo Could not assemble the portable folder - is a copy of it still open in dist\MarsNav?
 )

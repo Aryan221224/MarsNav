@@ -63,7 +63,7 @@ It is a portable Windows desktop app: one folder, one double-click, nothing to i
 
 **Windows 10 or 11 (64-bit):**
 
-1. Download `MarsNav-Windows.zip` from the latest release, or build it yourself with `build_exe.bat` (it appears in `dist\`).
+1. Download `MarsNav-Windows.zip` from the [latest release](https://github.com/Aryan221224/MarsNav/releases/latest). Every push builds it on a clean Windows machine (`.github/workflows/windows-exe.yml`), starts it, runs its self-test and the whole test suite, and only then publishes it. Or build it yourself with `build_exe.bat` (it appears in `dist\`).
 2. Unzip it anywhere you can save files (Desktop, Documents, `D:\`, a USB stick) and double-click **`MarsNav.exe`**.
 3. The first time on a new PC, Windows may say "Windows protected your PC" because the program is not code-signed: click **More info**, then **Run anyway**.
 
@@ -119,8 +119,9 @@ Hard limits come first and are never traded against time; a partial route from w
 ## Build and test from source
 
 ```bat
-build_exe.bat                         :: Windows: builds MarsNav.exe and dist\MarsNav-Windows.zip
+build_exe.bat                         :: Windows: builds MarsNav.exe and dist\MarsNav-Windows.zip (recipe: tools\build_windows.py)
 selftest.bat                          :: end-to-end server check under load
+python tools\smoke_exe.py dist\MarsNav\MarsNav.exe   :: start the built program, check every page and API, stop it
 ```
 
 ```sh

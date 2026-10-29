@@ -107,6 +107,10 @@ The Mars Year shown anywhere in the app was wrong (63 instead of 39): `marsYear(
   - **Visor:** a short "here" list at the bottom left: air, dose rate, gravity, water's boiling point, ground, dust, ice, geologic unit.
   - **Dashboard:** the site's slope, sand, slip and cliff distance next to them, and a "Data here" tab with every layer.
   - **Cuff:** the facts as tiles, the local time line, the nearest catalogued features, and every layer folded.
+- **Maps on real terrain.** The planner sends the site's orbital image, its HiRISE detail tiles and the no-go areas.
+  - **Dashboard:** draws them under the route, the re-plan, the track, the stations and the crew, with a Route / Whole site switch. Zoomed in past the 5 m image, it uses the HiRISE tiles.
+  - **Cuff:** has the same map.
+  - **Visor:** its mini map stays lines only, because black is see-through on a real visor.
 - **Survey of any place.** `hud.html?lon=&lat=&name=` opens the three displays for a place with no EVA. They are opened from Landing mode ("HUD") or the planner's place card ("Crew displays"). The visor shows local time, sun, time to sunset, season, elevation and Earth delay. The dashboard and visor map the catalogued features and names within 50 km, with range rings and the sun's direction.
 
 Checked in a headless browser on the real app. The visor followed a simulated Jezero EVA, switched to RETURN with the warning and its action when a suit leak was injected, and the cuff's acknowledge cleared the three open alerts in the planner. No console errors. Also checked:

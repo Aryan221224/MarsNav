@@ -269,8 +269,8 @@ function rover(n) {
   if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
   if (PLACE) { placeMap(cv, n, { visor: false }); $("rMapNote").textContent = `${PLACE.name} · catalogued features within 50 km · north up`; }
   else {
-    miniMap(cv, n, { visor: false });
-    $("rMapNote").textContent = `${S.plan.site} · ${{ return: "return route", replan: "re-planned route", plan: "filed plan" }[activePath().kind]} · north up`;
+    miniMap(cv, n, { visor: false, fit: S.rfit });
+    $("rMapNote").textContent = `${S.plan.site} · ${{ return: "return route", replan: "re-planned route", plan: "filed plan" }[activePath().kind]} · north up${S.plan.map ? " · orbital image, no-go areas in red" : ""}`;
   }
 }
 
@@ -293,15 +293,54 @@ function speedGauge(cv, kmh, max) {
 }
 
 // --------------------------------------------------------------------------------------------------- mini map --
-function miniMap(cv, n, { visor }) {
+const IMGS = new Map();
+/** An image by URL, loaded once; null until it has arrived (the displays redraw when it does). */
+function image(url) {
+  if (!url) return null;
+  let im = IMGS.get(url);
+  if (!im) {
+    im = new Image();
+    im.onload = () => render();
+    im.onerror = () => { im.failed = true; };
+    im.src = url;
+    IMGS.set(url, im);
+  }
+  return im.complete && im.naturalWidth && !im.failed ? im : null;
+}
+/** The site's orbital image and no-go areas under the map, as the planner draws them (P.map from the planner). */
+function siteImage(g, X, alpha = 1) {
+  const M = S.plan?.map;
+  if (!M?.bounds) return;
+  const [w, s, e, n] = M.bounds;
+  const [ax, ay] = X(local(w, n)), [bx, by] = X(local(e, s));
+  const o = image(M.ortho), v = image(M.veto);
+  g.globalAlpha = alpha;
+  if (o) g.drawImage(o, ax, ay, bx - ax, by - ay);
+  // zoomed in past the orbital image's own resolution: the HiRISE detail tiles on screen (fetched as needed)
+  const mPerPx = (local(e, s)[0] - local(w, n)[0]) / Math.max(1, bx - ax);
+  if (M.hi?.length && mPerPx < 0.8 * (M.res || 5)) {
+    const W = g.canvas.width, H = g.canvas.height;
+    for (const t of M.hi) {
+      const [tx0, ty0] = X(local(t.b[0], t.b[3])), [tx1, ty1] = X(local(t.b[2], t.b[1]));
+      if (tx1 < 0 || ty1 < 0 || tx0 > W || ty0 > H) continue;
+      const im = image(t.url);
+      if (im) g.drawImage(im, tx0, ty0, tx1 - tx0, ty1 - ty0);
+    }
+  }
+  g.globalAlpha = 0.55 * alpha;
+  if (v) g.drawImage(v, ax, ay, bx - ax, by - ay);
+  g.globalAlpha = 1;
+}
+function miniMap(cv, n, { visor, fit = "route" }) {
   const g = cv.getContext("2d"), W = cv.width, H = cv.height;
   g.setTransform(1, 0, 0, 1, 0, 0);
   g.clearRect(0, 0, W, H);
   const P = S.plan, s = S.snap, path = activePath();
-  const pts = [...(P.route || []), ...P.stations.map((x) => [x.lon, x.lat]), [P.base.lon, P.base.lat], ...(s ? [[s.lon, s.lat]] : [])].map(([lo, la]) => local(lo, la));
+  let pts = [...(P.route || []), ...P.stations.map((x) => [x.lon, x.lat]), [P.base.lon, P.base.lat], ...(s ? [[s.lon, s.lat]] : [])].map(([lo, la]) => local(lo, la));
+  if (fit === "site" && P.map?.bounds) { const [w, so, e, no] = P.map.bounds; pts = [local(w, no), local(e, so)]; }
   if (!pts.length) return;
   let x0 = Math.min(...pts.map((p) => p[0])), x1 = Math.max(...pts.map((p) => p[0])), y0 = Math.min(...pts.map((p) => p[1])), y1 = Math.max(...pts.map((p) => p[1]));
-  const pad = 0.12 * Math.max(x1 - x0, y1 - y0, 200);
+  const pad = fit === "site" ? 0 : 0.12 * Math.max(x1 - x0, y1 - y0, 200);
   x0 -= pad; x1 += pad; y0 -= pad; y1 += pad;
   const k = Math.min(W / (x1 - x0), H / (y1 - y0));
   const ox = (W - k * (x1 - x0)) / 2, oy = (H - k * (y1 - y0)) / 2;
@@ -312,14 +351,20 @@ function miniMap(cv, n, { visor }) {
     g.beginPath(); arr.forEach((p, i) => { const [a, b] = X(local(p[0], p[1])); i ? g.lineTo(a, b) : g.moveTo(a, b); }); g.stroke(); g.setLineDash([]);
   };
   const hud = visor ? "#9dffcf" : "#f2f5f8";
-  if (!visor) { g.fillStyle = "#05080c"; g.fillRect(0, 0, W, H); }
-  line(P.route || [], visor ? "#2f6b52" : "#5c6b7d", visor ? 2 : 3, path.kind === "plan" ? [] : [6, 5]);
-  if (path.kind !== "plan") line(path.pts, path.kind === "return" ? "#ff7470" : "#3ccbff", visor ? 2 : 3);
-  if (s?.track?.length) line(s.track, visor ? "#5fbf93" : "#d8a57a", visor ? 1.5 : 2);
+  if (!visor) { g.fillStyle = "#05080c"; g.fillRect(0, 0, W, H); siteImage(g, X); }
+  const casing = (arr, w) => { if (!visor) line(arr, "rgba(5,8,12,.85)", w + 3); };   // a dark edge keeps lines readable on the image
+  casing(P.route || [], 3);
+  line(P.route || [], visor ? "#2f6b52" : "#f2f5f8", visor ? 2 : 3, path.kind === "plan" ? [] : [6, 5]);
+  if (path.kind !== "plan") { casing(path.pts, 3); line(path.pts, path.kind === "return" ? "#ff7470" : "#3ccbff", visor ? 2 : 3); }
+  if (s?.track?.length) { casing(s.track, 2); line(s.track, visor ? "#5fbf93" : "#3ee07e", visor ? 1.5 : 2); }
   for (const st of P.stations) {
     const [a, b] = X(local(st.lon, st.lat));
     g.strokeStyle = hud; g.lineWidth = 2; g.beginPath(); g.moveTo(a, b - 6); g.lineTo(a + 6, b); g.lineTo(a, b + 6); g.lineTo(a - 6, b); g.closePath(); g.stroke();
-    if (!visor) { g.fillStyle = "#b8c2ce"; g.font = "12px Barlow, sans-serif"; g.fillText(st.name.slice(0, 28), a + 9, b + 4); }
+    if (!visor) {
+      g.font = `${Math.round(12 * (window.devicePixelRatio || 1))}px Barlow, sans-serif`;
+      g.lineWidth = 3; g.strokeStyle = "rgba(5,8,12,.9)"; g.strokeText(st.name.slice(0, 28), a + 9, b + 4);
+      g.fillStyle = "#f2f5f8"; g.fillText(st.name.slice(0, 28), a + 9, b + 4);
+    }
   }
   const [hx, hy] = X(local(P.base.lon, P.base.lat));
   g.strokeStyle = "#d8a57a"; g.lineWidth = 2; g.strokeRect(hx - 6, hy - 6, 12, 12);
@@ -332,9 +377,11 @@ function miniMap(cv, n, { visor }) {
     g.lineTo(cx + 6 * Math.sin(h - 2.4), cy - 6 * Math.cos(h - 2.4)); g.closePath(); g.fill();
   }
   // scale bar
+  const dpr = visor ? 1 : window.devicePixelRatio || 1;
   const m = niceScale((x1 - x0) / 4), L = m * k;
-  g.strokeStyle = visor ? hud : "#b8c2ce"; g.lineWidth = 2; g.beginPath(); g.moveTo(10, H - 12); g.lineTo(10 + L, H - 12); g.stroke();
-  g.fillStyle = g.strokeStyle; g.font = "11px 'IBM Plex Mono', monospace"; g.textAlign = "left"; g.fillText(fmtM(m), 12 + L, H - 8);
+  if (!visor) { g.fillStyle = "rgba(5,8,12,.75)"; g.fillRect(4, H - 26 * dpr, L + 70 * dpr, 22 * dpr); }
+  g.strokeStyle = visor ? hud : "#f2f5f8"; g.lineWidth = 2; g.beginPath(); g.moveTo(10, H - 12 * dpr); g.lineTo(10 + L, H - 12 * dpr); g.stroke();
+  g.fillStyle = g.strokeStyle; g.font = `${Math.round(11 * dpr)}px 'IBM Plex Mono', monospace`; g.textAlign = "left"; g.fillText(fmtM(m), 14 + L, H - 8 * dpr);
 }
 const niceScale = (v) => { const p = 10 ** Math.floor(Math.log10(v)); return [1, 2, 5, 10].map((x) => x * p).find((x) => x >= v * 0.6) ?? 10 * p; };
 
@@ -365,6 +412,11 @@ function cuff(n) {
     <div class="hint" style="margin-top:6px">${esc(timeLine(n.t))}</div>
     ${near.length ? `<ol class="cnear">${near.map((r) => `<li>${esc(r.label)} <span class="hint">${placeFmtKm(r.km)}</span></li>`).join("")}</ol>` : ""}`;
   dataPane($("cData"), false);
+  const cm = $("cMapCv"), dprC = window.devicePixelRatio || 1;
+  if (cm && cm.clientWidth) {
+    if (cm.width !== Math.round(cm.clientWidth * dprC)) { cm.width = Math.round(cm.clientWidth * dprC); cm.height = Math.round(cm.clientHeight * dprC); }
+    if (PLACE) placeMap(cm, n, { visor: false }); else miniMap(cm, n, { visor: false });
+  }
   if (PLACE) {
     $("cMet").textContent = placeHhmm(n.t.ltst);
     $("cLink").textContent = `LTST · ${placeHhmm(n.t.lmst)} LMST · MY ${n.t.marsYear}`;
@@ -411,6 +463,24 @@ function placeMap(cv, n, { visor }) {
   if (!visor) { g.fillStyle = "#05080c"; g.fillRect(0, 0, W, H); }
   const R = 52000, k = Math.min(W, H) / 2 / R, cx = W / 2, cy = H / 2;
   const X = (lon, lat) => { const [x, y] = local(lon, lat); return [cx + x * k, cy - y * k]; };
+  if (!visor) {                                                   // Mars imagery from the planet server (tiles/img)
+    const mPerDeg = R_MARS * DEG, b = S.plan.base;
+    const z = Math.max(3, Math.min(11, Math.round(Math.log2((180 * mPerDeg * k) / 256))));
+    const d = 180 / (1 << z), span = R * 1.5 / mPerDeg, spanLon = span / Math.max(0.05, Math.cos(b.lat * DEG));
+    const y0 = Math.max(0, Math.floor((90 - (b.lat + span)) / d)), y1 = Math.min((1 << z) - 1, Math.floor((90 - (b.lat - span)) / d));
+    const xa = Math.floor((b.lon - spanLon + 180) / d), xb = Math.floor((b.lon + spanLon + 180) / d);
+    for (let ty = y0; ty <= y1; ty++) {
+      for (let tx = xa; tx <= xb; tx++) {
+        const txw = ((tx % (2 << z)) + (2 << z)) % (2 << z);
+        const im = image(`tiles/img/${z}/${ty}/${txw}.jpg?layer=best`);
+        if (!im) continue;
+        const lw = -180 + tx * d, ln = 90 - ty * d;
+        const [ax, ay] = X(lw, ln), [bx, by] = X(lw + d, ln - d);
+        g.drawImage(im, ax, ay, bx - ax, by - ay);
+      }
+    }
+    g.fillStyle = "rgba(5,8,12,.35)"; g.fillRect(0, 0, W, H);
+  }
   g.strokeStyle = dim; g.lineWidth = 1; g.font = "11px 'IBM Plex Mono', monospace"; g.fillStyle = dim; g.textAlign = "left";
   for (const r of [10000, 25000, 50000]) {
     g.beginPath(); g.arc(cx, cy, r * k, 0, 2 * Math.PI); g.stroke();
@@ -452,6 +522,13 @@ const fmtLL = (lat, lon) => `${Math.abs(lat).toFixed(4)}°${lat >= 0 ? "N" : "S"
 for (const b of document.querySelectorAll("[data-rtab]")) b.addEventListener("click", () => {
   for (const x of document.querySelectorAll("[data-rtab]")) x.setAttribute("aria-selected", String(x === b));
   $("rData").hidden = b.dataset.rtab !== "data";
+  document.querySelector(".rzoom").hidden = b.dataset.rtab === "data";
+});
+S.rfit = "route";
+for (const b of document.querySelectorAll("[data-rfit]")) b.addEventListener("click", () => {
+  S.rfit = b.dataset.rfit;
+  for (const x of document.querySelectorAll("[data-rfit]")) x.setAttribute("aria-pressed", String(x === b));
+  render();
 });
 
 for (const b of document.querySelectorAll("[data-cmd]")) {

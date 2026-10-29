@@ -33,7 +33,7 @@ import webbrowser
 from pathlib import Path
 
 TITLE = "MarsNav"
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 WIN = os.name == "nt"
 CREATE_NO_WINDOW = 0x08000000
 

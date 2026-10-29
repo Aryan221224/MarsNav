@@ -18,4 +18,4 @@ landing), and a site builder that turns any point on Mars into a full MarsNav EV
 Every product records which dataset it came from and at what resolution.
 """
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"

@@ -50,6 +50,7 @@
     </div>
     <div class="rmap"><canvas id="rMap" aria-label="Route map"></canvas><div id="rMapNote" class="rnote"></div>
       <div class="rtabs" role="tablist"><button role="tab" data-rtab="map" aria-selected="true">Map</button><button role="tab" data-rtab="data" aria-selected="false" title="Every data layer at the crew's position">Data here</button></div>
+      <div class="rzoom" role="group" aria-label="Map extent"><button data-rfit="route" aria-pressed="true">Route</button><button data-rfit="site" aria-pressed="false">Whole site</button></div>
       <div id="rData" class="rdata" hidden></div></div>
     <div class="rcol">
       <div class="rhead">Rover power</div>
@@ -79,6 +80,7 @@
     <div class="ctile"><span class="k">Margin</span><span class="v" id="cMargin">--</span></div>
   </div>
   <div class="ccard" id="cNext"></div>
+  <div class="ccard cmap" id="cMap"><canvas id="cMapCv" aria-label="Map"></canvas></div>
   <div class="ccard" id="cHere"></div>
   <div class="ccard" id="cProc"></div>
   <div class="cbtns">

@@ -77,7 +77,7 @@ def _copytree(src: Path, dst: Path) -> int:
 
 def main() -> int:
     build, root = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
-    version = sys.argv[3] if len(sys.argv) > 3 else "2.0.0"
+    version = sys.argv[3] if len(sys.argv) > 3 else "2.1.0"
     exe = build / "MarsNav.exe"
     if not exe.exists():
         print(f"make_portable: {exe} not found")

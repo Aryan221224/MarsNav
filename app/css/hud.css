@@ -92,6 +92,14 @@ body.ready #wait { display: none; }
   text-transform: uppercase; color: var(--text-dim); cursor: pointer; }
 .rtabs button + button { border-left: 1px solid var(--line); }
 .rtabs button[aria-selected="true"] { background: #d8a57a29; color: #e8bd97; }
+.rzoom { position: absolute; right: 8px; bottom: 8px; display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; z-index: 2; }
+.rzoom button { background: #0b0f14e6; border: 0; padding: 4px 10px; font-family: var(--font-label); font-weight: 600; font-size: 12px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--text-dim); cursor: pointer; }
+.rzoom button + button { border-left: 1px solid var(--line); }
+.rzoom button[aria-pressed="true"] { background: #d8a57a29; color: #e8bd97; }
+body.placeonly .rzoom { display: none; }
+.cmap { padding: 0; overflow: hidden; }
+.cmap canvas { display: block; width: 100%; height: 300px; }
 .rdata { position: absolute; inset: 36px 0 0 0; overflow-y: auto; background: var(--panel); }
 #rHere .rrow .v { font-size: 14px; text-align: right; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ralerts { display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; }
@@ -110,6 +118,7 @@ body.ready #wait { display: none; }
 /* ------------------------------------------------------------------ wrist cuff (made for gloves: large targets) */
 #cuff { background: var(--panel); padding: 10px; overflow: auto; display: none; }
 body[data-mode="cuff"] #cuff { display: flex; flex-direction: column; gap: 10px; }
+#cuff > * { flex-shrink: 0; }                         /* the cuff scrolls: its cards keep their height */
 .chead { display: flex; justify-content: space-between; align-items: center; font-size: 22px; }
 .ctag { font-family: var(--font-label); letter-spacing: .12em; font-size: 16px; border: 1px solid var(--line); padding: 2px 10px; border-radius: 4px; }
 .ctag.ret { color: var(--warning); border-color: var(--warning); }

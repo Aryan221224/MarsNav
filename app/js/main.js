@@ -3,7 +3,7 @@ import { MapView } from "./map.js";
 import { Timeline } from "./timeline.js";
 import { ahp, L1_IDS, L1_NAMES, L1_MATRIX, L1_REASONS } from "../engine/ahp.js";
 import { marsContext, missionClock, M2020_CLOCK, fmtHours, earthMarsLight } from "../engine/marstime.js";
-import { setProjection, lonlatToXY, haversine, bearing } from "../engine/geo.js";
+import { setProjection, lonlatToXY, xyToLonLat, haversine, bearing } from "../engine/geo.js";
 import { loadPlace, placeHtml, timeHere, timeHtml, placeCompass } from "./placeview.js";
 import { View3D } from "./view3d.js";
 import { fmtDuration } from "../engine/util.js";
@@ -1153,8 +1153,28 @@ function hudPlan() {
       pov: povOf(st).map((i) => ({ src: new URL(i.file, DATA).href, caption: povCaption(i), alt: `${st.name}: ${povCaption(i)}` })) })),
     summary: r?.ok ? { t: r.t, dist: r.dist, doseMSv: r.doseMSv, minMargin: r.minMargin } : null,
     guidance: r?.ok ? r.legs.map((l) => ({ from: l.from, to: l.to, guidance: l.guidance })) : [],
-    swx: state.swx ? { level: state.swx.level, headline: state.swx.headline } : null });
+    swx: state.swx ? { level: state.swx.level, headline: state.swx.headline } : null, map: hudMap() });
   hudPlace(state.base.lon, state.base.lat);
+}
+/** The site's map for the displays: the orbital image of the whole site, its lon / lat bounds (the grid is
+ *  equirectangular, so the image is axis-aligned in lon / lat) and the no-go areas as a see-through PNG. */
+function hudMap() {
+  const g = state.meta?.grid, im = state.meta?.imagery?.ortho5;
+  if (!g || !im) return null;
+  if (state.hudMapFor !== state.map.veto) {
+    const [w, n] = xyToLonLat(g.x0, g.y0), [e, s] = xyToLonLat(g.x0 + g.width * g.res, g.y0 - g.height * g.res);
+    let veto = null;
+    try { veto = state.map.veto ? state.map.veto.toDataURL("image/png") : null; } catch { /* no canvas */ }
+    // the HiRISE detail tiles the planner shows when zoomed in, each with its lon / lat box
+    const hi = (state.meta.imagery.hi2?.tiles || []).filter((t) => t.valid > 0).map((t) => {
+      const x0 = g.x0 + t.c0 * g.res, y0 = g.y0 - t.r0 * g.res, sz = t.cells * g.res;
+      const [tw, tn] = xyToLonLat(x0, y0), [te, ts] = xyToLonLat(x0 + sz, y0 - sz);
+      return { url: new URL(t.file, DATA).href, b: [tw, ts, te, tn] };
+    });
+    state.hudMapInfo = { ortho: new URL(im.file, DATA).href, bounds: [w, s, e, n], veto, res: im.res, hi, hiRes: state.meta.imagery.hi2?.res ?? null };
+    state.hudMapFor = state.map.veto;
+  }
+  return state.hudMapInfo;
 }
 /** Every layer at the crew's position for the displays: fetched again after 400 m of travel or 10 minutes. */
 function hudPlace(lon, lat) {
