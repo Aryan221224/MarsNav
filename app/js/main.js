@@ -57,6 +57,7 @@ async function pickSite() {
   const want = decodeURIComponent(location.hash.slice(1));
   const site = sites.find((x) => x.id === want) ?? sites[0] ?? null;
   if (site) DATA = new URL(site.path, DATA_ROOT).href;
+  state.siteEntry = site;
   const sel = $("siteSel");
   sel.innerHTML = sites.map((x) => `<option value="${x.id}"${x === site ? " selected" : ""}>${x.short}</option>`).join("");
   sel.closest("label").hidden = sites.length < 2;
@@ -84,8 +85,8 @@ async function pickSite() {
 async function boot() {
   try {
     await pickSite();
-    // what each station looks like from the ground: the rover's own photographs (tools/build_pov.py)
-    state.pov = await fetch(new URL("pov.json", DATA)).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    // what each station looks like from the ground: the rover's own photographs (tools/build_pov.py marks the site)
+    state.pov = state.siteEntry?.pov ? await fetch(new URL("pov.json", DATA)).then((r) => (r.ok ? r.json() : null)).catch(() => null) : null;
     const meta = await call("init", { base: DATA });
     state.meta = meta;
     if (meta.projection?.lat_ts != null) setProjection(meta.projection.lat_ts, meta.projection.clon ?? 0);

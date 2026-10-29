@@ -173,6 +173,12 @@ def main() -> int:
            "note": f"Raw images from {name} at the spots it stood nearest each station (NASA raw-image service). Not calibrated, "
                    "not mosaicked: what a camera at head height saw there.", "stations": index}
     (out / "pov.json").write_text(json.dumps(doc, indent=1))
+    sf = ROOT / "app" / "data" / "sites.json"                     # the planner fetches pov.json only for sites marked
+    sites = json.loads(sf.read_text())
+    for s in sites:
+        if s["id"] == a.site:
+            s["pov"] = True
+    sf.write_text(json.dumps(sites, indent=1, ensure_ascii=False))
     size = sum(f.stat().st_size for f in (out / "pov").glob("*.jpg"))
     print(f"wrote {out.relative_to(ROOT)}/pov.json: {len(index)} stations, {size / 1e6:.1f} MB of images")
     return 0

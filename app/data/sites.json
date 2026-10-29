@@ -4,7 +4,8 @@
   "name": "Jezero Crater, Mars",
   "short": "Jezero crater",
   "path": "",
-  "description": "Perseverance's field site: delta, crater floor and western rim. HiRISE 1 m DTMs over the rover traverse, CTX 20 m DEM over the whole crater."
+  "description": "Perseverance's field site: delta, crater floor and western rim. HiRISE 1 m DTMs over the rover traverse, CTX 20 m DEM over the whole crater.",
+  "pov": true
  },
  {
   "id": "g_3p144n_155p311e",
@@ -19,7 +20,8 @@
   "short": "Mount Sharp boxwork",
   "path": "sites/g_4p811s_137p384e/",
   "description": "Curiosity's boxwork campaign on Mount Sharp, Gale crater (2025-2026): the challenge's own example. Built by MarsNav from 5 HiRISE 1 m DTMs (94 % of the operations area) and CTX 20 m DTMs. Hub: a forward camp (pressurised rover) at Curiosity's sol 4530 stop; stations at the Altadena, Monte Grande (Valle de la Luna / Nevado Sajama) and Campo Marte drill sites, placed at the rover's own localisations. Cliff-bounded buttes and 39 % sand: with dead-reckoning navigation much of it is out of reach.",
-  "clock": "MSL"
+  "clock": "MSL",
+  "pov": true
  },
  {
   "id": "jezero_east",

@@ -235,10 +235,20 @@ export class View3D {
     const rcx = rg.x0 + ((R.nc - 1) * R.step / 2 + 0.5) * rg.res, rcy = rg.y0 - ((R.nr - 1) * R.step / 2 + 0.5) * rg.res;
     rgeo.translate(rcx - this.ox, 0, this.oy - rcy);
     const rp = rgeo.attributes.position;
+    // cells without data (outside the regional DEM's coverage) take the nearest valid value along their row, so the
+    // skyline has no holes and no NaN vertices
+    const rz = Float32Array.from(R.z);
+    for (let r = 0; r < R.nr; r++) {
+      const row = r * R.nc;
+      let last = NaN;
+      for (let c = 0; c < R.nc; c++) { if (Number.isFinite(rz[row + c])) last = rz[row + c]; else rz[row + c] = last; }
+      last = NaN;
+      for (let c = R.nc - 1; c >= 0; c--) { if (Number.isFinite(rz[row + c])) last = rz[row + c]; else rz[row + c] = Number.isFinite(last) ? last : this.zRef; }
+    }
     for (let i = 0; i < rp.count; i++) {
       const X = rp.getX(i), Z = rp.getZ(i);
       const inside = Math.abs(X) < wM / 2 - 50 && Math.abs(Z) < hM / 2 - 50;
-      rp.setY(i, (R.z[i] - this.zRef) * this.exag - (X * X + Z * Z) / (2 * R_MARS) - (inside ? 25 : 3));
+      rp.setY(i, (rz[i] - this.zRef) * this.exag - (X * X + Z * Z) / (2 * R_MARS) - (inside ? 25 : 3));
     }
     rgeo.computeVertexNormals();
     const rtex = await new THREE.TextureLoader().loadAsync(new URL(this.ctx.imagery.regional.file, this.map.base).href);
