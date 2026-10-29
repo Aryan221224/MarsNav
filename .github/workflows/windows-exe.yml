@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   tests:
-    name: Tests (engine, pipeline, place, validation)
+    name: Tests (engine, pipeline, place, closed loop)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -40,10 +40,10 @@ jobs:
         run: node --test tests/*.test.mjs
       - name: Pipeline, downloader, science-atlas and place tests
         run: python -m pytest tests -q
-      - name: Validation against Perseverance
-        run: node validation/validate.mjs
-      - name: Same trips as Perseverance
-        run: node validation/rover_case_study.mjs
+      # validation/validate.mjs and rover_case_study.mjs need the raw NASA inputs listed in docs/04 (data_cache), which a
+      # clean machine does not have; the closed-loop campaign is self-contained
+      - name: Closed-loop campaign (40 paired EVAs)
+        run: node validation/closed_loop_campaign.mjs
 
   build:
     name: Build MarsNav.exe
