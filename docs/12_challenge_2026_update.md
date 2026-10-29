@@ -131,4 +131,4 @@ It keeps Navcam and Mastcam / Mastcam-Z frames of the ground and horizon. Sun im
 - **TES mineral maps** are Trek's published colour maps without a numeric scale. Their legends say "low → high", with the published value ranges in the note. At a point, the value is read back from the colour as a position on that scale (very low to very high), not as an abundance.
 - **Crustal magnetic field** is not included: no openly licensed global grid could be found (the Langlais et al. 2019 model is distributed on request).
 - **The dose model** is RAD's measured slope near 700-950 Pa. Far outside it (high volcanoes, the deepest basins) values are flagged as extrapolations, and solar particle events are not in the map.
-- **The user guide PDF** (`MarsNav_User_Guide.pdf`) describes v2.0. The screens added here are documented in this file and the README.
+- **The user guide PDF** (`MarsNav_User_Guide.pdf`) describes 2.1, with Chapters 5 (everything at any place), 6 (science atlas, objectives, missions, space weather) and 10 (crew displays). Its new figures were taken in a browser on the running app (`tools/guide/capture_guide21.js`), without the desktop window frame.

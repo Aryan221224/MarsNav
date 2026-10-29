@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# Chapters 11-19
+# Chapters 14-22
 from glib import *
 
-# ================================================================== 11. LIVE TELEMETRY
+# ================================================================== 14. LIVE TELEMETRY
 chapter("Live telemetry and hardware", "closing the loop with a real suit",
         "During the EVA, MarsNav reads suit and rover telemetry in the format of NASA's SUITS Telemetry Stream Server "
         "(TSS), the server NASA uses for its spacesuit-interface challenge, learns from it and uplinks every re-plan. "
@@ -26,25 +26,28 @@ P("Position comes from an extended Kalman filter built on Mars practice: dead re
   "drawn on the map as a radius (never a false exact dot) and feeds the planner: the stand-off from cliffs and keep-outs "
   "grows where the crew will be less sure where they are.")
 
-# ================================================================== 12. HOW IT WORKS
+# ================================================================== 15. HOW IT WORKS
 chapter("How MarsNav works", "the science and engineering inside",
         "MarsNav is three things working together: a data pipeline that turns orbital measurements into the ground a "
         "boot meets, a planning engine that puts safety first, and a whole-planet engine that streams and screens Mars. "
         "Every constant in the code is tagged by its origin: [SRC] sourced, [CALIB] calibrated, [PHYS] physics, [ASSUME] assumption.")
 H2("Technology")
 table([["Layer", "Built with"],
-       ["Desktop app", "Python launcher compiled with PyInstaller; native window through pywebview on Microsoft Edge WebView2 (pythonnet / .NET); "
-        "a supervisor with a Windows job object, health checks and automatic restarts."],
-       ["Interface", "HTML, CSS and JavaScript modules, no framework; three.js for 3D; the planning engine in a Web Worker."],
+       ["Desktop app", "Python launcher compiled with PyInstaller (tools/build_windows.py, the same recipe locally and in CI); native window "
+        "through pywebview on Microsoft Edge WebView2 (pythonnet / .NET); a supervisor with a Windows job object, health checks and automatic restarts."],
+       ["Interface", "HTML, CSS and JavaScript modules, no framework; three.js for 3D; the planning engine in a Web Worker; the crew "
+        "displays (hud.html) fed over a BroadcastChannel; one renderer for the data at any place (placeview.js)."],
        ["Planning engine", "Plain JavaScript (engine/): terrain, cost model, planner, walk-home fields, physiology, station "
         "tasks, Mars clock, environment, AHP, risk, sortie selection (Held-Karp, QUBO), simulation, closed loop, alerts, "
         "procedures, reports. The same code runs in the app, the tests and the validation."],
        ["Planet engine and server", "Python (planet/): pooled HTTP server, tile pyramid and disk cache, MOLA / HRSC / CTX / HiRISE "
-        "readers over GDAL in worker processes, USGS STAC catalogue, landing assessment, site generator, Local mode, TSS bridge."],
+        "readers over GDAL in worker processes, USGS STAC catalogue, landing assessment, site generator, Local mode, TSS bridge, "
+        "the science atlas, missions and objectives, space weather, and the lookup of every layer at a point."],
        ["Data pipeline", "Python with numpy, scipy, rasterio / GDAL and Pillow (pipeline/): download with SHA-256 checks, "
         "terrain statistics, hazard layers, imagery, weather fit."],
-       ["Verification", "Node's test runner (63 engine and closed-loop tests), pytest (15 pipeline and downloader tests), validation scripts "
-        "against Perseverance data, and an end-to-end server self-test."]],
+       ["Verification", "Node's test runner (64 engine and closed-loop tests), pytest (53 pipeline, downloader, science-atlas and place tests), "
+        "validation scripts against Perseverance data, an end-to-end server self-test, and on every change a Windows build that is "
+        "started and checked before it is published (GitHub Actions)."]],
       [1.45 * inch, CW - 1.45 * inch])
 H2("From orbit to the ground a boot meets")
 bullets(["<b>Grids.</b> Each site gets a 10 m operations grid, a 40 m horizon grid and a 100 m regional grid in a site-centred "
@@ -93,8 +96,12 @@ P("Mars is cut into a pyramid of map tiles, the same tiling as NASA's Mars Trek.
   "in view; a tile splits into four finer ones when it covers more than about 330 pixels, and a coarse tile keeps drawing "
   "until its children arrive, so the ground never has holes. The local server builds each tile on demand from the best "
   "data under it and keeps a disk cache (20 GB by default, oldest removed first).")
+P("On top of the elevation and imagery sit the science atlas (bundled catalogues of 74,250 mapped features, grids installed "
+  "once, NASA Mars Trek colour maps streamed, and models of pressure, dose and sunlight from MOLA), and one lookup that "
+  "gathers every layer at a point (<font name='Plex'>planet/place.py</font>, <font name='Plex'>/api/place</font>) for "
+  "Landing mode, the planner's place card and the crew displays (Chapter 5).")
 
-# ================================================================== 13. VALIDATION
+# ================================================================== 16. VALIDATION
 chapter("Validation and testing", "checked against Perseverance",
         "MarsNav is tested against the real rover's records, not only against itself, and every result is reported, "
         "including the one that did not go our way. The figures below were re-run on 26 October 2026 for this guide.")
@@ -126,20 +133,25 @@ small("Each EVA is flown twice with the same random numbers and a hidden truth d
       "vs 0.64) because it often finishes stations on reserve oxygen or battery; counting only science done without "
       "touching the reserve, the loop comes out ahead. Both arms use the same simulator.")
 H2("Automated tests")
-table([["Suite", "Command", "Result (26 Oct 2026)"],
-       ["Engine and closed loop (Node 20+)", "node --test tests/*.test.mjs", "63 of 63 pass"],
-       ["Data pipeline and downloader", "python -m pytest tests -q", "15 of 15 pass"],
-       ["Validation vs Perseverance", "node validation/validate.mjs", "results above, about 30 s"],
-       ["Closed-loop campaign", "node validation/closed_loop_campaign.mjs", "0 / 40 vs 31 / 40, about 70 s"],
-       ["Same trips as the rover", "node validation/rover_case_study.mjs", "results above, about 15 s"],
-       ["Desktop server under load", "selftest.bat (MarsNav.exe --selftest)", "every check passes: server killed and replaced in 3 s, no process left"]],
+table([["Suite", "Command", "Result"],
+       ["Engine and closed loop (Node 20+)", "node --test tests/*.test.mjs", "64 of 64 pass (29 Oct 2026)"],
+       ["Pipeline, downloader, science atlas, place", "python -m pytest tests -q", "53 of 53 pass (29 Oct 2026)"],
+       ["Validation vs Perseverance", "node validation/validate.mjs", "results above (26 Oct 2026), about 30 s; needs the raw NASA inputs in data_cache"],
+       ["Closed-loop campaign", "node validation/closed_loop_campaign.mjs", "0 / 40 vs 31 / 40; reproduced exactly on 29 Oct 2026"],
+       ["Same trips as the rover", "node validation/rover_case_study.mjs", "results above (26 Oct 2026), about 15 s"],
+       ["Desktop server under load", "selftest.bat (MarsNav.exe --selftest)", "every check passes on a clean Windows machine: about 10,000 requests, a worker and the server killed, the server replaced in 3 s, no process left"],
+       ["The built program", "python tools/smoke_exe.py dist\\MarsNav\\MarsNav.exe", "16 pages and scripts, 9 APIs and the place and elevation lookups answer"],
+       ["On every change", ".github/workflows/windows-exe.yml", "builds MarsNav.exe on a clean Windows machine, runs the two checks above and the test suites, then publishes the zip"],
+       ["Browser tour (Playwright)", "every site, Landing mode, the drive window and the crew displays", "29 of 29 checks, no console errors (29 Oct 2026)"]],
       [1.9 * inch, 2.45 * inch, CW - 4.35 * inch])
 P("The tests include the planner's safety contract on real terrain (every route inside its hard limits with a walk-home "
   "plan at every point), navigation-filter consistency, estimator convergence, the UDP telemetry bridge over real sockets, "
-  "and exact against heuristic station selection. Full reports: <font name='Plex'>validation/REPORT.md</font>, "
+  "exact against heuristic station selection, the science catalogues against brute force, the dose model against "
+  "Curiosity's value at Gale, the place lookup with no data and no network, the USGS chart at every landed mission, gravity "
+  "and the liquid-water window against published values, and the Mars Year at its published starts. Full reports: <font name='Plex'>validation/REPORT.md</font>, "
   "<font name='Plex'>validation/CLOSED_LOOP.md</font>, and the method in <font name='Plex'>docs/05_verification_and_validation.md</font>.")
 
-# ================================================================== 14. FOR JUDGES
+# ================================================================== 17. FOR JUDGES
 chapter("How MarsNav answers the challenge", "for judges",
         "The challenge asks for an interplanetary survival guide: a layered map that helps astronauts plan and carry out "
         "a safe, successful Marswalk with science along the way. Here is MarsNav against the challenge and the criteria.")
@@ -148,26 +160,32 @@ callout("What is new compared with existing tools", "Mapping tools show terrain;
         "input, closes the loop with suit telemetry, and carries the same safety logic from choosing the landing site to the "
         "last step of each EVA, offline.", "rust")
 table([["The challenge asks for", "MarsNav"],
-       ["“a layered, integrated view of a location or route”", "Eleven terrain layers and four overlays at 10 m, routes with uncertainty, a timeline profile; the whole planet with six base maps and six overlays."],
-       ["“data from multiple NASA science missions”", "MRO (HiRISE, CTX), MGS (MOLA, TES), Mars Odyssey (GRS, THEMIS), Mars Express (HRSC), Mars 2020 (MEDA, traverse, tilt), MSL (RAD), Viking, Apollo (walking)."],
-       ["“details of their routes and destinations”", "Guidance legs, station procedures, target provenance, the cue card, GeoJSON."],
-       ["“updates on current conditions”", "Live Mars clock, sun and shade along the route, dust, radio line of sight, position error, and live suit telemetry with learned rates."],
+       ["“a layered, integrated view of a location or route”", "Eleven terrain layers and four overlays at 10 m, routes with uncertainty, a timeline profile; the whole planet with six base maps, six overlays and a 26-layer science atlas; every layer at any point, one click (Chapter 5)."],
+       ["“at least three kinds of data”: optical, thermal, spectral, topographic, geophysical, atmospheric, radiation, chemical", "All eight: HiRISE, CTX and Viking images; TES and THEMIS thermal; CRISM, OMEGA and TES minerals; MOLA, HRSC, CTX and HiRISE elevation; MRO gravity; air pressure; cosmic-ray dose; GRS elements (Chapter 6)."],
+       ["“data from multiple NASA science missions”, past and future", "MRO, MGS, Mars Odyssey, Mars Express, Mars 2020, MSL, Viking and Apollo data in the map, and a catalogue of 31 missions past, present and future."],
+       ["science goals and a location: the boxwork at Mount Sharp", "Seven science objectives that rank every site, and the Mount Sharp boxwork as a full EVA site with Curiosity's drill sites (Chapters 6, 13)."],
+       ["space weather", "NASA DONKI CME arrivals at Mars, particle events, flares and an EVA advisory; dose by altitude on every route."],
+       ["“details of their routes and destinations”", "Guidance legs, station procedures, target provenance, the rover's own photographs of each stop, the cue card, GeoJSON."],
+       ["“updates on current conditions”", "Live Mars clock, sun and shade along the route, dust, radio line of sight, position error, space weather, and live suit telemetry with learned rates."],
        ["“complete their mission quickly and safely”", "Five named routes under hard limits, walk-home margins everywhere, caution and warning, automatic return."],
        ["“plan and carry out a successful Marswalk”", "Plan, Execute and Review, with the 3D rehearsal and the drive window."],
-       ["“new and exciting science along the way”", "Perseverance's real sample sites, a science-value optimiser, landing sites scored for water ice."]],
-      [2.0 * inch, CW - 2.0 * inch])
+       ["inside the habitat, on a tablet, or a HUD on the helmet visor", "The habitat console, a helmet-visor HUD, a rover dashboard and a wrist cuff, live from the same EVA (Chapter 10)."],
+       ["point-of-view images", "The rover's own Navcam and Mastcam frames from each station (Chapter 8)."],
+       ["“new and exciting science along the way”", "Perseverance's real sample sites, a science-value optimiser, what is catalogued within 100 km of every site, landing sites scored for water ice."]],
+      [2.2 * inch, CW - 2.2 * inch])
 H2("The judging criteria")
 table([["Criterion", "Evidence in MarsNav"],
        ["Influence", "The decisions NASA must make before the first crewed EVA; site-agnostic; reads NASA's SUITS telemetry format; "
         "runs offline on one laptop; open data and open source."],
        ["Creativity", "Walk-home guarantee inside the search; soft soil priced by its tail (CVaR); position error as a planning "
-        "input; walking-scale terrain from 1 m stereo; a closed loop that learns the crew and the suit; Mars mode."],
-       ["Validity", "Validated against Perseverance; a negative result reported; 78 automated tests; a paired 40-EVA campaign "
-        "with a significance test; byte-identical rebuilds; assumptions tagged."],
+        "input; walking-scale terrain from 1 m stereo; a closed loop that learns the crew and the suit; every layer at any point; "
+        "the same EVA on visor, dashboard and cuff; Mars mode."],
+       ["Validity", "Validated against Perseverance; a negative result reported; 117 automated tests; a paired 40-EVA campaign "
+        "with a significance test; byte-identical rebuilds; a Windows build tested on a clean machine at every change; assumptions tagged."],
        ["Relevance", "Every point of the challenge statement (above), demonstrated at Perseverance's own field site."],
-       ["Presentation", "A native desktop app with a guided Tour and 3D rehearsal; this guide; focused documents in docs/."]],
+       ["Presentation", "A native desktop app with a guided Tour, 3D rehearsal and three crew displays; this guide; focused documents in docs/."]],
       [1.1 * inch, CW - 1.1 * inch])
-# ================================================================== 15. BUILD FROM SOURCE
+# ================================================================== 18. BUILD FROM SOURCE
 chapter("Building from source", "for developers and reviewers",
         "The portable app is built from this repository with one script. You only need this chapter to change the code, "
         "rebuild the science data or reproduce the results.")
@@ -177,11 +195,18 @@ P("On Windows with Python 3.10 or later (tick “Add python.exe to PATH”) and 
 numbered(["creates a private build environment in <font name='Plex'>.buildvenv</font> (your own Python is not touched);",
           "installs numpy, scipy, rasterio, Pillow, pywebview, pythonnet and PyInstaller from <font name='Plex'>requirements.txt</font>;",
           "compiles <font name='Plex'>launcher/martian_map.py</font> and <font name='Plex'>launcher/desktop.py</font> into "
-          "<b>MarsNav.exe</b>, a windowed program with its libraries in <font name='Plex'>MarsNav_runtime</font>;",
+          "<b>MarsNav.exe</b>, a windowed program with its libraries in <font name='Plex'>MarsNav_runtime</font>, with "
+          "<font name='Plex'>tools/build_windows.py</font> (the recipe the published build uses);",
           "assembles the portable package: <font name='Plex'>dist\\MarsNav\\</font> and <font name='Plex'>dist\\MarsNav-Windows.zip</font>;",
           "starts the new MarsNav.exe as a check."])
 P("The <font name='Plex'>app/</font> and <font name='Plex'>planet/</font> folders are read from disk, so changes there "
   "need no rebuild; changes to <font name='Plex'>launcher/</font> or the pipeline do.")
+H2("The published download")
+P("Every change pushed to the repository runs <font name='Plex'>.github/workflows/windows-exe.yml</font> on GitHub Actions. On a "
+  "clean Windows machine it builds MarsNav.exe with the same recipe, starts the built program and checks every page and API "
+  "(<font name='Plex'>tools/smoke_exe.py</font>), and runs the program's own self-test under load. On Linux it runs both "
+  "test suites and the closed-loop campaign. Only when all of them pass does it publish <b>MarsNav-Windows.zip</b> as the "
+  "release of the current version, replacing the previous build of that version.")
 H2("Run from source")
 code("# the desktop app from source (Windows, with the build environment)\n"
      ".buildvenv\\Scripts\\python.exe launcher\\martian_map.py\n"
@@ -198,10 +223,10 @@ code("pip install -r requirements.txt\n"
      "bash tools/build_all.sh     # fetch + SHA-256 check, terrain, layers, weather fit, imagery")
 small("Raw rasters are read from data_cache/raw/, a _data_raw/ folder next to the project, or $MM_RAW. Exact URLs and "
       "checksums are in pipeline/sources.json. A full rebuild reproduces the shipped layers byte for byte.")
-small("Tests: node --test tests/*.test.mjs (61), python -m pytest tests -q (15), node validation/validate.mjs, "
-      "node validation/closed_loop_campaign.mjs, and selftest.bat (Chapter 13).")
+small("Tests: node --test tests/*.test.mjs (64), python -m pytest tests -q (53), node validation/validate.mjs, "
+      "node validation/closed_loop_campaign.mjs, python tools/smoke_exe.py, and selftest.bat (Chapter 16).")
 
-# ================================================================== 16. TROUBLESHOOTING
+# ================================================================== 19. TROUBLESHOOTING
 chapter("Troubleshooting", "if something does not work",
         "Most problems have a one-line fix. MarsNav also keeps logs that say exactly what happened.")
 table([["Symptom", "What to do"],
@@ -214,7 +239,10 @@ table([["Symptom", "What to do"],
        ["Landing mode is blurry close up", "Close-up detail needs CTX (20 m) or HiRISE (1 m) data under that spot; elsewhere 463 m MOLA is the best that exists. The first view of an area downloads its data in the background and sharpens by itself."],
        ["A science layer did not install", "Each comes from a different server. The others work; press Install the missing layer later in the Data tab."],
        ["Local mode says it will not fit", "Untick the 11 GB blended elevation or a THEMIS pack, use a smaller zone radius, or free disk space."],
-       ["The map stops responding", "Wait a few seconds: the supervisor replaces a stalled engine within 30-60 s (3 s if it exits). Help, Engine status shows its health."]],
+       ["The map stops responding", "Wait a few seconds: the supervisor replaces a stalled engine within 30-60 s (3 s if it exits). Help, Engine status shows its health."],
+       ["SPACE WX says there is no data", "NASA's DONKI service could not be reached, or limited the demonstration key. Press Fetch the latest from NASA DONKI later, or set your own key in MM_NASA_API_KEY. The advisory never guesses."],
+       ["A crew display says it is waiting", "Open it from the EVA planner (HUD, or the buttons in Execute) in the same MarsNav, then start an EVA. In a browser, allow pop-ups for the page."],
+       ["A line of the place data says reading…", "A remote lookup (the USGS geologic map or a Mars Trek map) is still answering; it fills in by itself. In Mars mode it says the map is not in the local packs."]],
       [1.95 * inch, CW - 1.95 * inch])
 H2("Logs and the self-test")
 P("<b>Help</b>, <b>Open the log folder</b> opens <font name='Plex'>data_cache</font>: <font name='Plex'>server.log</font> "
@@ -226,7 +254,7 @@ callout("Keep some space free on C:", "Windows needs free space on the system dr
         "every program can run out of memory. MarsNav writes nothing to the system drive itself, but warns in its log when "
         "it is below 2 GB.", "amber")
 
-# ================================================================== 17. LIMITATIONS
+# ================================================================== 20. LIMITATIONS
 chapter("Honest limitations", "what MarsNav does not claim",
         "A tool for life-critical decisions must be clear about its limits. These are condensed from "
         "docs/08_limitations.md; every assumption is tagged [ASSUME] in the code.")
@@ -251,26 +279,39 @@ bullets(["1 m HiRISE coverage is 75 % of the Jezero operations area with all sev
          "re-evaluated exactly afterwards.",
          "Voice is an offline intent parser with speech output (no speech recognition). The global traverse router plans "
          "long drives on 20-463 m elevation; build a hub at each end for EVA-scale planning.",
+         "<b>Place values</b> describe the ground around a point at each dataset's resolution (GRS 5°, TES 3-16 km, SWIM 0.05°), "
+         "not what a drill will meet. TES mineral and dust values are read back from published colour maps, so they are relative.",
+         "<b>Space weather</b> is a stated heuristic on NASA's DONKI records, which see the Sun from Earth's side. The live service "
+         "could not be reached from the development network on 28-29 October 2026, so the parser is tested on DONKI's documented "
+         "record shapes. There is no crustal magnetic field layer: no openly licensed global grid was found.",
+         "<b>The crew displays</b> take heading from the track, because SUITS telemetry has no compass, and simulate a HUD on a "
+         "screen; they have not been tried on a visor.",
+         "The Windows program is not code-signed, so Windows asks once before running it on a new PC.",
          "Moving the weather model to a new latitude is a first-order correction, not a climate model. MarsNav is a Windows "
-         "program; the EVA planner alone runs in any modern browser from a simple web server (Chapter 15)."])
+         "program; the EVA planner alone runs in any modern browser from a simple web server (Chapter 18)."])
 
-# ================================================================== 18. PROJECT STRUCTURE
+# ================================================================== 21. PROJECT STRUCTURE
 chapter("Project structure", "where everything is",
         "The repository layout, for anyone reading or extending the code.")
 table([["Path", "Contents"],
        ["MarsNav.exe, MarsNav_runtime/, dist/", "The desktop app built by build_exe.bat, its libraries, and the portable folder and zip. Build output, kept out of the repository (.gitignore)."],
        ["launcher/", "martian_map.py (supervisor, local server, worker and job processes, self-test), desktop.py (the native "
         "window, menus, dialogs), wintheme.py (dark title bar and menu), make_portable.py, the icon and version resource."],
-       ["app/", "The interface: index.html (EVA planner), landing.html (Landing mode), drive.html (3D drive window), css/, js/, "
-        "theme.css (the shared console style), engine/ (copy of engine/), data/ (built Jezero layers), vendor/ (three.js and the "
-        "fonts), sw.js (offline cache)."],
+       ["app/", "The interface: index.html (EVA planner), landing.html (Landing mode), drive.html (3D drive window), hud.html (crew "
+        "displays), css/, js/ (placeview.js draws the data at any place), theme.css (the shared console style), engine/ (copy of "
+        "engine/), data/ (built sites, station photographs), vendor/ (three.js and the fonts), sw.js (offline cache)."],
        ["engine/", "The planning engine in plain JavaScript, shared by the app, the tests and the validation."],
        ["planet/", "The whole-planet engine: tiles and cache, raster readers, STAC catalogue, IAU names, landing assessment, site "
-        "generator, science datasets, Local mode, TSS bridge and the HTTP API."],
+        "generator, science datasets, the science atlas (atlas.py, features.py), missions and objectives (science.py), space "
+        "weather (spaceweather.py), every layer at a point (place.py), Local mode, TSS bridge and the HTTP API; data/ holds the "
+        "bundled catalogues, candidates, missions and objectives."],
        ["pipeline/", "The Python data pipeline and the site definitions (pipeline/sites/*.json)."],
        ["validation/", "Validation against Perseverance and the closed-loop campaign, with their reports."],
-       ["tests/", "Engine and closed-loop tests (Node), pipeline and downloader tests (pytest)."],
-       ["tools/", "build_all.sh, the TSS bridge and stand-in, guide/ (the screenshot script and this guide's source), dev/ (developer scripts)."],
+       ["tests/", "Engine and closed-loop tests (Node); pipeline, downloader, science-atlas and place tests (pytest)."],
+       ["tools/", "build_all.sh; build_windows.py and smoke_exe.py (the Windows build and its check); build_features.py (the bundled "
+        "catalogues); build_pov.py (station photographs); the TSS bridge and stand-in; guide/ (the screenshot scripts and this "
+        "guide's source); dev/ (developer scripts)."],
+       [".github/workflows/", "windows-exe.yml: builds, checks and publishes the Windows app on every change."],
        ["docs/", "Concept of operations, architecture, algorithms, data provenance, verification, requirements traceability, "
         "deployment and new sites, limitations, the closed loop and hardware interface, station tasks, station selection."],
        ["submission/", "Judging-criteria map, demo script, comparison with other approaches, screenshots."],
@@ -278,7 +319,7 @@ table([["Path", "Contents"],
        ["data_cache/", "Created at run time: downloads, tiles, science layers, Local mode packs, built sites, reports, logs. Not part of the repository."]],
       [1.85 * inch, CW - 1.85 * inch], mono_first=True)
 
-# ================================================================== 19. CREDITS
+# ================================================================== 22. CREDITS
 chapter("Data sources and credits", "standing on NASA's shoulders",
         "MarsNav is built entirely on public data. All mission data are US Government works in the public domain or "
         "openly licensed; exact sources, URLs and checksums are in pipeline/sources.json and docs/04_data_and_provenance.md.")
@@ -296,12 +337,23 @@ table([["Data", "Source"],
        ["Crater database (384,343 craters ≥ 1 km)", "Robbins & Hynek 2012 (JGR), 2020 release"],
        ["Global geologic map, SIM 3292", "Tanaka et al. 2014, USGS (OGC API)"],
        ["Candidate sites", "NASA First Landing Site / Exploration Zone Workshop (2015); Golombek et al. 2021 (Starship); NSSDCA"],
+       ["Mineral catalogues: aqueous minerals, CRISM / OMEGA hydrous detections, chlorides", "Ehlmann & Edwards 2014; Carter et al. 2013 (MRO CRISM, Mars Express OMEGA); Osterloo et al. 2010; via NASA Mars Trek"],
+       ["TES minerals, albedo and dust cover; MOLA roughness", "Bandfield 2002; Christensen et al. 2001; Ruff & Christensen 2002; Kreslavsky & Head 2000; NASA Mars Trek"],
+       ["Glaciers, gullies, valley networks, fans, dunes, present-day activity", "Souness 2012, Brough 2016, Fassett 2010; Harrison 2015; Hynek et al. 2010; Moore & Howard 2005, Kraal 2008; Hayward et al. 2007; Daubar, McEwen, Ojha, Dundas; via NASA Mars Trek"],
+       ["GRS elements (Fe, Cl, K, Th, Si); gravity field GMM-3", "Mars Odyssey (Boynton et al. 2007), PDS; MRO (Genova et al. 2016), PDS Geosciences Node"],
+       ["Space weather", "NASA CCMC DONKI (api.nasa.gov, kauai.ccmc.gsfc.nasa.gov)"],
+       ["Cosmic-ray dose and its pressure dependence", "Curiosity RAD (Hassler et al. 2014; Guo et al. 2017)"],
+       ["Station photographs, rover positions", "Perseverance and Curiosity raw images (NASA/JPL-Caltech, MSSS, ASU); NASA/JPL MMGIS waypoint feeds"],
+       ["Mission statuses", "NASA, ESA, JAXA, CNSA and press reports, sourced per mission in planet/data/missions.json (28 October 2026)"],
+       ["USGS chart quadrangles", "USGS 1:5,000,000 Mars Chart series (MC-01 to MC-30)"],
        ["Place names", "IAU Gazetteer of Planetary Nomenclature"],
        ["Mars clock", "Mars24 algorithm, NASA GISS"]],
       [2.55 * inch, CW - 2.55 * inch])
 P("Software: three.js (MIT), numpy, scipy, rasterio / GDAL, Pillow, pywebview, pythonnet and PyInstaller. Fonts in this "
   "guide: Barlow and IBM Plex Mono (SIL Open Font License). MarsNav's own code is released under the MIT licence (LICENSE).")
 spacer(10)
-callout("About this guide", "Written for MarsNav 2.0 for the NASA Space Apps Challenge 2026 (Interplanetary Survival Guide: "
-        "Martian Map). Every screenshot was taken from the running desktop app on real data; every number in Chapter 13 was "
-        "re-run for this edition.", "cyan")
+callout("About this guide", "Written for MarsNav 2.1 for the NASA Space Apps Challenge 2026 (Interplanetary Survival Guide: "
+        "Martian Map). Every screenshot was taken from the running app on real data: the 2.0 figures in the desktop window, the "
+        "2.1 figures (Chapters 4-6, 8, 10 and 13) in a browser on the same app, without the window frame. The validation numbers "
+        "in Chapter 16 were re-run for 2.0 on 26 October 2026; the tests, the Windows build and the browser tour for 2.1 on "
+        "29 October 2026.", "cyan")
