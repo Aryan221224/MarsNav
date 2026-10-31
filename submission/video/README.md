@@ -8,12 +8,12 @@ Everything on screen is the running app or the repository's own validation outpu
 
 | Time | Shot | Made from |
 |---|---|---|
-| 0.0–4.6 s | First-person walk through the helmet-visor HUD at Jezero | `hud.html?mode=visor` flying a simulated EVA from the planner (`capture_eva.mjs`) |
+| 0.0–4.6 s | A crew member and rover on a Mars plain; the camera pushes in to the gold visor, where MarsNav's HUD glows | 3D illustration (`devices.html`); the HUD symbology is `hud.html?mode=visor` with its 3D view switched off, captured from a simulated EVA (`capture_eva.mjs`) |
 | 4.6–7.6 s | The walkback field fades in over the route | The planner's "Walkback time" layer (`capture_maps.mjs`) |
 | 7.6–9.0 s | Landing mode, 66 candidates | `submission/screens/13_landing_mode.jpg` |
 | 9.0–11.0 s | Six NASA data layers at one place (Arcadia Planitia) | The user guide's captures of the running Landing mode |
 | 11.0–12.8 s | Curiosity's boxwork at Mount Sharp in 3D, the challenge's own example | The planner's 3D view of the built site (`capture_maps.mjs`) |
-| 12.8–17.3 s | One EVA on four displays; a suit leak turns all four home | The planner, visor, rover dashboard and wrist cuff captured in lockstep, shown on device models (`devices.html`) |
+| 12.8–17.3 s | One EVA on four displays: the habitat workstation, the crew rover's dashboard, the visor and wrist cuff of a suited crew member; at the suit leak all four turn home in a 2×2 grid | The planner, visor, rover dashboard and wrist cuff captured in lockstep, shown on 3D models built in `devices.html` (habitat module, rover, astronaut) |
 | 17.3–23.9 s | Perseverance's 7.15 km, 85-sol trip against MarsNav's 2.92 km, 84-minute crew walk | `validation/results/rover_case_study.json` over the app's 2 m HiRISE relief tiles (`prep_rover_map.py`) |
 | 23.9–27.1 s | 0 of 40 against 31 of 40: one dot per real paired run | `validation/results/closed_loop.json` |
 | 27.1–29.5 s | End card | Watermarked AI-generated logo; no NASA or Space Apps logos |
@@ -50,7 +50,8 @@ anything over 30 s. If an AI voice is used instead, say so in `docs/AI_USE.md`.
 
 ## Rebuilding the picture
 
-Needs Node 20+, Playwright with Chromium, Python 3 with numpy, scipy and Pillow, and ffmpeg.
+Needs Node 20+, Playwright with Chromium, Python 3 with numpy, scipy and Pillow, and ffmpeg. The two captures need the
+planet server; the rest only a static server at the repository root.
 
 ```bash
 python3 launcher/martian_map.py --headless --port 8790
@@ -69,24 +70,13 @@ node submission/video/capture_eva.mjs http://127.0.0.1:8790/ submission/video/bu
 ```
 
 ```bash
-node submission/video/render_devices.mjs http://127.0.0.1:8800/ 150 135 submission/video/build/devices
+RESUME=1 bash submission/video/build_video.sh
 ```
 
-```bash
-python3 submission/video/prep_rover_map.py . submission/video/build/rover
-```
-
-```bash
-node submission/video/render_video.mjs http://127.0.0.1:8800/ submission/video/build/frames
-```
-
-```bash
-python3 submission/video/make_audio.py
-```
-
-```bash
-python3 submission/video/assemble.py
-```
+`build_video.sh` renders the opening and the devices shot, the rover map and every frame, then the sound and the
+MP4 (add `--vo` once the narration is recorded). With `RESUME=1` it keeps frames that already exist, so an
+interrupted run picks up where it stopped. The 3D models (habitat workstation, crew rover, suited crew member with
+its helmet and wrist cuff) are built from three.js primitives in `devices.html`; nothing is downloaded.
 
 The app has no notion of video time, and software 3D cannot render 30 frames a second, so the captures run every page
 on a virtual clock (`lib/vt_shim.js`): each frame the clock moves exactly 1/30 s, the page renders, and a screenshot is
@@ -103,8 +93,8 @@ no AI. The warning at the suit leak is the app's own caution-and-warning tone (`
 
 ## Honesty notes
 
-- The EVA in the first and fourth shots is a simulation flown by the app's simulator, and the first shot says so on
-  screen.
+- The opening and the devices shot are 3D illustrations; what plays on every screen and on the visor is the running
+  app, flying a simulated EVA from its own simulator.
 - The rover comparison is a robot driven from Earth against a planned crew walk between the same two points, on the
   same 1 m terrain; the narration says "for a crew" so it is not read as a faster rover.
 - "Down to one metre": not every site has 1 m data (docs/08), so the line does not claim every walk is planned at 1 m.

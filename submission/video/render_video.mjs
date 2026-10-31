@@ -27,8 +27,9 @@ const N = Math.round(TL.duration * TL.fps);
 const times = ONLY.length ? ONLY : Array.from({ length: N }, (_, i) => i / TL.fps);
 const t0 = Date.now();
 for (const [k, t] of times.entries()) {
-  await page.evaluate((t) => window.renderAt(t), t);
   const name = ONLY.length ? `t${t.toFixed(2)}.jpg` : `${String(Math.round(t * TL.fps)).padStart(4, "0")}.jpg`;
+  if (!ONLY.length && process.env.RESUME && fs.existsSync(path.join(OUT, name))) continue;
+  await page.evaluate((t) => window.renderAt(t), t);
   await page.screenshot({ path: path.join(OUT, name), type: "jpeg", quality: 95 });
   if (!ONLY.length && k % 60 === 0) console.log(`frame ${k}/${N}  ${((Date.now() - t0) / 1000).toFixed(0)} s`);
 }

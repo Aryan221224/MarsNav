@@ -189,7 +189,7 @@ def music():
     # the warning tone itself stays dry and clear, like the app's
     dev = next(s for s in S if s["id"] == "devices")
     cap = json.load(open(os.path.join(HERE, "build", "eva", "capture.json")))
-    leak_t = dev["start"] + (cap["leakFrame"] - 150) / cap["fps"]
+    leak_t = dev["start"] + (cap["leakFrame"] - dev["capture_from"]) / cap["fps"]
     mix += warning_tone(leak_t, gain=0.09)
     # fade out at the very end
     mix *= smoothstep((DUR - t) / 0.6)[:, None]

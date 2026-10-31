@@ -23,8 +23,11 @@ const SHIM = fs.readFileSync(path.join(HERE, "lib", "vt_shim.js"), "utf8");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // display pages: viewport and how often a frame is kept (every n-th video frame)
+// visor_plain is the same helmet visor with its 3D terrain switched off (the app's V key): the HUD symbology on black,
+// which is see-through on a real visor; the device shot lays it over the model's gold visor.
 const DISPLAYS = {
   visor: { size: { width: 1920, height: 1080 }, every: 1 },
+  visor_plain: { size: { width: 1280, height: 720 }, every: 1, mode: "visor", plain: true },
   rover: { size: { width: 1600, height: 900 }, every: 2 },
   cuff: { size: { width: 480, height: 1150 }, every: 2 },
 };
@@ -58,8 +61,9 @@ for (const [mode, d] of Object.entries(DISPLAYS)) {
   const p = await ctx.newPage();
   p.on("pageerror", (e) => errs.push(`${mode}: ${e.message}`));
   await p.setViewportSize(d.size);
-  await p.goto(new URL(`hud.html?mode=${mode}`, BASE).href, { waitUntil: "load" });
+  await p.goto(new URL(`hud.html?mode=${d.mode || mode}`, BASE).href, { waitUntil: "load" });
   await p.addStyleTag({ content: DEVICE_CSS });
+  if (d.plain) await p.keyboard.press("v");           // the app's own switch: HUD symbology only
   pages[mode] = p;
 }
 // the displays say hello and receive the plan; the visor builds its 3D terrain

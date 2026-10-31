@@ -16,10 +16,10 @@ captions; add the narration with `submission/video/README.md`). Shot times, capt
 
 | Time | On screen | Voice-over |
 |---|---|---|
-| 0.0 to 4.6 s | First-person walk at Jezero through the helmet-visor HUD | "The first crew on Mars will walk with no GPS, and limited air." |
+| 0.0 to 4.6 s | A crew member and rover on a Mars plain; the camera pushes in to the gold visor and MarsNav's HUD | "The first crew on Mars will walk with no GPS, and limited air." |
 | 4.6 to 7.6 s | The walkback field fades in over the route; MarsNav name | "MarsNav keeps a way home on every step." |
 | 7.6 to 12.8 s | Landing mode (66 candidates), six NASA data layers at one place, Curiosity's boxwork at Mount Sharp in 3D | "It ranks landing sites and science targets, then plans each walk on NASA terrain down to one metre." |
-| 12.8 to 17.3 s | One EVA on the habitat console, rover dashboard, wrist cuff and helmet visor; a suit leak turns all four home | "From habitat to helmet, it reads the suit and re-plans." |
+| 12.8 to 17.3 s | One EVA on the habitat workstation, the rover's dashboard and the crew member's visor and wrist cuff; at a suit leak all four turn home | "From habitat to helmet, it reads the suit and re-plans." |
 | 17.3 to 23.9 s | Perseverance's real 7.15 km route drawn, then MarsNav's 2.92 km crew route | "Perseverance took 85 sols to make this trip. For a crew, MarsNav plans it as an 84-minute walk." |
 | 23.9 to 27.1 s | 0 of 40 against 31 of 40, one dot per paired run | "In 40 simulated EVAs, no crew touched their reserve." |
 | 27.1 to 29.5 s | End card: logo, tagline, repository | "MarsNav. Every step, a way home." |
