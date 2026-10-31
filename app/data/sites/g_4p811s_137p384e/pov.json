@@ -1,0 +1,102 @@
+{
+ "site": "g_4p811s_137p384e",
+ "rover": "Curiosity",
+ "built": "2026-10-28",
+ "tool": "tools/build_pov.py",
+ "note": "Raw images from Curiosity at the spots it stood nearest each station (NASA raw-image service). Not calibrated, not mosaicked: what a camera at head height saw there.",
+ "stations": {
+  "ALTA": {
+   "name": "Altadena (first boxwork drill)",
+   "images": [
+    {
+     "file": "pov/ALTA_1.jpg",
+     "rover": "Curiosity",
+     "camera": "Navcam",
+     "sol": 4561,
+     "utc": "2025-06-05T11:33:40.15354",
+     "lmst": "12:05",
+     "azimuth_deg": null,
+     "rover_m_from_station": 0,
+     "credit": "NASA/JPL-Caltech",
+     "source": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04561/opgs/edr/ncam/NLB_802391271EDR_F1161944NCAM00225M_-br2.jpg",
+     "imageid": "NLB_802391271EDR_F1161944NCAM00225M_"
+    },
+    {
+     "file": "pov/ALTA_2.jpg",
+     "rover": "Curiosity",
+     "camera": "Navcam",
+     "sol": 4561,
+     "utc": "2025-06-05T11:51:37.67231",
+     "lmst": "12:23",
+     "azimuth_deg": null,
+     "rover_m_from_station": 0,
+     "credit": "NASA/JPL-Caltech",
+     "source": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04561/opgs/edr/ncam/NLB_802392348EDR_F1161944NCAM00225M_-br2.jpg",
+     "imageid": "NLB_802392348EDR_F1161944NCAM00225M_"
+    }
+   ]
+  },
+  "MGRD": {
+   "name": "Monte Grande hollow: Valle de la Luna and Nevado Sajama drills",
+   "images": [
+    {
+     "file": "pov/MGRD_1.jpg",
+     "rover": "Curiosity",
+     "camera": "Navcam",
+     "sol": 4791,
+     "utc": "2026-01-27T18:59:44.87062",
+     "lmst": "11:47",
+     "azimuth_deg": null,
+     "rover_m_from_station": 1,
+     "credit": "NASA/JPL-Caltech",
+     "source": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04791/opgs/edr/ncam/NLB_822808241EDR_F1200574NCAM00353M_-br2.jpg",
+     "imageid": "NLB_822808241EDR_F1200574NCAM00353M_"
+    },
+    {
+     "file": "pov/MGRD_2.jpg",
+     "rover": "Curiosity",
+     "camera": "Navcam",
+     "sol": 4791,
+     "utc": "2026-01-27T18:48:50.35458",
+     "lmst": "11:36",
+     "azimuth_deg": null,
+     "rover_m_from_station": 1,
+     "credit": "NASA/JPL-Caltech",
+     "source": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04791/opgs/edr/ncam/NLB_822807586EDR_F1200574NCAM00225M_-br2.jpg",
+     "imageid": "NLB_822807586EDR_F1200574NCAM00225M_"
+    }
+   ]
+  },
+  "CAMP": {
+   "name": "Campo Marte drill and the Atacama block (sulfate unit)",
+   "images": [
+    {
+     "file": "pov/CAMP_1.jpg",
+     "rover": "Curiosity",
+     "camera": "Navcam",
+     "sol": 4895,
+     "utc": "2026-05-14T16:09:07.02285",
+     "lmst": "12:18",
+     "azimuth_deg": null,
+     "rover_m_from_station": 0,
+     "credit": "NASA/JPL-Caltech",
+     "source": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04895/opgs/edr/ncam/NLB_832042715EDR_F1220462NCAM00225M_-br2.jpg",
+     "imageid": "NLB_832042715EDR_F1220462NCAM00225M_"
+    },
+    {
+     "file": "pov/CAMP_2.jpg",
+     "rover": "Curiosity",
+     "camera": "Navcam",
+     "sol": 4895,
+     "utc": "2026-05-14T15:50:31.84344",
+     "lmst": "12:00",
+     "azimuth_deg": null,
+     "rover_m_from_station": 0,
+     "credit": "NASA/JPL-Caltech",
+     "source": "https://mars.nasa.gov/msl-raw-images/proj/msl/redops/ods/surface/sol/04895/opgs/edr/ncam/NLB_832041600EDR_F1220462NCAM00225M_-br2.jpg",
+     "imageid": "NLB_832041600EDR_F1220462NCAM00225M_"
+    }
+   ]
+  }
+ }
+}

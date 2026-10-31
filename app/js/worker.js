@@ -276,7 +276,10 @@ function simSnap(s) {
     back: s.back, dist: s.dist, returning: s.returning, done: s.done, los: s.los, shade: s.shade, alerts: s.alerts, counts: s.counts,
     master: s.master, raised: s.raised || [], cap: P.cap, events: S.sim.events.slice(-40), station: s.station, pins: s.pins,
     returnPts: S.sim.returnCells ? S.sim.returnCells.filter((_, k) => k % 3 === 0).map((i) => S.T.grid.cellLonLat(...S.T.grid.rc(i))) : null,
-    track: S.sim.track.filter((_, k) => k % 5 === 0).map((p) => S.T.grid.cellLonLat(...S.T.grid.rc(p.cur))) };
+    track: S.sim.track.filter((_, k) => k % 5 === 0).map((p) => S.T.grid.cellLonLat(...S.T.grid.rc(p.cur))),
+    // what the crew displays (hud.html) look ahead with
+    rs: s.ruleState ? { slopeAhead: s.ruleState.slopeAhead, sunsetMinLeft: s.ruleState.sunsetMinLeft, losLostMin: s.ruleState.losLostMin,
+      cold: !!s.ruleState.cold, vetoHere: s.ruleState.vetoHere, offRoute: !!s.ruleState.offRoute, crossTrack: s.ruleState.crossTrack } : null };
 }
 
 const handlers = {
@@ -387,20 +390,8 @@ const handlers = {
   simInject: ({ kind }) => { S.sim.inject(kind); return simSnap(S.sim.step(0)); },
   simAck: ({ id }) => { id ? S.sim.alerts.ack(id) : S.sim.alerts.ackAll(); return simSnap(S.sim.step(0)); },
   simSilence: () => { S.sim.alerts.silence(); return { ok: true }; },
-  elevWindow: ({ r0, c0, r1, c1, step }) => {
-    const g = S.T.grid, e = S.T.f32("elev_dm");
-    const nr = Math.floor((r1 - r0) / step) + 1, nc = Math.floor((c1 - c0) / step) + 1;
-    const z = new Float32Array(nr * nc);
-    for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) z[i * nc + j] = e[(r0 + i * step) * g.width + c0 + j * step];
-    return { z, nr, nc, r0, c0, step };
-  },
-  regionalWindow: ({ step }) => {
-    const g = S.T.regGrid, e = S.T.f32("reg_elev_dm");
-    const nr = Math.floor((g.height - 1) / step) + 1, nc = Math.floor((g.width - 1) / step) + 1;
-    const z = new Float32Array(nr * nc);
-    for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) z[i * nc + j] = e[i * step * g.width + j * step];
-    return { z, nr, nc, step, grid: g.toJSON() };
-  },
+  elevWindow: (a) => S.T.elevWindow(a),
+  regionalWindow: (a) => S.T.regionalWindow(a),
   simPin: ({ note }) => { S.sim.pin(note); return simSnap(S.sim.step(0)); },
   simAbort: () => { S.sim.abort("crew commanded return"); return simSnap(S.sim.step(0)); },
   cuecard: ({ route, title }) => cueCardHTML(S.plan.routes[route], { departMs: S.cfg.departMs, lon: S.cfg.base.lon, profile: S.cfg.profile,

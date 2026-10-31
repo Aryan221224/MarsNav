@@ -10,6 +10,7 @@
 // disk cache. Geometry is built relative to each tile's centre (floating origin), so a 20 m crater is as steady as the
 // globe. Units: kilometres.
 import * as THREE from "../vendor/three.module.min.js";
+import { loadPlace, placeHtml, timeHere, timeHtml } from "./placeview.js";
 
 const $ = (id) => document.getElementById(id);
 const R = 3396.19;                       // Mars sphere radius, km (IAU 2015; same as the data's datum)
@@ -696,7 +697,7 @@ $("layersToggle").onclick = () => {
 
 // ------------------------------------------------------------------------------------------------- map layers and legend
 $("baseSel").onchange = () => { S.base = $("baseSel").value; reloadTextures(); saveHash(); };
-for (const el of document.querySelectorAll("[data-ovl]")) {
+function bindOvl(el) {
   el.onchange = () => {
     const need = OVL_NEEDS[el.dataset.ovl];
     if (el.checked && need && S.datasets[need] && !S.datasets[need].installed) {
@@ -706,6 +707,7 @@ for (const el of document.querySelectorAll("[data-ovl]")) {
     reloadTextures(); updateLegend(); saveHash();
   };
 }
+for (const el of document.querySelectorAll("[data-ovl]")) bindOvl(el);
 $("iceDepth").onchange = () => { if (document.querySelector('[data-ovl="ice"]').checked) { reloadTextures(); updateLegend(); saveHash(); } };
 $("exag").oninput = () => {
   S.exag = +$("exag").value; $("exagV").textContent = S.exag;
@@ -739,8 +741,9 @@ async function updateLegend() {
 function legendHtml(key, L) {
   const note = L.note ? `<p>${esc(L.note)}</p>` : "";
   if (L.classes) {
-    return `<div class="lg"><b>${esc(L.title)} · ${esc($("landerSel").selectedOptions[0].text.split("·")[0].trim())}</b><div class="cls">${L.classes.map((c) =>
-      `<i style="background:rgba(${c.rgba[0]},${c.rgba[1]},${c.rgba[2]},${Math.min(1, c.rgba[3] * 1.8)})"></i><span>${esc(c.label)}</span>`).join("")}</div>
+    const sw = L.classes.map((c) => `<i style="background:rgba(${c.rgba[0]},${c.rgba[1]},${c.rgba[2]},${Math.min(1, c.rgba[3] * 1.8)})"></i><span>${esc(c.label)}</span>`).join("");
+    if (key !== "safety") return `<div class="lg"><b>${esc(L.title)}</b><div class="cls">${sw}</div>${note}</div>`;
+    return `<div class="lg"><b>${esc(L.title)} · ${esc($("landerSel").selectedOptions[0].text.split("·")[0].trim())}</b><div class="cls">${sw}</div>
       <p>Resolution follows your zoom; over HiRISE footprints it reaches lander scale (1–2 m).</p></div>`;
   }
   if (L.ticks?.length) {
@@ -922,7 +925,7 @@ function selectPoint(lon, lat, cand = null) {
   lon = wrap180(lon);
   const tok = ++selToken;
   S.focus = { lon, lat, cand, name: cand?.name || null };
-  S.dossier = null; S.landing = null; S.iceTarget = null; S.quick = null;
+  S.dossier = null; S.landing = null; S.iceTarget = null; S.quick = null; S.place = null;
   clearMarkers("pick"); clearMarkers("ice");
   if (!cand) addMarker("pick", lon, lat, "◆");
   $("dEmpty").hidden = true; $("dBody").hidden = false;
@@ -938,23 +941,52 @@ function selectPoint(lon, lat, cand = null) {
   $("hubCard").hidden = true; $("siteDone").innerHTML = ""; $("siteLog").hidden = true;
   $("btnAddRoute").disabled = false;
   $("dSections").innerHTML = "";
+  $("dPlace").innerHTML = `${timeSection()}<div class="pv-loading">Reading every data layer at this place…</div>`;
+  tickPlaceTime();
   rebuildOverlays(); renderCandList(); saveHash();
   quickLook(tok);
+}
+// Everything at the selected place (planet/place.py): shown for any point on Mars, before and after an assessment
+function timeSection() {
+  return `<section class="pv-sec" data-pv="time"><h3>Time here now <small>Mars24 clock, live</small></h3><div id="pvTime"></div></section>`;
+}
+function tickPlaceTime() {
+  const el = $("pvTime"), f = S.focus;
+  if (el && f) el.innerHTML = timeHtml(timeHere(Date.now(), f.lon, f.lat));
+}
+setInterval(tickPlaceTime, 1000);
+function renderPlace() {
+  if (!S.place) return;
+  $("dPlace").innerHTML = `<h3 class="pv-group">All data at this place <small>every layer MarsNav holds, for any point on Mars</small></h3>${timeSection()}` +
+    placeHtml(S.place, { fold: true, links: true, open: S.dossier ? ["where", "env"] : undefined });
+  tickPlaceTime();
+  $("btnJson").disabled = false;
 }
 async function quickLook(tok) {
   const f = S.focus; if (!f) return;
   const z = Math.max(6, Math.min(12, currentZoom() + 1));
-  const [pt, sc] = await Promise.all([
-    api(`/api/point?lon=${f.lon}&lat=${f.lat}&z=${z}`).catch((e) => ({ err: e.message })),
-    post("/api/screen", { points: [[f.lon, f.lat, "pick"]], crit: S.crit }).then((r) => r.results[0]).catch(() => null),
-  ]);
+  S.place = null;                                     // a criteria change asks again: the quick screen comes with the place
+  const qtok = S.quickTok = (S.quickTok || 0) + 1;
+  loadPlace(f.lon, f.lat, (d) => {
+    if (tok !== selToken || qtok !== S.quickTok) return;
+    S.place = d; renderPlace();
+    if (S.quick && !S.dossier) { S.quick.sc = d.screen; renderQuick(f); }
+  }, { crit: S.crit, stillWanted: () => tok === selToken && qtok === S.quickTok }).catch((e) => {
+    if (tok === selToken && qtok === S.quickTok) $("dPlace").innerHTML = `${timeSection()}<p class="pv-loading">Place data unavailable: ${esc(e.message)}. The server keeps working; select the point again.</p>`;
+    tickPlaceTime();
+  });
+  const pt = await api(`/api/point?lon=${f.lon}&lat=${f.lat}&z=${z}`).catch((e) => ({ err: e.message }));
   if (tok !== selToken || S.dossier) return;
-  S.quick = { pt, sc };
+  S.quick = { pt, sc: S.place?.screen ?? null };
+  renderQuick(f);
+}
+function renderQuick(f) {
+  const { pt, sc } = S.quick;
   if (!f.cand && pt.names?.length) { f.name = `Near ${pt.names[0].name}`; $("dName").textContent = f.name; }
   if (sc) {
     setGauge(sc.score, sc.verdict, true);
     setVerdict(sc.verdict, `Preliminary, from global data. Assess for the landing ellipse, surface, water and environment.`, true);
-  } else setVerdict(null, "Global screen unavailable. Assess for the full dossier.");
+  } else setVerdict(null, S.place ? "Global screen unavailable. Assess for the full dossier." : "Reading the global data…");
   const rows = sc ? sc.rows.map((r) => `<div class="crit"><i class="${r.status}"></i><span class="l">${esc(CRIT_SHORT[r.id] || r.id)}</span><span class="v">${esc(r.value)}</span></div>`).join("") : "";
   const src = (pt.sources || []).filter((s) => (s.frac ?? 1) > 0.01).map((s) => esc(s.name || s)).join(", ") || "MOLA";
   $("dSections").innerHTML = candidateSection(f.cand) + `
@@ -1004,6 +1036,16 @@ function setVerdict(v, small, prelim = false) {
 }
 
 $("btnAssess").onclick = () => assess();
+// the crew displays for this place (helmet visor, rover dashboard, wrist cuff): hud.html reads the place itself
+$("btnCrew").onclick = () => {
+  const f = S.focus; if (!f) return;
+  const u = new URL("hud.html", location.href);
+  u.searchParams.set("lon", f.lon.toFixed(5)); u.searchParams.set("lat", f.lat.toFixed(5));
+  u.searchParams.set("name", f.cand?.name || f.name || "Selected place");
+  u.searchParams.set("mode", "visor");
+  const w = window.open(u.href, "marsnav-hud-place", "popup=yes,width=1280,height=760");
+  if (!w) toast("The browser blocked the display window: allow pop-ups for this page.");
+};
 $("dCoords").onclick = async () => {
   if (!S.focus) return;
   const t = `${S.focus.lat.toFixed(5)}, ${S.focus.lon.toFixed(5)}`;
@@ -1135,6 +1177,34 @@ function renderDossier(d) {
     ${cx.names?.length ? `<div class="lbl">IAU names</div><div class="hint">${cx.names.map((n) => `${esc(n.name)} (${esc(n.type || "")}, ${fmtKm(n.dist_km)})`).join(" · ")}</div>` : ""}
   </section>`);
 
+  // science along the way: the bundled catalogues near the site (planet/features.py)
+  const sc = d.science;
+  if (sc) {
+    const rows = Object.values(sc.layers || {}).sort((a, b) => (a.nearest?.km ?? 1e9) - (b.nearest?.km ?? 1e9))
+      .map((p) => `<span>${esc(p.name)}</span><span>${fmtN(p.count)} within ${fmtN(sc.radius_km)} km · nearest: ${esc(p.nearest.label)}, ${fmtKm(p.nearest.km)}</span>`).join("");
+    const pp = sc.planetary_protection;
+    sect.push(`<section class="sect"><h3>Science along the way <small>catalogued features within ${fmtN(sc.radius_km)} km</small></h3>
+      ${rows ? `<div class="kv">${rows}</div>` : `<p class="hint">No catalogued minerals, ice landforms, active slopes or mission sites within ${fmtN(sc.radius_km)} km.</p>`}
+      ${pp ? `<p class="warn-t">Planetary protection: ${esc(pp.label)} ${fmtKm(pp.nearest_rsl_km)} away. ${esc(pp.note)}</p>` : ""}
+      <p class="hint">Show them under Map layers, Science atlas. The Science tab ranks every site for an objective.</p></section>`);
+  }
+  if (d.objectives?.length && !d.objectives[0].error) {
+    const top = Math.max(1, ...d.objectives.map((o) => o.score));
+    sect.push(`<section class="sect"><h3>Science objectives here <small>evidence within 100 km</small></h3>${d.objectives.map((o) =>
+      `<div class="crit"><i class="${o.score >= 6 ? "go" : o.score >= 2 ? "caution" : "unknown"}"></i><span class="l">${esc(o.title)}</span>
+        <span class="v"><i class="sbar"><b style="width:${Math.max(3, 100 * o.score / top)}%"></b></i> ${o.score.toFixed(1)}</span></div>`).join("")}</section>`);
+  }
+  // chemistry, gravity, radiation
+  const ch = d.data?.chem, md = d.model || {};
+  const chemRows = ch ? Object.values(ch).map((e) => `<span>${esc(e.name)} (GRS)</span><span>${e.value != null ? `${fmtN(e.value, e.value < 2 ? 2 : 1)} ${esc(e.unit)}` : "no measurement here"}</span>`).join("")
+    : `<span>GRS elements</span><span class="na-t">layer not installed</span>`;
+  sect.push(`<section class="sect"><h3>Chemistry, gravity and radiation</h3><div class="kv">${chemRows}
+    <span>Albedo (TES)</span><span>${d.data?.albedo != null ? fmtN(d.data.albedo, 3) : `<span class="na-t">layer not installed</span>`}</span>
+    <span>Gravity anomaly</span><span>${d.data?.gravity_mgal != null ? `${d.data.gravity_mgal > 0 ? "+" : ""}${fmtN(d.data.gravity_mgal)} mGal (MRO GMM-3)` : `<span class="na-t">layer not installed</span>`}</span>
+    <span>Cosmic-ray dose</span><span>${md.gcr_ugy_day != null ? `${fmtN(md.gcr_ugy_day)} µGy/day · ${fmtN(md.gcr_msv_day, 2)} mSv/day (${md.gcr_vs_gale >= 1 ? "+" : ""}${fmtN(100 * (md.gcr_vs_gale - 1))} % vs Curiosity at Gale)${md.gcr_extrapolated ? ' <span class="warn-t">extrapolated</span>' : ""}` : "–"}</span>
+    <span>Space weather now</span><span>${S.swx?.level ? `<span class="${S.swx.level === "quiet" ? "ok-t" : S.swx.level === "storm" ? "bad-t" : "warn-t"}">${esc(S.swx.headline)}</span>` : "–"}</span>
+  </div><p class="hint">GRS cells are 5° wide. The dose is Curiosity's RAD record moved by the air column overhead (galactic cosmic rays only; solar particle events come on top).</p></section>`);
+
   // sources
   const ds = d.datasets || {};
   sect.push(`<section class="sect"><h3>Data sources</h3><ul class="srcs">
@@ -1146,6 +1216,7 @@ function renderDossier(d) {
   </ul></section>`);
 
   $("dSections").innerHTML = sect.join("");
+  renderPlace();
   // wire the buttons made above
   $("btnShowSafety")?.addEventListener("click", () => {
     const cb = document.querySelector('[data-ovl="safety"]');
@@ -1229,11 +1300,12 @@ function snapshot() {
   try { renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.85); } catch { return null; }
 }
 $("btnJson").onclick = () => {
-  const d = S.dossier; if (!d) return;
-  const out = { app: "MarsNav · Landing mode", ...d };
+  const d = S.dossier;
+  if (!d && !S.place) return;
+  const out = { app: "MarsNav · Landing mode", ...(d || { name: S.focus?.name, generated: new Date().toISOString() }), place: S.place };
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
-  a.download = `hub-dossier-${(d.name || "site").replace(/[^\w-]+/g, "_")}-${d.generated.slice(0, 10)}.json`;
+  a.download = `${d ? "hub-dossier" : "place"}-${(out.name || "site").replace(/[^\w-]+/g, "_")}-${out.generated.slice(0, 10)}.json`;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 };
@@ -1241,12 +1313,17 @@ $("btnReport").onclick = () => {
   const d = S.dossier; if (!d) return;
   const img = snapshot();
   const secs = $("dSections").cloneNode(true);
+  const place = $("dPlace").cloneNode(true);
+  for (const x of place.querySelectorAll("details")) x.open = true;
+  secs.append(...place.childNodes);
   for (const b of secs.querySelectorAll("button")) b.remove();
   const css = `body{font:13px/1.45 Barlow,Segoe UI,Arial,sans-serif;color:#111;margin:28px;max-width:900px}h1{font-size:22px;margin:0}h3{font-size:14px;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #222;padding-bottom:2px;margin:18px 0 6px;display:flex;justify-content:space-between}h3 small{font-weight:400;text-transform:none;color:#555}
     .v{font-weight:700;font-size:18px;padding:6px 10px;border:2px solid;display:inline-block;margin:8px 0}.GO{color:#0a7a3a}.CAUTION{color:#9a6b00}.NO-GO{color:#b3261e}
     .crit{display:grid;grid-template-columns:14px 1fr;gap:0 8px;padding:4px 0;border-bottom:1px solid #ddd}.crit>i{width:10px;height:10px;border-radius:50%;margin-top:4px;background:#999}.crit>i.go{background:#1a9e55}.crit>i.caution{background:#e0a100}.crit>i.nogo{background:#d33}
     .crit .l{font-weight:600}.crit .v,.crit .s{grid-column:2;font-weight:400;font-size:12px;border:0;padding:0;margin:0;display:block}.s{color:#555}.kv{display:grid;grid-template-columns:170px 1fr;gap:3px 10px}.kv>span:nth-child(odd){color:#555}
     .fracbar{display:flex;height:10px;margin:4px 0}.fracbar i{display:block}.meter{display:grid;grid-template-columns:60px 1fr 50px;gap:8px;align-items:center}.meter .tr{height:8px;background:#ddd;position:relative}.meter .tr i{position:absolute;top:0;bottom:0}
+    .pv-kv{display:grid;grid-template-columns:170px 1fr;gap:3px 10px}.pv-kv>span:nth-child(odd){color:#555}.pv-sec>summary,.pv-sec>h3,.pv-group{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #222;margin:18px 0 6px;list-style:none}.pv-sec small,.pv-group small{font-weight:400;text-transform:none;color:#555}
+    .pv-meter,.pv-rel,.pv-obj{display:grid;grid-template-columns:110px 1fr 90px;gap:8px;align-items:center}.pv-meter .tr,.pv-rel .tr,.pv-obj .tr{height:8px;background:#ddd;position:relative}.pv-meter .tr i,.pv-rel .tr i,.pv-obj .tr i{position:absolute;top:0;bottom:0;left:0;background:#555}.pv-rel .tr.tri i{position:static;display:block;height:2px;margin:1px 0}.pv-na,.pv-hint,.pv-lbl{color:#666}.pv-warn{color:#9a6b00}.pv-bad{color:#b3261e}.pv-ok{color:#0a7a3a}
     .list{list-style:none;padding:0;margin:0}.tag,.badge{font-size:11px}.hint,.na-t{color:#666}.ok-t{color:#0a7a3a}.warn-t{color:#9a6b00}.bad-t{color:#b3261e}.lbl{font-weight:700;font-size:11px;text-transform:uppercase;color:#444;margin-top:6px}
     img{width:100%;border:1px solid #999;margin:10px 0}.bar{display:flex;gap:10px;align-items:center}@media print{.noprint{display:none}body{margin:12mm}}`;
   const verdictClass = d.verdict || "";
@@ -1758,7 +1835,8 @@ function readHash() {
       S.crit = p[6];
       for (const x of document.querySelectorAll(".seg button[data-crit]")) x.setAttribute("aria-checked", String(x.dataset.crit === S.crit));
     }
-    for (const k of (p[7] || "").split("+")) { const cb = document.querySelector(`[data-ovl="${k}"]`); if (cb) cb.checked = true; }
+    S.hashOvls = (p[7] || "").split("+").filter(Boolean);       // the atlas layers are added later: they are ticked then
+    for (const k of S.hashOvls) { const cb = document.querySelector(`[data-ovl="${k}"]`); if (cb) cb.checked = true; }
     hashSel = p[8] || null;
     return true;
   }
@@ -1771,6 +1849,168 @@ function restoreFocusFromHash() {
   const [la, lo] = s.split(";").map(Number);
   if (isFinite(la) && isFinite(lo)) selectPoint(lo, la);
 }
+
+// ------------------------------------------------------------------------------------------------- science atlas
+// every whole-planet layer by kind of measurement (planet/atlas.py); the ones already in the list above are skipped
+const GROUP_COLOUR = { spectral: "#6aa0ff", chemical: "#8fd36a", water: "#3ccbff", thermal: "#e6a03c", topographic: "#c9a57a",
+  geophysical: "#d06ad0", atmospheric: "#f06060", activity: "#ff6a4a", missions: "#ffffff" };
+async function loadAtlas() {
+  let cat;
+  try { cat = await api("/api/atlas"); } catch { return; }
+  S.atlas = cat;
+  const have = new Set([...document.querySelectorAll("#layersBody .ovl [data-ovl]")].map((x) => x.dataset.ovl));
+  const box = $("atlasBox");
+  box.innerHTML = `<div class="lbl">Science atlas · whole planet</div>` + cat.groups.map((g) => {
+    const rows = g.layers.filter((L) => !have.has(L.id)).map((L) => {
+      if (L.needs) OVL_NEEDS[L.id] = L.needs;
+      const tip = [L.what, L.cite].filter(Boolean).join(" · ");
+      return `<label class="chk" title="${esc(tip)}"><input type="checkbox" data-ovl="${esc(L.id)}"><i class="sw" style="--c:${GROUP_COLOUR[g.id] || "#aaa"}"></i>${esc(L.name)}${L.count ? ` <small class="cnt">${fmtN(L.count)}</small>` : ""}${L.installed === false ? ` <small class="na-t">not installed</small>` : ""}</label>`;
+    }).join("");
+    return rows ? `<details class="agrp"${g.id === "spectral" ? " open" : ""}><summary>${esc(g.name)}</summary><div class="ovl">${rows}</div></details>` : "";
+  }).join("");
+  let ticked = false;
+  for (const el of box.querySelectorAll("[data-ovl]")) {
+    bindOvl(el);
+    if (S.hashOvls?.includes(el.dataset.ovl)) { el.checked = true; el.closest("details").open = true; ticked = true; }
+  }
+  if (ticked) { reloadTextures(); updateLegend(); }
+}
+
+// ------------------------------------------------------------------------------------------------- science objectives, missions
+async function loadScience() {
+  try {
+    const [o, m] = await Promise.all([api("/api/objectives"), api("/api/missions")]);
+    S.objectives = o.objectives || [];
+    S.missions = m.missions || [];
+    S.missionsAsOf = m.as_of;
+  } catch { return; }
+  $("objSel").innerHTML = S.objectives.map((o) => `<option value="${esc(o.id)}">${esc(o.title)}</option>`).join("");
+  $("objSel").onchange = renderObjective;
+  renderObjective();
+  $("nMis").textContent = S.missions.length;
+  renderMissions();
+  // where future missions go: their landing regions on the globe
+  clearMarkers("future");
+  for (const m of S.missions.filter((x) => misGroup(x) === "future")) {
+    for (const p of m.regions || (m.site?.lon != null ? [m.site] : [])) addMarker("future", p.lon, p.lat, `${m.name}${m.regions ? `: ${p.name}` : ""}`, () => { selectPoint(p.lon, p.lat); showTab("sci"); }, `${m.name} · ${m.status}`);
+  }
+}
+function renderObjective() {
+  const o = S.objectives?.find((x) => x.id === $("objSel").value);
+  if (!o) return;
+  $("objCard").innerHTML = `<div class="kind">${esc(o.goal)}</div><p>${esc(o.question)}</p>
+    <p class="hint"><b>Why humans:</b> ${esc(o.why_humans)}</p>
+    <div class="lbl">Example places</div><ol class="list">${o.examples.map((e, k) => `<li data-ex="${k}"><span class="t">${esc(e.name)}<small>${esc(e.why)}</small></span><span class="m">${fmtLL(e.lat, e.lon, 2)}${e.site ? "<br>EVA site" : ""}</span></li>`).join("")}</ol>
+    <p class="hint"><b>At stations:</b> ${esc(o.at_stations)}</p><p class="hint"><b>Safety:</b> ${esc(o.safety)}</p>`;
+  for (const li of $("objCard").querySelectorAll("[data-ex]")) {
+    li.onclick = () => { const e = o.examples[+li.dataset.ex]; flyTo(e.lon, e.lat, e.site ? 60 : 900); selectPoint(e.lon, e.lat); };
+  }
+  $("objRank").innerHTML = "";
+}
+$("btnObjLayers").onclick = () => {
+  const o = S.objectives?.find((x) => x.id === $("objSel").value);
+  if (!o) return;
+  for (const id of o.layers) {
+    const cb = document.querySelector(`[data-ovl="${id}"]`);
+    if (cb && !cb.checked) { cb.checked = true; cb.closest("details")?.setAttribute("open", ""); }
+  }
+  $("layers").classList.remove("collapsed");
+  $("layersToggle").setAttribute("aria-expanded", "true");
+  reloadTextures(); updateLegend(); saveHash();
+  toast(`Map layers for “${o.title}” are on (top left).`);
+};
+$("btnObjRank").onclick = async () => {
+  const ol = $("objRank");
+  ol.innerHTML = `<li class="hint">Scoring every candidate site and hub…</li>`;
+  try {
+    const r = await api(`/api/objective/rank?id=${encodeURIComponent($("objSel").value)}&limit=20`);
+    const top = Math.max(1e-6, r.ranked[0]?.score || 0);
+    ol.innerHTML = r.ranked.map((x) => {
+      const why = [...x.evidence.map((e) => `${e.count} × ${e.label.toLowerCase()} (nearest ${fmtKm(e.nearest_km)})`), ...x.data].slice(0, 3).join(" · ");
+      return `<li data-id="${esc(x.id)}" data-ll="${x.lon},${x.lat}"><span class="t">${esc(x.name)}<small>${esc(why || "no catalogued evidence within 100 km")}</small></span>
+        <span class="m"><i class="sbar"><b style="width:${Math.max(4, 100 * x.score / top)}%"></b></i>${x.score.toFixed(1)}</span></li>`;
+    }).join("");
+    for (const li of ol.querySelectorAll("li[data-id]")) {
+      li.onclick = () => {
+        const c = S.cand.find((x) => x.id === li.dataset.id);
+        if (c) { openCandidate(c); return; }
+        const [lo, la] = li.dataset.ll.split(",").map(Number);
+        flyTo(lo, la, 400); selectPoint(lo, la);
+      };
+    }
+  } catch (e) { ol.innerHTML = `<li class="hint bad-t">${esc(e.message)}</li>`; }
+};
+const misGroup = (m) => /^active/.test(m.status) ? "active" : /en route|planned|development|slipped|studied/.test(m.status) ? "future" : "past";
+let misFilter = "all";
+for (const b of $("misChips").querySelectorAll("button")) {
+  b.onclick = () => { misFilter = b.dataset.mis; for (const x of $("misChips").querySelectorAll("button")) x.classList.toggle("on", x === b); renderMissions(); };
+}
+for (const b of $("sciChips").querySelectorAll("button")) {
+  b.onclick = () => {
+    for (const x of $("sciChips").querySelectorAll("button")) x.classList.toggle("on", x === b);
+    $("sciObj").hidden = b.dataset.sci !== "obj";
+    $("sciMis").hidden = b.dataset.sci !== "mis";
+  };
+}
+function renderMissions() {
+  const list = (S.missions || []).filter((m) => misFilter === "all" || misGroup(m) === misFilter);
+  const line = (label, v) => v && v !== "-" ? `<small>${label}${esc(v)}</small>` : "";
+  $("misList").innerHTML = list.map((m) => `<li data-k="${S.missions.indexOf(m)}"><span class="t">${esc(m.name)}<small>${esc(m.agency)} · ${esc(m.kind)} · ${esc(m.years || "")}</small>
+      ${line("", m.science)}${line("In MarsNav: ", m.data_in_marsnav)}${line("For crews: ", m.for_crews)}</span>
+      <span class="m"><span class="st ${misGroup(m)}">${esc(m.status)}</span>${m.site?.lon != null ? `<br>${fmtLL(m.site.lat, m.site.lon, 2)}` : m.regions ? `<br>${m.regions.length} candidate regions` : ""}</span></li>`).join("");
+  $("misNote").textContent = `Status as of ${S.missionsAsOf}, from NASA, ESA, JAXA, CNSA and press reports cited per mission (planet/data/missions.json).`;
+  for (const li of $("misList").querySelectorAll("li[data-k]")) {
+    li.onclick = () => {
+      const m = S.missions[+li.dataset.k], p = m.site?.lon != null ? m.site : m.regions?.[0];
+      if (!p) return;
+      flyTo(p.lon, p.lat, ["rover", "lander", "helicopter"].includes(m.kind) ? 120 : 2500);
+      selectPoint(p.lon, p.lat);
+    };
+  }
+}
+
+// ------------------------------------------------------------------------------------------------- space weather
+const SWX_WORD = { quiet: "QUIET", watch: "WATCH", storm: "STORM", unknown: "–" };
+async function loadSwx() {
+  try { S.swx = await api("/api/spaceweather"); } catch { return; }
+  const w = S.swx, pill = $("swxPill");
+  pill.textContent = `SPACE WX ${SWX_WORD[w.level] || "–"}`;
+  pill.className = `pill ${w.level === "quiet" ? "ok" : w.level === "storm" ? "bad" : "warn"}`;
+  pill.title = `${w.headline}. ${(w.reasons || []).join(". ")}`;
+  if (!$("swxModal").hidden) renderSwx();
+}
+function renderSwx() {
+  const w = S.swx;
+  if (!w) { $("swxBody").innerHTML = `<p class="hint">The MarsNav server did not answer.</p>`; return; }
+  const g = w.geometry || {};
+  $("swxSub").textContent = `${w.source}${w.fetched_utc ? ` · fetched ${w.fetched_utc} (${w.age_h} h ago)` : ""}`;
+  const arr = (w.mars_arrivals || []).slice(-6).reverse(), sep = w.sep || [], fl = w.flares || [];
+  $("swxBody").innerHTML = `<div class="verdictbar ${w.level === "quiet" ? "GO" : w.level === "storm" ? "NO-GO" : "CAUTION"}">${esc(w.headline)}</div>
+    <ul class="srcs">${(w.reasons || []).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
+    ${w.action ? `<p><b>For EVAs:</b> ${esc(w.action)}</p>` : ""}
+    <div class="kv"><span>Sun-Earth-Mars angle</span><span>${fmtN(g.separation_deg)}° (${g.mars_minus_earth_deg >= 0 ? "Mars ahead of Earth" : "Mars behind Earth"})</span>
+      <span>Earth-Mars distance</span><span>${fmtN(g.distance_au, 2)} AU · ${fmtN(g.light_min, 1)} light-minutes</span></div>
+    <p class="hint">${esc(g.note || "")}</p>
+    <h3 class="lbl">CME arrivals at Mars (WSA-ENLIL)</h3>
+    ${arr.length ? `<table class="tbl">${arr.map((a) => `<tr><td>${esc(a.arrival_utc)}</td><td>${a.glancing ? "glancing" : "direct"}${a.speed_kms ? `, ${a.speed_kms} km/s` : ""}</td><td>${a.hours_from_now >= 0 ? `in ${fmtN(a.hours_from_now)} h` : `${fmtN(-a.hours_from_now)} h ago`}</td><td>${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">DONKI</a>` : ""}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
+    <h3 class="lbl">Solar particle events (near Earth)</h3>
+    ${sep.length ? `<table class="tbl">${sep.slice(0, 6).map((x) => `<tr><td>${esc(x.time_utc)}</td><td>${fmtN(x.hours_ago)} h ago</td><td>${esc((x.instruments || []).join(", "))}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
+    <h3 class="lbl">M and X flares</h3>
+    ${fl.length ? `<table class="tbl">${fl.slice(0, 6).map((x) => `<tr><td>${esc(x.peak_utc)}</td><td>${esc(x.class)}</td><td>${esc(x.source || "")}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
+    <p class="hint">${esc(w.basis || "")}</p>`;
+}
+$("swxPill").onclick = () => { renderSwx(); $("swxModal").hidden = false; };
+$("swxClose").onclick = () => { $("swxModal").hidden = true; };
+$("swxModal").addEventListener("click", (e) => { if (e.target === $("swxModal")) $("swxModal").hidden = true; });
+$("swxRefresh").onclick = async () => {
+  $("swxJob").textContent = "Asking NASA DONKI…";
+  try {
+    const { job } = await post("/api/spaceweather/refresh", {});
+    await pollJob(job, (lines) => { $("swxJob").textContent = lines[lines.length - 1]; });
+    await loadSwx();
+    renderSwx();
+  } catch (e) { $("swxJob").textContent = e.message; }
+};
 
 // ------------------------------------------------------------------------------------------------- loop
 let lastHash = 0, lastScale = 0, lastStat = { drawn: 0, wanted: 0 };
@@ -1800,8 +2040,11 @@ if (canvas.clientWidth < 820 || window.innerHeight < 820) {       // small scree
 }
 loadNames();
 updateLegend();
-loadDatasets().then(() => loadCandidates());
+loadDatasets().then(() => { loadCandidates(); loadAtlas(); });
 loadHubs().then(() => loadLocal());
+loadScience();
+loadSwx();
+setInterval(loadSwx, 30 * 60 * 1000);
 refreshStatus();
 setInterval(refreshStatus, 5000);
 requestAnimationFrame(frame);

@@ -1,0 +1,123 @@
+# MarsNav for Windows: builds MarsNav.exe on a clean Windows machine, starts it and checks it, runs every test, and
+# publishes MarsNav-Windows.zip as a release: unzip it on any Windows 10 / 11 PC and double-click MarsNav.exe.
+# The build recipe is tools/build_windows.py, the same one build_exe.bat uses on a PC.
+name: Windows app
+
+on:
+  push:
+    branches: [main, master, "claude/**"]
+    tags: ["v*"]
+    paths-ignore: ["**/*.md", "docs/**", "submission/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests (engine, pipeline, place, closed loop)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        # the app window's packages (pywebview, pythonnet) are Windows-only and not needed by the tests
+        run: |
+          grep -v -E "^(pywebview|pythonnet)" requirements.txt > requirements-ci.txt
+          python -m pip install -r requirements-ci.txt
+      - name: Engine and closed-loop tests
+        run: node --test tests/*.test.mjs
+      - name: Pipeline, downloader, science-atlas and place tests
+        run: python -m pytest tests -q
+      # validation/validate.mjs and rover_case_study.mjs need the raw NASA inputs listed in docs/04 (data_cache), which a
+      # clean machine does not have; the closed-loop campaign is self-contained
+      - name: Closed-loop campaign (40 paired EVAs)
+        run: node validation/closed_loop_campaign.mjs
+
+  build:
+    name: Build MarsNav.exe
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install the build environment
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller pyinstaller-hooks-contrib
+      - name: Build MarsNav.exe and the portable zip
+        run: python tools/build_windows.py --portable
+      - name: Start the built program and check every page and API
+        run: python tools/smoke_exe.py dist/MarsNav/MarsNav.exe
+      - name: The program's own self-test under load (kills a worker and the server on purpose)
+        shell: cmd
+        run: |
+          cd dist\MarsNav
+          start "" /wait MarsNav.exe --selftest
+          set RC=%ERRORLEVEL%
+          type data_cache\selftest.txt
+          exit /b %RC%
+      - name: Keep the download
+        uses: actions/upload-artifact@v4
+        with:
+          name: MarsNav-Windows
+          path: dist/MarsNav-Windows.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 90
+      - name: Keep the test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-logs
+          path: |
+            dist/MarsNav/smoke_exe.log
+            dist/MarsNav/data_cache/selftest.txt
+            dist/MarsNav/data_cache/server.log
+          if-no-files-found: ignore
+
+  release:
+    name: Publish the download
+    needs: [tests, build]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: MarsNav-Windows
+          path: out
+      - name: Release MarsNav-Windows.zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(python3 -c "import re;print(re.search(r'VERSION = \"([^\"]+)\"', open('tools/build_windows.py').read()).group(1))")
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then TAG="$GITHUB_REF_NAME"; else TAG="v$VERSION"; fi
+          SIZE=$(du -m out/MarsNav-Windows.zip | cut -f1)
+          cat > notes.md <<EOF
+          **MarsNav $TAG for Windows 10 and 11 (64-bit).** Built and tested on a clean Windows machine from commit ${GITHUB_SHA::7} (${GITHUB_REF_NAME}).
+
+          1. Download **MarsNav-Windows.zip** below (${SIZE} MB).
+          2. Unzip it anywhere you can save files: Desktop, Documents, D:\\, a USB stick. Keep the whole MarsNav folder together.
+          3. Double-click **MarsNav.exe**. Nothing to install: no Python, no admin rights.
+
+          The first time on a new PC, Windows may say "Windows protected your PC" because the program is not code-signed: click **More info**, then **Run anyway**.
+          The window uses Microsoft Edge WebView2, part of Windows 10 and 11. The Jezero EVA planner works offline at once; Landing mode downloads NASA / USGS data the first time it looks at a place (Data > Local mode downloads it all in advance, then Mars mode runs with no internet).
+          EOF
+          # one release per version, always holding the newest tested build of it
+          gh release delete "$TAG" --cleanup-tag --yes 2>/dev/null || true
+          gh release create "$TAG" out/MarsNav-Windows.zip --target "$GITHUB_SHA" --title "MarsNav $TAG for Windows" --notes-file notes.md --latest

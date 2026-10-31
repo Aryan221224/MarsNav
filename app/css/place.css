@@ -1,0 +1,56 @@
+/* The place panel (js/placeview.js): every layer at one point, in Landing mode, the EVA planner and the crew displays.
+   Self-contained: it reads the page's colour and font variables where they exist and falls back to the console theme. */
+:root { --pv-info: #3ccbff; --pv-bad: #ff7470; --pv-warn: #ffc629; --pv-ok: #3ee07e; }
+.pv-sec { border-top: 1px solid var(--line, #2a3646); padding: 10px 16px 12px; font-size: 13px; }
+.pv-sec > h3, .pv-sec > summary { margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  font-family: var(--font-label, "Barlow Condensed", sans-serif); text-transform: uppercase; letter-spacing: .07em; font-size: 13px;
+  color: var(--accent, #d8a57a); font-weight: 600; }
+.pv-sec > summary { cursor: pointer; list-style: none; margin: 0; }
+.pv-sec > summary::-webkit-details-marker { display: none; }
+.pv-sec > summary::before { content: "▸"; color: var(--text-faint, #8d9aab); margin-right: 2px; transition: transform .15s; display: inline-block; }
+.pv-sec[open] > summary { margin-bottom: 8px; }
+.pv-sec[open] > summary::before { transform: rotate(90deg); }
+.pv-sec > h3 small, .pv-sec > summary small { font-family: var(--font-ui, "Barlow", sans-serif); text-transform: none; letter-spacing: 0;
+  color: var(--text-faint, #8d9aab); font-weight: 400; font-size: 12px; margin-left: auto; text-align: right; }
+.pv-kv { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: 4px 10px; font-size: 13px; }
+.pv-kv > span:nth-child(odd) { color: var(--text-dim, #b8c2ce); }
+.pv-kv > span:nth-child(even) { font-family: var(--font-data, "IBM Plex Mono", monospace); font-size: 12.5px; overflow-wrap: anywhere; }
+.pv-kv a { color: var(--accent-2, #e8bd97); }
+.pv-lbl { font-family: var(--font-label, "Barlow Condensed", sans-serif); text-transform: uppercase; letter-spacing: .07em; font-size: 12px;
+  color: var(--text-dim, #b8c2ce); margin: 8px 0 3px; font-weight: 600; }
+.pv-lbl:first-child { margin-top: 0; }
+.pv-hint { font-size: 12px; color: var(--text-faint, #8d9aab); margin: 6px 0 0; }
+.pv-na { color: var(--text-faint, #8d9aab); font-family: var(--font-ui, "Barlow", sans-serif); font-size: 12px; }
+.pv-ok { color: var(--pv-ok); } .pv-warn { color: var(--pv-warn); } .pv-bad { color: var(--pv-bad); }
+p.pv-warn, p.pv-bad { margin: 6px 0 0; font-size: 12.5px; }
+.pv-meter, .pv-rel, .pv-obj { display: grid; grid-template-columns: 92px 1fr 72px; gap: 8px; align-items: center; font-size: 12.5px; margin: 4px 0; }
+.pv-obj { grid-template-columns: minmax(0, 1fr) 70px 34px; }
+.pv-obj > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pv-meter .tr, .pv-rel .tr, .pv-obj .tr { height: 8px; background: var(--line, #2a3646); border-radius: 4px; position: relative; overflow: hidden; }
+.pv-meter .tr i { position: absolute; top: 0; bottom: 0; left: 50%; }
+.pv-meter .tr b { position: absolute; top: -2px; bottom: -2px; left: 75%; width: 1px; background: var(--text-faint, #8d9aab); }
+.pv-rel .tr i, .pv-obj .tr i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #5a3cd6, #3c8cff, #36d2b4, #a6e04a, #ffd23c, #ff5a3c); }
+.pv-obj .tr i { background: var(--accent, #d8a57a); }
+.pv-rel .tr.tri { display: flex; flex-direction: column; gap: 1px; background: none; height: 11px; }
+.pv-rel .tr.tri i { position: static; display: block; height: 3px; background: var(--text-dim, #b8c2ce); border-radius: 2px; }
+.pv-meter .n, .pv-rel .n, .pv-obj .n { font-family: var(--font-data, "IBM Plex Mono", monospace); text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-src { margin: 0; padding-left: 16px; font-size: 12px; color: var(--text-faint, #8d9aab); display: flex; flex-direction: column; gap: 3px; }
+.pv-loading { padding: 10px 16px; font-size: 13px; color: var(--text-faint, #8d9aab); }
+
+/* ------------------------------------------------------------------ the EVA planner's place card (over the map) */
+.placecard { position: absolute; top: 10px; left: 66px; z-index: 4; width: min(400px, calc(100% - 330px)); min-width: 280px;
+  max-height: calc(100% - 64px); overflow-y: auto; background: rgba(13, 18, 25, 0.97); border: 1px solid var(--line-2, #3a4a5e);
+  border-radius: var(--r, 6px); box-shadow: 0 8px 28px #0009; color: var(--text, #f2f5f8); }
+.placecard .pc-head { position: sticky; top: 0; z-index: 1; background: rgba(13, 18, 25, 0.98); padding: 10px 12px 8px 16px;
+  border-bottom: 1px solid var(--line, #2a3646); display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; }
+.placecard .pc-name { font-family: var(--font-label, "Barlow Condensed", sans-serif); font-weight: 700; font-size: 17px; letter-spacing: .05em; }
+.placecard .pc-sub { grid-column: 1; font-family: var(--font-data, monospace); font-size: 12px; color: var(--text-dim, #b8c2ce); }
+.placecard .pc-btns { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.placecard .pc-x { grid-row: 1; grid-column: 2; background: none; border: 1px solid var(--line, #2a3646); color: var(--text-dim, #b8c2ce);
+  border-radius: 4px; cursor: pointer; font-size: 16px; line-height: 1; padding: 3px 8px; }
+.placecard .pc-veto { color: var(--pv-bad); font-weight: 600; }
+.placecard .pv-group { margin: 0; padding: 10px 16px 2px; border-top: 2px solid var(--line-2, #3a4a5e); font-family: var(--font-label, "Barlow Condensed", sans-serif);
+  text-transform: uppercase; letter-spacing: .08em; font-size: 13.5px; color: var(--accent-2, #e8bd97); }
+.placecard .pc-pov { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.placecard .pc-pov img { width: 100%; border-radius: 4px; display: block; }
+@media (max-width: 900px) { .placecard { left: 10px; right: 10px; width: auto; top: 64px; } }

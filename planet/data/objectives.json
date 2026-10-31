@@ -1,0 +1,431 @@
+{
+ "note": "Science objectives for a crewed Mars surface mission, after the MEPAG goals (I life, II climate, III geology, IV preparation for human exploration). Each lists the map layers that show it, the catalogued features that count as evidence (planet/features.py), and example places (IAU gazetteer centres or rover positions). 'evidence' weights score a place by the features within 100 km: weight * log2(1 + count).",
+ "objectives": [
+  {
+   "id": "life",
+   "goal": "I. Life",
+   "title": "Ancient life in lakes and deltas",
+   "question": "Did life ever arise on Mars? Look where water stood long enough to leave clays, carbonates, silica and salts.",
+   "why_humans": "A geologist on foot reads an outcrop in minutes, picks the one layer worth coring, and adapts the plan the same afternoon.",
+   "layers": [
+    "f_aqueous",
+    "f_hydrous",
+    "f_valleys",
+    "f_fans",
+    "f_chlorides",
+    "geology"
+   ],
+   "evidence": [
+    [
+     "aqueous",
+     "Phyllosilicates",
+     1.0
+    ],
+    [
+     "aqueous",
+     "Carbonates",
+     2.0
+    ],
+    [
+     "aqueous",
+     "Hydrated silica",
+     1.5
+    ],
+    [
+     "hydrous",
+     "*",
+     0.7
+    ],
+    [
+     "chlorides",
+     "*",
+     1.2
+    ],
+    [
+     "valleys",
+     "*",
+     0.6
+    ],
+    [
+     "fans",
+     "*",
+     1.0
+    ]
+   ],
+   "examples": [
+    {
+     "name": "Jezero crater western delta",
+     "lon": 77.365,
+     "lat": 18.505,
+     "why": "Perseverance's Cheyava Falls rock (2024) holds a potential biosignature; the delta and lake sediments are the planner's own site."
+    },
+    {
+     "name": "Oxia Planum",
+     "lon": -25.71,
+     "lat": 17.28,
+     "why": "Ancient clays chosen for ESA's Rosalind Franklin rover and its 2 m drill."
+    },
+    {
+     "name": "Mawrth Vallis",
+     "lon": -16.973,
+     "lat": 22.43,
+     "why": "Some of the thickest clay-rich layers on Mars."
+    },
+    {
+     "name": "Eberswalde crater",
+     "lon": -33.297,
+     "lat": -23.975,
+     "why": "A preserved river delta seen from orbit."
+    }
+   ],
+   "at_stations": "Look for fine layering, colour changes and nodules; core the finest-grained mudstone; keep samples shaded and sealed.",
+   "safety": "Delta fronts are steep and layered: watch the slope and cliff layers; plan cores at the base of outcrops."
+  },
+  {
+   "id": "boxwork",
+   "goal": "I. Life / III. Geology",
+   "title": "Groundwater and the boxwork of Mount Sharp",
+   "question": "How long did water flow underground after the surface dried? Boxwork ridges are fractures that groundwater filled with minerals, now standing proud.",
+   "why_humans": "Ridges 1-2 m high with sandy hollows between: a crew can walk ridge and hollow, sample both, and see the network's shape that a rover maps one stop at a time.",
+   "layers": [
+    "f_aqueous",
+    "f_hydrous",
+    "f_traverses",
+    "f_dunes",
+    "gravity"
+   ],
+   "evidence": [
+    [
+     "aqueous",
+     "Sulfates",
+     1.5
+    ],
+    [
+     "aqueous",
+     "Phyllosilicates",
+     0.6
+    ],
+    [
+     "hydrous",
+     "*",
+     0.6
+    ],
+    [
+     "traverses",
+     "Curiosity",
+     1.0
+    ]
+   ],
+   "examples": [
+    {
+     "name": "Mount Sharp boxwork unit (Curiosity, 2025-2026)",
+     "lon": 137.384,
+     "lat": -4.811,
+     "site": "g_4p811s_137p384e",
+     "why": "Curiosity explored it from sol 4534 (May 2025): drill holes Altadena, Valle de la Luna (hollow) and Nevado Sajama (ridge), then Atacama and Campo Marte in the sulfate unit above. Built as an EVA site."
+    }
+   ],
+   "at_stations": "Pair every ridge sample with a hollow sample; photograph the ridge network from a high point; note vein colour and hardness.",
+   "safety": "Sandy hollows are soft ground (the sand layer); ridges are narrow: walk the hollow floors, step up to sample."
+  },
+  {
+   "id": "ice",
+   "goal": "IV. Human preparation / II. Climate",
+   "title": "Water ice: drinking water, propellant and climate record",
+   "question": "Where is ice within reach of a drill or a shovel, and what does its layering say about recent climate?",
+   "why_humans": "Ice is the resource that makes a long stay possible: water, oxygen and rocket propellant from the ground.",
+   "layers": [
+    "ice",
+    "grs",
+    "f_glacial",
+    "f_active",
+    "ti"
+   ],
+   "evidence": [
+    [
+     "glacial",
+     "*",
+     1.2
+    ],
+    [
+     "active",
+     "exposed ice",
+     2.5
+    ],
+    [
+     "gullies",
+     "pole-facing",
+     0.3
+    ]
+   ],
+   "data_terms": [
+    [
+     "ice",
+     1.5
+    ],
+    [
+     "grs_h2o",
+     0.08
+    ]
+   ],
+   "examples": [
+    {
+     "name": "Arcadia Planitia",
+     "lon": -171.85,
+     "lat": 49.02,
+     "why": "Shallow ice consistent with every orbital dataset (SWIM); Starship candidate sites."
+    },
+    {
+     "name": "Deuteronilus Mensae",
+     "lon": 23.918,
+     "lat": 45.109,
+     "why": "Debris-covered glaciers around mesas: ice under a metre or two of rock."
+    },
+    {
+     "name": "Phlegra Montes",
+     "lon": 163.714,
+     "lat": 40.397,
+     "why": "Glacier-like forms and ice-rich mantles at mid-latitude."
+    },
+    {
+     "name": "Utopia Planitia",
+     "lon": 117.517,
+     "lat": 46.736,
+     "why": "Scalloped terrain over buried ice; Viking 2 saw surface frost; a Tianwen-3 candidate region."
+    }
+   ],
+   "at_stations": "Trench or drill below the dry layer; log depth to ice; keep ice cores frozen.",
+   "safety": "Ice-rich ground is cold and shaded slopes stay frozen: budget heater power; avoid scarps that expose ice (unstable)."
+  },
+  {
+   "id": "activity",
+   "goal": "II. Climate / planetary protection",
+   "title": "Mars today: active slopes, new craters and Special Regions",
+   "question": "What changes on Mars now? Recurring slope lineae, active gullies and new impacts.",
+   "why_humans": "Crews can watch a slope change over a season, but must not contaminate places where liquid water might occur: COSPAR Special Regions.",
+   "layers": [
+    "f_active",
+    "f_gullies",
+    "f_dunes"
+   ],
+   "evidence": [
+    [
+     "active",
+     "*",
+     1.0
+    ],
+    [
+     "gullies",
+     "*",
+     0.4
+    ]
+   ],
+   "examples": [
+    {
+     "name": "Garni crater (Valles Marineris)",
+     "lon": -69.689,
+     "lat": -11.516,
+     "why": "Recurring slope lineae on the crater walls."
+    },
+    {
+     "name": "Palikir crater",
+     "lon": -157.858,
+     "lat": -41.573,
+     "why": "Recurring slope lineae near Newton crater."
+    },
+    {
+     "name": "Coprates Chasma",
+     "lon": -60.739,
+     "lat": -13.365,
+     "why": "Many RSL slopes in Valles Marineris."
+    }
+   ],
+   "at_stations": "Observe from outside the feature with long-range cameras; sample only after a planetary-protection review.",
+   "safety": "RSL slopes are steep (25-40 deg): no-go for walking. The planner flags RSL within 300 km of a site."
+  },
+  {
+   "id": "volcanism",
+   "goal": "III. Geology",
+   "title": "Volcanoes, crust and the planet's interior",
+   "question": "How did the crust form and change? Unaltered lavas, crustal chemistry and the gravity of buried mass.",
+   "why_humans": "Sampling a lava sequence bed by bed, and placing seismometers, is classic field geology.",
+   "layers": [
+    "tes_cpx",
+    "tes_plag",
+    "grs_k",
+    "grs_th",
+    "gravity",
+    "geology"
+   ],
+   "evidence": [],
+   "data_terms": [
+    [
+     "gravity_abs",
+     0.004
+    ]
+   ],
+   "examples": [
+    {
+     "name": "Syrtis Major Planum",
+     "lon": 67.103,
+     "lat": 9.201,
+     "why": "Dust-free volcanic plain: the highest pyroxene and plagioclase in TES."
+    },
+    {
+     "name": "Nili Patera",
+     "lon": 67.167,
+     "lat": 8.969,
+     "why": "Caldera with hydrothermal silica and active dunes."
+    },
+    {
+     "name": "Cerberus Fossae",
+     "lon": 166.374,
+     "lat": 11.277,
+     "why": "Young fissures: the source of the marsquakes InSight recorded."
+    },
+    {
+     "name": "Arsia Mons",
+     "lon": -120.093,
+     "lat": -8.257,
+     "why": "A Tharsis shield volcano: among the strongest gravity anomalies on Mars."
+    }
+   ],
+   "at_stations": "Sample each flow with its contact; measure orientation of layers; deploy seismic and heat-flow instruments.",
+   "safety": "High volcanoes have thin air: more radiation (cosmic-ray layer), weaker aerobraking for landers."
+  },
+  {
+   "id": "climate",
+   "goal": "II. Climate",
+   "title": "Climate history in layers and glaciers",
+   "question": "How did Mars go from wet to dry? Read it in layered sediments, polar deposits and glaciers.",
+   "why_humans": "Measuring a stratigraphic column metre by metre, with context, is what field geologists do best.",
+   "layers": [
+    "f_glacial",
+    "f_valleys",
+    "f_fans",
+    "geology",
+    "ice"
+   ],
+   "evidence": [
+    [
+     "glacial",
+     "*",
+     1.0
+    ],
+    [
+     "valleys",
+     "*",
+     0.8
+    ],
+    [
+     "fans",
+     "*",
+     1.0
+    ],
+    [
+     "aqueous",
+     "Sulfates",
+     0.6
+    ]
+   ],
+   "examples": [
+    {
+     "name": "Aeolis Mons (Mount Sharp)",
+     "lon": 137.845,
+     "lat": -5.083,
+     "why": "5 km of layered rock spanning the wet-to-dry change."
+    },
+    {
+     "name": "Medusae Fossae",
+     "lon": -164.196,
+     "lat": -2.166,
+     "why": "Wind-carved layered deposits rich in chlorine (GRS)."
+    },
+    {
+     "name": "Protonilus Mensae",
+     "lon": 48.864,
+     "lat": 43.869,
+     "why": "Glaciers that flowed from mesas: a recent climate record."
+    }
+   ],
+   "at_stations": "Measure layer thickness and dip; sample at regular intervals; photograph with scale.",
+   "safety": "Layered mesas have cliffs: the planner's cliff stand-off grows with position error."
+  },
+  {
+   "id": "resources",
+   "goal": "IV. Human preparation",
+   "title": "A place to live: water, sunlight, low radiation, firm ground",
+   "question": "Where can a crew live for months? Water nearby, enough sunlight for power, more air overhead for shielding, and no thick dust.",
+   "why_humans": "This is the hub itself: Landing mode screens it against NASA's criteria.",
+   "layers": [
+    "ice",
+    "grs",
+    "gcr",
+    "sunlight",
+    "dci",
+    "ti"
+   ],
+   "evidence": [
+    [
+     "glacial",
+     "*",
+     0.8
+    ],
+    [
+     "active",
+     "exposed ice",
+     1.5
+    ],
+    [
+     "hydrous",
+     "*",
+     0.4
+    ]
+   ],
+   "data_terms": [
+    [
+     "ice",
+     1.2
+    ],
+    [
+     "grs_h2o",
+     0.06
+    ],
+    [
+     "gcr_low",
+     1.0
+    ],
+    [
+     "sun",
+     1.0
+    ],
+    [
+     "dust_penalty",
+     1.0
+    ]
+   ],
+   "examples": [
+    {
+     "name": "Arcadia Planitia",
+     "lon": -171.85,
+     "lat": 49.02,
+     "why": "Ice and low elevation (more air): a leading Starship and human candidate."
+    },
+    {
+     "name": "Hellas Planitia",
+     "lon": 70.502,
+     "lat": -42.43,
+     "why": "The deepest basin: the most air overhead on Mars. At the IAU centre the model gives about 7 % less cosmic-ray dose than at Gale, more on the deepest floor."
+    },
+    {
+     "name": "Jezero crater",
+     "lon": 77.687,
+     "lat": 18.408,
+     "why": "Low latitude sunlight and Perseverance's samples; ice is farther away."
+    }
+   ],
+   "at_stations": "Survey regolith for building, measure dust and ice; set up the habitat where the lander can come down safely.",
+   "safety": "Every candidate still needs HiRISE 1 m coverage of the landing ellipse before commitment (the dossier says where it exists)."
+  }
+ ]
+}

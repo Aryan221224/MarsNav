@@ -38,3 +38,16 @@ What MarsNav does not do, what it assumes, and what we do not claim.
 - **Sortie optimiser.** Exact (Held-Karp) up to 15 candidates on the coarse time field with a 15 % hold-back; beyond that the QUBO path came within 1.7 % of optimal on average on 15-station tests (docs/11).
 - **Sites without MEDA.** These reuse a reference climatology with a hydrostatic pressure correction; a real site would add its own or a Mars Climate Database extraction.
 - **Service worker.** It caches data on first use; a crew tablet must load each site once on the habitat network before going out of range.
+
+## Added for the 2026 statement (docs/12)
+
+- **Space weather is an advisory, not a forecast.** NASA DONKI watches the Sun from the Earth side; the storm / watch rule is ours and stated on screen. The parser is tested on DONKI's documented record shapes; a live answer could not be fetched from the development network (rate-limited demo key).
+- **The cosmic-ray map is a model.** It moves Curiosity's RAD value at Gale by the dose-pressure slope RAD measured between about 700 and 950 Pa; outside 600-1100 Pa it is flagged as extrapolated. Solar particle events are not in it.
+- **TES mineral maps are the published colour maps** (Trek tiles, 4 px/deg): relative abundance, no value at a point.
+- **Feature catalogues are published surveys** with their own completeness limits (for example, dune fields under about 1 km² are not mapped; gullies were surveyed in CTX over about 85 % of the planet). Absence on the map is not absence on the ground.
+- **Science-objective scores** count catalogued evidence within 100 km; they rank candidates for a first look, they are not a science case.
+- **Mission status** is as reported on 28 October 2026 and changes; time-sensitive entries cite a source.
+- **No crustal magnetic field layer:** no openly licensed global grid was available.
+- **Point-of-view photos are raw rover images** from where the rover stood (Perseverance: at that exact localisation; Curiosity: on sols it stood there all day). They are not calibrated or mosaicked, and the rover's camera is at about 2 m, not a suited crew's eye height.
+- **Mount Sharp boxwork site:** with dead-reckoning-class navigation most of the site is out of reach behind cliff stand-offs; the hub is a forward camp (pressurised rover) because the foothills are no place for a lander. The Monte Grande drill pair stays unreachable: its hollow is ringed by ridge walls that the 10 m map treats as cliffs.
+- **The crew displays** use a BroadcastChannel, so they run in the same browser (or app) as the planner. A display on another device would read the plan uplink (`/api/tss/plan`), which carries the route but not every snapshot.

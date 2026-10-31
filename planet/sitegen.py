@@ -88,8 +88,16 @@ def build(lon: float, lat: float, km: float = 10.0, lander: str = "human", name:
     log(f"site {sid} ({label}): {km:.0f} km operations area, regional {2 * reg_half / 1000:.0f} km")
     # ------------------------------------------------------------------ regional DEM (finest available)
     from affine import Affine
-    ctx_items = catalog.query("ctx", *reg, limit=40)
-    ops_ctx = catalog.query("ctx", *ops, limit=40)
+    ctx_items = catalog.query("ctx", *reg, limit=120)
+    ops_ctx = catalog.query("ctx", *ops, limit=120)
+
+    def box_overlap(it, box):
+        bw, bs, be, bn = it["bbox"]
+        return max(0.0, min(be, box[2]) - max(bw, box[0])) * max(0.0, min(bn, box[3]) - max(bs, box[1]))
+    # the DTMs that cover most of the operations area first (then the regional box): a catalogue often lists many stereo
+    # pairs that share one image and the same ground, and reading those first leaves the operations area on MOLA
+    ctx_items.sort(key=lambda it: (box_overlap(it, ops), box_overlap(it, reg)), reverse=True)
+    ops_ctx.sort(key=lambda it: box_overlap(it, ops), reverse=True)
     res = 20.0 if ops_ctx else 100.0
     x0, y1 = mars_geo.lonlat_to_xy(reg[0], reg[3])
     x1, y0 = mars_geo.lonlat_to_xy(reg[2], reg[1])
@@ -128,7 +136,7 @@ def build(lon: float, lat: float, km: float = 10.0, lander: str = "human", name:
     ctx_used = []
     if ctx_items:
         acc = np.full(blend.shape, np.nan, np.float32)
-        for it in ctx_items[:16]:
+        for it in ctx_items[:24]:
             try:
                 a = cog.read_grid(it["dtm"], wkt, T, nx, ny)
             except Exception as e:  # noqa: BLE001
@@ -187,7 +195,7 @@ def build(lon: float, lat: float, km: float = 10.0, lander: str = "human", name:
     onx, ony = int(math.ceil((ix1 - ocx0) / 5)) + 40, int(math.ceil((ocy1 - iy1) / 5)) + 40
     OT = Affine(5.0, 0, ocx0, 0, -5.0, ocy1)
     omos = np.full((ony, onx), np.nan, np.float32)
-    for it in ops_ctx[:12]:
+    for it in ops_ctx[:16]:
         if not it.get("ortho"):
             continue
         try:

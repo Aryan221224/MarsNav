@@ -237,3 +237,14 @@ test("robotic scout slows in cluttered terrain (AutoNav); crews and the crew rov
   pg.speedF = f;
   near(e1.t / e0.t, 1 / f[v], 1e-6, "time ratio");
 });
+
+test("terrain windows for the 3D views (planner worker and visor): every step-th cell, the regional grid whole", () => {
+  const g = T.grid, e = T.f32("elev_dm");
+  const w = T.elevWindow({ r0: 100, c0: 200, r1: 160, c1: 290, step: 3 });
+  assert.equal(w.nr, 21); assert.equal(w.nc, 31); assert.equal(w.z.length, 21 * 31);
+  for (const [i, j] of [[0, 0], [20, 30], [7, 11]]) assert.equal(w.z[i * w.nc + j], e[(100 + 3 * i) * g.width + 200 + 3 * j]);
+  const R = T.regionalWindow({ step: 2 }), rg = T.regGrid, re = T.f32("reg_elev_dm");
+  assert.deepEqual(R.grid, rg.toJSON());
+  assert.equal(R.nr, Math.floor((rg.height - 1) / 2) + 1); assert.equal(R.nc, Math.floor((rg.width - 1) / 2) + 1);
+  assert.equal(R.z[R.nc + 1], re[2 * rg.width + 2]);
+});

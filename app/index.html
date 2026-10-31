@@ -9,6 +9,7 @@
 <link rel="icon" type="image/png" href="favicon-64.png">
 <link rel="apple-touch-icon" href="logo-192.png">
 <link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/place.css">
 <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
@@ -33,6 +34,7 @@
     <div class="item p1"><span class="lbl">Sun elev</span><span class="v" id="ckSun">--</span></div>
     <div class="item p3"><span class="lbl">Ls</span><span class="v" id="ckLs">--</span></div>
     <div class="item p2" title="One-way radio light time Earth to Mars (JPL approximate planetary positions)"><span class="lbl">Earth delay</span><span class="v" id="ckLight">--</span></div>
+    <button class="item p2 swx" id="ckSwxBox" hidden title="Space weather at Mars from NASA DONKI (CME arrivals, solar particle events): click for details"><span class="lbl">Space wx</span><span class="v" id="ckSwx">--</span></button>
   </div>
   <div class="status" id="statusBox">
     <span class="pill phase" id="dataPill" title="EVA phase and telemetry source">PRE-EVA</span>
@@ -189,6 +191,12 @@
           <button class="btn" id="btnDrive" title="Open a separate first-person 3D window: walk or drive the route yourself; your movement is the telemetry">Open 3D drive window</button>
         </div>
         <p class="note" id="driveStatus" hidden></p>
+        <div class="lbl" style="margin-top:6px">Crew displays (the same EVA, live)</div>
+        <div class="row displays">
+          <button class="btn" data-display="visor" title="Heads-up display projected on the helmet visor: heading, steering cue, walk-home margin, consumables, alerts">Helmet visor</button>
+          <button class="btn" data-display="rover" title="Rover dashboard: speed, heading, slope ahead, battery and range, route map, alerts">Rover dash</button>
+          <button class="btn" data-display="cuff" title="Wrist cuff tablet: next stop with the rover's photo, procedure checklist, big consumables, acknowledge / pin / return">Wrist cuff</button>
+        </div>
         <div class="row" id="simOpts">
           <label style="flex:1"><span class="lbl">Hidden truth (the software is not told)</span>
             <select id="truthSel"></select></label>
@@ -259,6 +267,7 @@
       <button class="btn" id="zoomFit" aria-label="Fit route">Fit</button>
       <button class="btn" id="btn3d" aria-label="3D view" title="3D terrain view of the route">3D</button>
       <button class="btn" id="btnDrive2" aria-label="Drive window" title="Walk or drive the route yourself in a separate first-person window">Drive</button>
+      <button class="btn" data-display="visor" aria-label="Crew displays" title="Open the crew displays: helmet visor HUD (rover dashboard and wrist cuff from its menu)">HUD</button>
     </div>
     <div class="view3d" id="view3d" hidden>
       <canvas></canvas>
@@ -296,7 +305,8 @@
       <label><input type="checkbox" id="chkAlt" checked> Alternative routes</label>
       </div>
     </div>
-    <div class="readout" id="readout">Move over the map for terrain details.</div>
+    <div class="readout" id="readout">Move over the map for terrain details. Click any point for everything known there.</div>
+    <div class="placecard" id="placeCard" hidden aria-label="Everything at the selected point"></div>
     <div class="legend" id="legend" hidden></div>
     <div class="scale" id="scale"><div class="b" id="scaleBar"></div><span id="scaleTxt"></span></div>
     <div class="busy" id="busy">Loading terrain&hellip;</div>

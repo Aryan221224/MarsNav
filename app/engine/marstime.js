@@ -157,10 +157,10 @@ export function marsContext(ms, lonEast, lat, clock = M2020_CLOCK) {
 
 /** Mars Year numbering (Clancy et al.): MY 1 began at Ls 0 on 11 April 1955. Approximate by MSD. */
 export function marsYear(msd, Ls) {
-  // MY 1 Ls=0 at MSD ~ 12800.6 (1955-04-11); a Mars year is 668.5991 sols.
-  const my = Math.floor((msd - 12800.6) / 668.5991 + 1 + 1e-9);
+  // MY 1 Ls=0 at MSD ~ 28892.7 (1955-04-11, where marsState's Ls passes 0); a Mars year is 668.5991 sols.
+  const my = Math.floor((msd - 28892.7) / 668.5991 + 1 + 1e-9);
   // correct around Ls 0 boundary
-  const frac = mod((msd - 12800.6) / 668.5991, 1);
+  const frac = mod((msd - 28892.7) / 668.5991, 1);
   if (frac < 0.02 && Ls > 300) return my - 1;
   if (frac > 0.98 && Ls < 60) return my + 1;
   return my;

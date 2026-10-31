@@ -21,12 +21,16 @@ The five Space Apps judging criteria, and the evidence in this project for each.
 - **A closed loop with the hardware.** Telemetry teaches the planner how hard the crew is working and how the suit is draining; the forecast re-plans from the crew's real position, waits for certainty unless the margin or a station start forces a decision, and cuts a station short before dropping it.
 - **Mars navigation, not GPS**: an extended Kalman filter fusing dead reckoning, sun heading, landmark map matching and beacon ranging, with its error ellipse on the map.
 - **The crew states the work**: time, intensity, tools and extra consumables per station, budgeted into the whole round trip.
+- **Science first, then the route**: objectives rank every candidate site by the catalogued minerals, ice and activity near it, and the dossier says what lies within 100 km.
+- **Navigation decides access**: at Mount Sharp the same cliffs leave 17 % of the site reachable with dead reckoning and 54 % with an orbital navigation constellation; MarsNav shows why, and puts the hub where a pressurised rover can park.
+- **One EVA, every display**: the planner's closed loop drives a visor HUD, a rover dashboard and a wrist cuff at once, and the cuff's commands act on the loop.
+- **Every layer, any place**: one click anywhere on Mars, or on a built site, shows all the data at that point. That covers ground, ice, minerals, air, water's boiling point, dose, gravity, science and missions nearby, and the local time and sun. The crew displays carry the same facts for the ground under the crew.
 
 ## Validity: is it scientifically and technically sound?
 
 - Validated against Perseverance's own records: sun geometry (0.086° over 5,616 samples), terrain registration (0.2 ± 0.4 m), slope vs chassis tilt (r = 0.72), false no-go (2 %), and hazard agreement with JPL's route choices (21 of 30); the same trips as the rover on 45 drives, with what MarsNav still gets wrong reported (`validation/ROVER_CASE_STUDY.md`).
 - The negative result is reported: route geometry does not beat a straight line against the rover's drives.
-- 78 automated tests (63 engine and loop, 15 pipeline and downloader), including the planner's safety contract on real terrain, navigation-filter consistency (NEES), estimator convergence, the UDP bridge over real sockets, and exact-vs-heuristic station selection.
+- 97 automated tests (63 engine and loop, 34 pipeline, downloader and science atlas), including the planner's safety contract on real terrain, navigation-filter consistency (NEES), estimator convergence, the UDP bridge over real sockets, and exact-vs-heuristic station selection.
 - A paired 40-EVA campaign with a Wilcoxon test: 0 of 40 reserve dips with the closed loop against 31 of 40 without (p < 0.001), with the science cost reported too.
 - A rebuild from raw data is byte-identical.
 - Every constant is tagged by origin (`[SRC]`, `[CALIB]`, `[ASSUME]`, `[PHYS]`), and the limits are stated (docs/08).
@@ -44,6 +48,12 @@ The challenge statement, point by point (docs/06 has the full trace):
 | "complete their mission quickly and safely" | Five named routes under hard limits, walkback margins, caution and warning |
 | "plan and carry out a successful Marswalk" | Plan and Execute modes, with Review after |
 | "conducting new and exciting science along the way" | Real sample sites (including Cheyava Falls), science-value optimiser, procedures |
+| "a location... boxwork formations... Mount Sharp" | The Mount Sharp boxwork EVA site with Curiosity's drill sites; seven science objectives ranking every candidate |
+| "at least three kinds of data" | Optical, thermal, spectral, topographic, geophysical, atmospheric, radiation and chemical layers, whole planet (docs/12) |
+| "include space weather data" | NASA DONKI CME arrivals at Mars, particle events, flares; EVA advisory; dose by altitude |
+| "a heads-up display on the helmet visor... a tablet" | Helmet-visor HUD, rover dashboard, wrist cuff, habitat console |
+| "point-of-view images" | The rover's own photographs from each station |
+| "a map... tool or interface for astronauts" to know a location | Every layer at any point clicked on Mars or on a site (`/api/place`), on screen and on the visor, dashboard and cuff |
 
 ## Presentation: how well is it communicated?
 

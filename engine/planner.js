@@ -17,7 +17,7 @@ import { stationWork } from "./task.js";
 import { WHEEL_DAMAGE } from "./physio.js";
 import { namedWeightSets } from "./ahp.js";
 import { G_MARS, xyToLonLat } from "./geo.js";
-import { evaDoseMSv } from "./sitecheck.js";
+import { evaDoseMSv, routeDoseMSv } from "./sitecheck.js";
 
 const RES_KEYS = ["o2", "co2", "water", "batt", "rbatt"];
 const zeroRes = () => ({ o2: 0, co2: 0, water: 0, batt: 0, rbatt: 0 });
@@ -412,7 +412,7 @@ export class Planner {
       shadeFrac: legs.reduce((a, l) => a + l.ev.shadeFrac * l.ev.dist, 0) / Math.max(1, legs.reduce((a, l) => a + l.ev.dist, 0)),
       losFrac: legs.reduce((a, l) => a + l.ev.losFrac * l.ev.dist, 0) / Math.max(1, legs.reduce((a, l) => a + l.ev.dist, 0)),
       sunsetMs: this.sunsetMs, timeEndS: this.timeEndS,
-      doseMSv: evaDoseMSv(state.t),
+      doseMSv: routeDoseMSv(all) ?? evaDoseMSv(state.t),
       seamCells: legs.reduce((a, l) => a + (l.ev.seamCells || 0), 0),
       // rocky ground: slower, costlier and riskier for boots and wheels alike; wheels also wear (share of life used)
       rockyFrac: legs.reduce((a, l) => a + (l.ev.rockyM || 0), 0) / Math.max(1, legs.reduce((a, l) => a + l.ev.dist, 0)),

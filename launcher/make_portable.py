@@ -38,6 +38,14 @@ KEEP TOGETHER
   Move or copy the whole "MarsNav" folder, never the .exe alone. Put it anywhere you can
   save files (Desktop, Documents, D:\\, a USB drive) - not in C:\\Program Files.
 
+WHAT TO TRY FIRST
+  * Tour (top bar): a two-minute guided walkthrough of the EVA planner.
+  * Landing mode: click anywhere on Mars - every data layer at that point appears
+    (ground, ice, minerals, air, where water boils, radiation, gravity, science, missions).
+  * Science tab: pick a science objective (for example the boxwork of Mount Sharp) and rank every site.
+  * EVA planner, Execute, Run, then HUD: the helmet visor, rover dashboard and wrist cuff follow the EVA.
+  The user guide explains every screen.
+
 INTERNET AND OFFLINE (MARS) USE
   * The Jezero EVA planner works fully offline from the data included here.
   * Landing mode streams whole-planet data from NASA / USGS the first time you look at a
@@ -48,6 +56,9 @@ INTERNET AND OFFLINE (MARS) USE
 WHERE THINGS ARE
   data_cache\\     everything the app downloads or builds (maps, tiles, Local mode data, logs)
   MarsNav_User_Guide.pdf   the user guide (also Help > User guide)
+
+NEWER VERSIONS
+  https://github.com/Aryan221224/MarsNav/releases/latest
 
 REQUIREMENTS
   Windows 10 or 11, 64-bit, 4 GB RAM (8 GB recommended), about 600 MB of disk plus room for data.
@@ -77,7 +88,7 @@ def _copytree(src: Path, dst: Path) -> int:
 
 def main() -> int:
     build, root = Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve()
-    version = sys.argv[3] if len(sys.argv) > 3 else "2.0.0"
+    version = sys.argv[3] if len(sys.argv) > 3 else "2.1.0"
     exe = build / "MarsNav.exe"
     if not exe.exists():
         print(f"make_portable: {exe} not found")

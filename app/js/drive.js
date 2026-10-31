@@ -301,6 +301,7 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyM") S.miniZoom = (S.miniZoom + 1) % 3;
   if (e.code === "KeyP") $("panel").classList.toggle("min");
   if (e.code === "KeyC") cycleCamera();
+  if (e.code === "KeyH") toggleVisor();
   if (e.code === "KeyV") { S.yaw = S.profile === "rover" ? 0 : S.yaw; S.pitch = -0.05; }
 });
 // selects and sliders give the keyboard back to the view as soon as they are used
@@ -581,7 +582,7 @@ function frame(now) {
   requestAnimationFrame(frame);
   const dtWall = Math.min(0.1, (now - last) / 1000);
   last = now;
-  if (!S.T) { renderer.render(scene, camera); return; }
+  if (!S.T || !S.env) { renderer.render(scene, camera); return; }   // the terrain arrives before its climate file
   stepPlayer(dtWall);
   sendTelemetry(now);
   lodTimer += dtWall;
@@ -750,3 +751,17 @@ CH.onmessage = async (ev) => {
 const hello = () => { if (!S.T) { CH.postMessage({ type: "hello" }); setTimeout(hello, 2000); } };
 hello();
 setTimeout(() => { if (!S.T) $("status").innerHTML = '<span class="warn">No main MarsNav window answered. Open this window from MarsNav (Execute → Open 3D drive window).</span>'; }, 6000);
+
+// Helmet visor: the crew display (hud.html, visor mode) drawn see-through over the first-person view, the way a
+// heads-up display sits on the helmet. It follows the planner's closed loop like the separate display window does.
+function toggleVisor() {
+  let f = $("visorFrame");
+  if (f) { f.remove(); document.body.classList.remove("visor-on"); return; }
+  f = document.createElement("iframe");
+  f.id = "visorFrame";
+  f.title = "Helmet visor HUD";
+  f.src = new URL("../hud.html?mode=visor&overlay=1", import.meta.url).href;
+  f.setAttribute("allowtransparency", "true");
+  document.body.appendChild(f);
+  document.body.classList.add("visor-on");
+}

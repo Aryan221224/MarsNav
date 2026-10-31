@@ -75,10 +75,22 @@ Layer format: gzip-compressed little-endian uint8/uint16 arrays with a scale and
 ## App (`app/`)
 
 - `worker.js` holds one copy of the terrain and all models in a module Web Worker, so planning never freezes the map. The UI gets images, route summaries and snapshots through messages.
-- `view3d.js` is the 3D view (three.js, vendored so it works offline). The local terrain is the 10 m DEM around the route, draped with the orthoimage, the 2 m HiRISE relief and the active overlay. The far terrain is the whole-crater DEM, so the helmet view's skyline is the real crater rim. Mars curvature is applied, the scale is true by default, and the sun is at its real position for the departure time. "Walk route" moves a 1.8 m eye along the route with the plan's time, grade, walk-home time and margin at each point.
+- `view3d.js` is the 3D view (three.js, vendored so it works offline). The local terrain is the 10 m DEM around the route, draped with the orthoimage, the 2 m HiRISE relief and the active overlay. The far terrain is the whole-crater DEM, so the helmet view's skyline is the real crater rim. Mars curvature is applied, the scale is true by default, and the sun is at its real position for the departure time. "Walk route" moves a 1.8 m eye along the route with the plan's time, grade, walk-home time and margin at each point. The crew displays use the same view behind the helmet visor ("crew" mode: the eye follows the crew's position and heading, the routes are painted on the ground), loading only the two elevation layers (`Terrain.elevWindow` and `regionalWindow`, shared with the worker) and the orthoimage.
 - `map.js` draws on a canvas. It shows the orthoimage, 2 m HiRISE tiles when zoomed in, overlays, and the route with a white core, dark casing and violet 2σ corridor, plus chevrons, keep-outs, pins, crew, and the return route.
 - `index.html` and `css/app.css` implement the NASA-informed display: a dark theme, colours reserved for status (red, amber, green, cyan), violet for uncertainty, fixed-width digits and units everywhere.
 - `sw.js` caches the app shell and each file on first use, so a standalone deployment works with no network. It is skipped when the app is embedded in a viewer that does not allow service workers.
+
+## Added for the 2026 statement
+
+| Module | Responsibility |
+|---|---|
+| `planet/features.py` | The bundled feature catalogues (minerals, ice landforms, activity, dunes, valleys, landers, traverses): drawing on tiles, radius queries, the "science along the way" context and the planetary-protection flag |
+| `planet/atlas.py` | TES mineral and dust maps and MOLA roughness from Mars Trek; model layers for air pressure, cosmic-ray dose and sunlight; the layer catalogue grouped by kind of measurement |
+| `planet/datasets.py` (extended) | GRS elements, TES albedo, MRO GMM-3 gravity (spherical harmonics summed on a 0.25° grid) |
+| `planet/science.py` | Mission catalogue and science objectives; scores and ranks places by the evidence near them |
+| `planet/spaceweather.py` | NASA DONKI client, offline cache, Sun-Earth-Mars geometry and the EVA advisory |
+| `app/hud.html`, `app/js/hud.js` | Crew displays: helmet visor HUD, rover dashboard, wrist cuff, fed by the planner over a BroadcastChannel |
+| `tools/build_features.py`, `tools/build_pov.py`, `tools/add_rover_context.py` | Rebuild the bundled catalogues, the station photographs, and a site's rover context (traverse, stations, keep-out, clock) |
 
 ## Performance (one 2.1 GHz Xeon core, Node 22)
 

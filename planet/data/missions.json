@@ -1,0 +1,502 @@
+{
+ "as_of": "2026-10-28",
+ "note": "Status as reported by NASA, ESA, JAXA and press sources listed per mission, checked on the as_of date. Positions: landers from NASA Mars Trek waypoints (HiRISE-located) or NASA/JPL rover feeds; future landing regions are IAU gazetteer centres, not final ellipses.",
+ "missions": [
+  {
+   "id": "viking1",
+   "name": "Viking 1 lander",
+   "agency": "NASA",
+   "kind": "lander",
+   "status": "ended",
+   "years": "1976-1982",
+   "site": {
+    "name": "Chryse Planitia",
+    "lon": -47.952,
+    "lat": 22.272
+   },
+   "science": "First successful Mars landing; biology experiments; 6 years of weather.",
+   "data_in_marsnav": "Viking orbiter colour mosaic (MDIM 2.1) is the colour base map of the globe.",
+   "for_crews": "The first surface weather record; the soil chemistry crews will handle."
+  },
+  {
+   "id": "viking2",
+   "name": "Viking 2 lander",
+   "agency": "NASA",
+   "kind": "lander",
+   "status": "ended",
+   "years": "1976-1980",
+   "site": {
+    "name": "Utopia Planitia",
+    "lon": 134.28,
+    "lat": 47.667
+   },
+   "science": "Seasonal frost on the surface; second biology test site.",
+   "data_in_marsnav": "Heritage site in Landing mode.",
+   "for_crews": "Seen frost at mid-latitude: ice is near."
+  },
+  {
+   "id": "pathfinder",
+   "name": "Mars Pathfinder and Sojourner",
+   "agency": "NASA",
+   "kind": "rover",
+   "status": "ended",
+   "years": "1997",
+   "site": {
+    "name": "Ares Vallis",
+    "lon": -33.254,
+    "lat": 19.097
+   },
+   "science": "First rover; airbag landing on an outflow-flood plain strewn with rocks.",
+   "data_in_marsnav": "Heritage site.",
+   "for_crews": "A rock-strewn flood plain: what a boulder field looks like up close."
+  },
+  {
+   "id": "spirit",
+   "name": "Spirit (MER-A)",
+   "agency": "NASA",
+   "kind": "rover",
+   "status": "ended",
+   "years": "2004-2010",
+   "site": {
+    "name": "Gusev crater, Columbia Hills",
+    "lon": 175.478,
+    "lat": -14.572
+   },
+   "science": "Hot-spring silica at Home Plate; volcanic rocks of Gusev.",
+   "data_in_marsnav": "Traverse and science stops on the globe (Mars Trek).",
+   "for_crews": "Lost in soft soil at Troy in 2009, ground that looked firm from orbit: why MarsNav prices soft soil by its worst outcomes."
+  },
+  {
+   "id": "opportunity",
+   "name": "Opportunity (MER-B)",
+   "agency": "NASA",
+   "kind": "rover",
+   "status": "ended",
+   "years": "2004-2018",
+   "site": {
+    "name": "Meridiani Planum",
+    "lon": -5.526,
+    "lat": -1.948
+   },
+   "science": "Hematite spherules and sulfates from ancient acidic water; 45 km to Endeavour crater.",
+   "data_in_marsnav": "Traverse and science stops on the globe (Mars Trek).",
+   "for_crews": "Ended by the 2018 global dust storm (solar power): the dust-storm scenario in the planner."
+  },
+  {
+   "id": "phoenix",
+   "name": "Phoenix",
+   "agency": "NASA",
+   "kind": "lander",
+   "status": "ended",
+   "years": "2008",
+   "site": {
+    "name": "Vastitas Borealis",
+    "lon": -125.755,
+    "lat": 68.219
+   },
+   "science": "Dug into water ice a few centimetres down; found perchlorate salts.",
+   "data_in_marsnav": "Heritage site; ice layers (SWIM, GRS).",
+   "for_crews": "Shallow ice is real, and so is perchlorate, a toxicity hazard for crews and suits."
+  },
+  {
+   "id": "msl",
+   "name": "Curiosity (Mars Science Laboratory)",
+   "agency": "NASA",
+   "kind": "rover",
+   "status": "active",
+   "years": "2012-",
+   "site": {
+    "name": "Gale crater, Aeolis Mons (Mount Sharp)",
+    "lon": 137.3876,
+    "lat": -4.8247,
+    "note": "position on sol 5045 (NASA/JPL waypoint feed)"
+   },
+   "science": "A habitable ancient lake; since 2025 the boxwork ridges of Mount Sharp, left by groundwater; 47+ drill samples.",
+   "data_in_marsnav": "RAD surface radiation dose (EVA dose and the cosmic-ray map); the Mount Sharp boxwork EVA site; the traverse to its latest sol; raw camera images.",
+   "for_crews": "The only long radiation record on the surface; the boxwork site is the challenge's own example.",
+   "sources": [
+    "https://mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints.json",
+    "https://science.nasa.gov/mission/msl-curiosity/"
+   ]
+  },
+  {
+   "id": "insight",
+   "name": "InSight",
+   "agency": "NASA",
+   "kind": "lander",
+   "status": "ended",
+   "years": "2018-2022",
+   "site": {
+    "name": "Elysium Planitia",
+    "lon": 135.623,
+    "lat": 4.502
+   },
+   "science": "Marsquakes and the size of the core and crust; the heat-probe mole stalled in cohesive soil.",
+   "data_in_marsnav": "Heritage site; the gravity map shows the crust InSight probed.",
+   "for_crews": "Soil can be stronger than expected too: dig tools must cope with duricrust."
+  },
+  {
+   "id": "m2020",
+   "name": "Perseverance (Mars 2020)",
+   "agency": "NASA",
+   "kind": "rover",
+   "status": "active",
+   "years": "2021-",
+   "site": {
+    "name": "Jezero crater",
+    "lon": 77.2332,
+    "lat": 18.4356,
+    "note": "position on sol 2022 (NASA/JPL waypoint feed)"
+   },
+   "science": "River delta and lake of Jezero; cored samples including Cheyava Falls, a potential biosignature (2024).",
+   "data_in_marsnav": "MEDA weather (the climate model), the traverse, real sample sites as EVA stations, the validation case study, raw camera images.",
+   "for_crews": "The planner's flagship EVA site; terrain-relative navigation landed it inside a hazard field.",
+   "sources": [
+    "https://mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints.json"
+   ]
+  },
+  {
+   "id": "ingenuity",
+   "name": "Ingenuity helicopter",
+   "agency": "NASA",
+   "kind": "helicopter",
+   "status": "ended",
+   "years": "2021-2024",
+   "site": {
+    "name": "Jezero crater",
+    "lon": 77.4509,
+    "lat": 18.4446,
+    "note": "deployed near the Perseverance landing site"
+   },
+   "science": "First powered flight on another planet: 72 flights, scouting routes for the rover.",
+   "data_in_marsnav": "-",
+   "for_crews": "Aerial scouting ahead of a traverse is proven."
+  },
+  {
+   "id": "zhurong",
+   "name": "Tianwen-1 Zhurong rover",
+   "agency": "CNSA",
+   "kind": "rover",
+   "status": "ended",
+   "years": "2021-2022",
+   "site": {
+    "name": "Utopia Planitia",
+    "lon": 109.925,
+    "lat": 25.066
+   },
+   "science": "Ground-penetrating radar of buried layers in southern Utopia; hibernated in May 2022 and did not wake.",
+   "data_in_marsnav": "Heritage site.",
+   "for_crews": "Dust on solar panels ends missions: the dust-cover layer matters."
+  },
+  {
+   "id": "mars3",
+   "name": "Mars 3",
+   "agency": "USSR",
+   "kind": "lander",
+   "status": "ended",
+   "years": "1971",
+   "site": {
+    "name": "Terra Sirenum (probable)",
+    "lon": -157.969,
+    "lat": -45.058
+   },
+   "science": "First soft landing on Mars; signal lost after about 20 seconds.",
+   "data_in_marsnav": "Heritage site.",
+   "for_crews": "-"
+  },
+  {
+   "id": "beagle2",
+   "name": "Beagle 2",
+   "agency": "ESA / UK",
+   "kind": "lander",
+   "status": "lost",
+   "years": "2003",
+   "site": {
+    "name": "Isidis Planitia",
+    "lon": 90.43,
+    "lat": 11.53,
+    "note": "found intact by HiRISE in 2015; its panels did not all open"
+   },
+   "science": "-",
+   "data_in_marsnav": "-",
+   "for_crews": "One stuck deployment ends a mission: why checklists and procedures live in the app."
+  },
+  {
+   "id": "schiaparelli",
+   "name": "Schiaparelli (ExoMars 2016 EDM)",
+   "agency": "ESA",
+   "kind": "lander",
+   "status": "lost",
+   "years": "2016",
+   "site": {
+    "name": "Meridiani Planum",
+    "lon": -6.21,
+    "lat": -2.05,
+    "note": "impact site seen by MRO"
+   },
+   "science": "-",
+   "data_in_marsnav": "-",
+   "for_crews": "Entry, descent and landing are where missions are lost; the landing ellipse is part of the dossier."
+  },
+  {
+   "id": "mgs",
+   "name": "Mars Global Surveyor",
+   "agency": "NASA",
+   "kind": "orbiter",
+   "status": "ended",
+   "years": "1997-2006",
+   "science": "MOLA laser altimetry, TES thermal spectroscopy, magnetic field.",
+   "data_in_marsnav": "MOLA elevation (the datum of every map), MOLA roughness, TES thermal inertia, albedo, minerals and dust index, gravity tracking."
+  },
+  {
+   "id": "odyssey",
+   "name": "2001 Mars Odyssey",
+   "agency": "NASA",
+   "kind": "orbiter",
+   "status": "active (reported operating in July 2026; propellant nearly used up)",
+   "years": "2001-",
+   "science": "THEMIS infrared; GRS gamma-ray and neutron spectrometers; relay for the rovers.",
+   "data_in_marsnav": "THEMIS day / night infrared base maps; GRS water, iron, chlorine, potassium, thorium, silicon; chloride deposits.",
+   "for_crews": "Relay link: fewer relay orbiters means fewer contact windows for a crew.",
+   "sources": [
+    "https://newspaceeconomy.ca/2026/07/24/what-missions-have-been-sent-to-mars/"
+   ]
+  },
+  {
+   "id": "mex",
+   "name": "Mars Express",
+   "agency": "ESA",
+   "kind": "orbiter",
+   "status": "active",
+   "years": "2003-",
+   "science": "HRSC stereo camera, OMEGA mineral spectrometer, MARSIS radar.",
+   "data_in_marsnav": "HRSC + MOLA blended elevation (200 m) and colour relief; OMEGA hydrous-mineral detections.",
+   "sources": [
+    "https://www.theregister.com/science/2026/10/22/veteran-esa-probe-rolls-out-welcome-mat-for-japans-phobos-mission/5304684"
+   ]
+  },
+  {
+   "id": "mro",
+   "name": "Mars Reconnaissance Orbiter",
+   "agency": "NASA",
+   "kind": "orbiter",
+   "status": "active",
+   "years": "2006-",
+   "science": "HiRISE (25 cm), CTX (6 m), CRISM, SHARAD radar, Mars Climate Sounder; main relay.",
+   "data_in_marsnav": "HiRISE and CTX elevation models and images (every EVA site), CRISM mineral detections, recurring slope lineae and new craters, GMM-3 gravity, gullies, glaciers.",
+   "for_crews": "Almost every hazard the planner sees comes from MRO."
+  },
+  {
+   "id": "maven",
+   "name": "MAVEN",
+   "agency": "NASA",
+   "kind": "orbiter",
+   "status": "lost",
+   "years": "2014-2025",
+   "science": "Upper atmosphere, solar wind and atmospheric escape; also a relay.",
+   "data_in_marsnav": "-",
+   "for_crews": "Contact lost on 6 December 2025; NASA ended the mission in mid-2026. One fewer relay and no upper-atmosphere space-weather monitor at Mars.",
+   "sources": [
+    "https://www.planetary.org/articles/nasa-has-lost-a-spacecraft-around-mars",
+    "https://aiaa.org/2026/03/23/nasa-continues-efforts-to-reestablish-contact-with-maven-at-mars/"
+   ]
+  },
+  {
+   "id": "tgo",
+   "name": "ExoMars Trace Gas Orbiter",
+   "agency": "ESA",
+   "kind": "orbiter",
+   "status": "active (reported operating in July 2026)",
+   "years": "2016-",
+   "science": "Trace gases (methane search), FREND neutron map of near-surface water, CaSSIS colour stereo; relay.",
+   "data_in_marsnav": "-",
+   "for_crews": "Relay for Perseverance and Curiosity.",
+   "sources": [
+    "https://newspaceeconomy.ca/2026/07/24/what-missions-have-been-sent-to-mars/"
+   ]
+  },
+  {
+   "id": "hope",
+   "name": "Emirates Mars Mission (Hope)",
+   "agency": "UAE (MBRSC)",
+   "kind": "orbiter",
+   "status": "active (reported operating in July 2026)",
+   "years": "2021-",
+   "science": "Whole-planet weather and dust every few hours from a high orbit.",
+   "data_in_marsnav": "-",
+   "for_crews": "The kind of synoptic weather picture a crew would want each morning.",
+   "sources": [
+    "https://newspaceeconomy.ca/2026/07/24/what-missions-have-been-sent-to-mars/"
+   ]
+  },
+  {
+   "id": "tianwen1",
+   "name": "Tianwen-1 orbiter",
+   "agency": "CNSA",
+   "kind": "orbiter",
+   "status": "active (CNSA: running stably, 20 May 2026)",
+   "years": "2021-",
+   "science": "MoRIC global mosaic, high-resolution camera, subsurface radar.",
+   "data_in_marsnav": "-",
+   "for_crews": "-",
+   "sources": [
+    "https://azmth.space/mars/missions/tianwen-1"
+   ]
+  },
+  {
+   "id": "mom",
+   "name": "Mars Orbiter Mission (Mangalyaan)",
+   "agency": "ISRO",
+   "kind": "orbiter",
+   "status": "ended",
+   "years": "2014-2022",
+   "science": "Colour imaging and atmosphere.",
+   "data_in_marsnav": "-",
+   "for_crews": "-"
+  },
+  {
+   "id": "escapade",
+   "name": "ESCAPADE (two spacecraft)",
+   "agency": "NASA / UC Berkeley / Rocket Lab",
+   "kind": "orbiter",
+   "status": "en route",
+   "years": "launched 2025-11-13; arrival 2027",
+   "science": "Two small orbiters measuring the solar wind and Mars' magnetic environment at the same time.",
+   "data_in_marsnav": "Will give the space-weather picture at Mars itself that crews need for radiation forecasts (DONKI today predicts arrivals from Earth-side data).",
+   "for_crews": "Launched on New Glenn on 13 November 2025, waiting near Earth-Sun L2 to leave for Mars in late 2026; arrival planned for autumn 2027.",
+   "sources": [
+    "https://svs.gsfc.nasa.gov/14915"
+   ]
+  },
+  {
+   "id": "mmx",
+   "name": "Martian Moons eXploration (MMX)",
+   "agency": "JAXA (with CNES, DLR, NASA, ESA)",
+   "kind": "sample return",
+   "status": "en route",
+   "years": "launched 2026-10-20; arrival 2027; return 2031",
+   "site": {
+    "name": "Phobos",
+    "lon": null,
+    "lat": null
+   },
+   "science": "Phobos samples (at least 10 g) back to Earth in 2031; the IDEFIX rover on Phobos.",
+   "data_in_marsnav": "-",
+   "for_crews": "Phobos is a candidate staging point for human missions.",
+   "sources": [
+    "https://www.esa.int/ESA_Multimedia/Images/2026/10/MMX_lifts_off_to_Mars_s_moon_Phobos",
+    "https://www.nippon.com/en/news/yjj2026102000118/"
+   ]
+  },
+  {
+   "id": "mto",
+   "name": "Mars Telecommunications Orbiter",
+   "agency": "NASA (Blue Origin)",
+   "kind": "orbiter",
+   "status": "in development",
+   "years": "delivery by end of 2028; operational by 2030",
+   "science": "High-rate relay network for Mars.",
+   "data_in_marsnav": "-",
+   "for_crews": "Replaces the ageing relay fleet (MAVEN lost, Odyssey near its end): more contact time for surface crews. NASA selected Blue Origin on 1 September 2026.",
+   "sources": [
+    "https://www.globalsecurity.org/space/library/news/2026/space-260901-nasa01.htm"
+   ]
+  },
+  {
+   "id": "rosalind",
+   "name": "ExoMars Rosalind Franklin rover",
+   "agency": "ESA",
+   "kind": "rover",
+   "status": "planned",
+   "years": "launch 2028; landing ~2030",
+   "site": {
+    "name": "Oxia Planum",
+    "lon": -25.71,
+    "lat": 17.28,
+    "note": "IAU centre of Oxia Planum; the landing ellipse lies in the plain"
+   },
+   "science": "A 2 m drill for organics below the radiation-damaged surface, in clay-rich ancient rock.",
+   "data_in_marsnav": "Oxia Planum's clays appear in the aqueous-mineral layer.",
+   "for_crews": "Tells crews how deep they must dig for intact organic molecules.",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Rosalind_Franklin_(rover)"
+   ]
+  },
+  {
+   "id": "tianwen3",
+   "name": "Tianwen-3 sample return",
+   "agency": "CNSA",
+   "kind": "sample return",
+   "status": "planned",
+   "years": "launch ~2028 (may slip to ~2030); samples to Earth ~2031",
+   "regions": [
+    {
+     "name": "Utopia Planitia",
+     "lon": 117.517,
+     "lat": 46.736
+    },
+    {
+     "name": "Chryse Planitia",
+     "lon": -40.307,
+     "lat": 28.433
+    },
+    {
+     "name": "Amazonis Planitia",
+     "lon": -162.913,
+     "lat": 25.746
+    }
+   ],
+   "science": "First Mars samples to Earth; 86 candidate sites studied, mostly in Utopia and Chryse.",
+   "data_in_marsnav": "Candidate regions on the globe.",
+   "for_crews": "-",
+   "sources": [
+    "https://www.universetoday.com/articles/china-plans-to-retrieve-mars-samples-by-2031"
+   ]
+  },
+  {
+   "id": "msr",
+   "name": "Mars Sample Return (NASA / ESA)",
+   "agency": "NASA / ESA",
+   "kind": "sample return",
+   "status": "cancelled in its current form",
+   "years": "-",
+   "site": {
+    "name": "Perseverance sample tubes, Jezero",
+    "lon": 77.45,
+    "lat": 18.45,
+    "note": "region only: the tubes are in Jezero crater"
+   },
+   "science": "Perseverance's cored samples were to be brought to Earth; the FY2026 budget left the retrieval unfunded.",
+   "data_in_marsnav": "The sample sites are the Jezero EVA stations.",
+   "for_crews": "A human crew may be the one that brings the Jezero samples home.",
+   "sources": [
+    "https://www.theregister.com/2026/01/16/nasa_science_budget/"
+   ]
+  },
+  {
+   "id": "starship",
+   "name": "SpaceX Starship to Mars (uncrewed)",
+   "agency": "SpaceX",
+   "kind": "lander",
+   "status": "slipped (2026 window not used)",
+   "years": "next windows 2028-29",
+   "science": "Cargo landers ahead of crews.",
+   "data_in_marsnav": "The 7 Starship candidate sites (Golombek et al. 2021) and the Starship criteria in Landing mode.",
+   "for_crews": "In February 2026 SpaceX moved its near-term focus to the Moon; first Mars landings would follow later.",
+   "sources": [
+    "https://www.19fortyfive.com/2026/08/the-mars-launch-window-opens-in-november-2026-and-closes-about-a-month-later-the-next-one-is-in-2029/"
+   ]
+  },
+  {
+   "id": "humans",
+   "name": "First crewed landing",
+   "agency": "NASA (Moon to Mars) and partners",
+   "kind": "crew",
+   "status": "studied",
+   "years": "-",
+   "science": "Human field science: the reason MarsNav exists.",
+   "data_in_marsnav": "48 NASA Exploration Zones (2015) screened against the human landing-site criteria; the EVA planner.",
+   "for_crews": "-"
+  }
+ ]
+}

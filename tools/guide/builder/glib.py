@@ -547,7 +547,7 @@ def draw_cover(c, doc):
     c.drawCentredString(cx, PAGE_H * 0.218, "USER GUIDE  &  MISSION HANDBOOK")
     c.setFont("Barlow", 10)
     c.setFillColor(colors.HexColor("#9aa0a8"))
-    c.drawCentredString(cx, PAGE_H * 0.19, "Version 2.0  ·  Windows desktop app  ·  real NASA and USGS Mars data")
+    c.drawCentredString(cx, PAGE_H * 0.19, "Version 2.1  ·  Windows desktop app  ·  real NASA and USGS Mars data")
     # bottom band
     c.setFillColor(NIGHT2)
     c.rect(0, 0, PAGE_W, 0.9 * inch, stroke=0, fill=1)

@@ -4,12 +4,14 @@ Verification checks that the software does what it was designed to do; validatio
 
 | Command | What it runs | Result |
 |---|---|---|
-| `node --test tests/*.test.mjs` | Engine unit tests, integration tests on real Jezero data and the CTX-only site, closed-loop, navigation and bridge tests | 63 pass |
-| `python3 -m pytest tests -q` | Pipeline tests (including Python/JS parity) and the concurrent-download test | 15 pass |
+| `node --test tests/*.test.mjs` | Engine unit tests, integration tests on real Jezero data and the CTX-only site, closed-loop, navigation and bridge tests, Mars Year, the 3D views' terrain windows | 65 pass |
+| `python3 -m pytest tests -q` | Pipeline tests (including Python/JS parity), the concurrent-download test, the science atlas, and the place lookup (charts, gravity, liquid water, offline, built sites, time at the place vs the Python Mars24 port, polar ice) | 53 pass |
 | `node validation/validate.mjs` | Validation against Perseverance data | `validation/REPORT.md` |
 | `node validation/closed_loop_campaign.mjs` | 40 paired closed-loop vs open-loop EVAs | `validation/CLOSED_LOOP.md` |
 | `MarsNav.exe --selftest` (`selftest.bat`) | The desktop server under load for 150 s: map tiles, API, a route job; a raster worker and the server itself killed on purpose | Every check passes, including from an empty data folder (first run on a new PC) |
-| Headless browser check (Playwright) | Both sites: load, plan, execute with a fault, review, cue card | Pass, with no console errors (the fonts are part of the app, so nothing is fetched from the internet) |
+| `python tools/smoke_exe.py dist\MarsNav\MarsNav.exe` | Starts the built program as a user would, checks 16 pages and scripts, 9 APIs (bundled catalogues found, missions, objectives, candidates, atlas, space weather) and the place and elevation lookups, then stops it | All pass |
+| GitHub Actions, `.github/workflows/windows-exe.yml` | On every push: builds `MarsNav.exe` on a clean Windows machine, runs the smoke test and `--selftest` on the built program, runs both test suites and the closed-loop campaign on Linux, then publishes `MarsNav-Windows.zip` | Run 2 (29 October 2026): all pass on Windows, including 10,837 requests under load with a worker and the server killed |
+| Headless browser check (Playwright) | All four sites (plan, 3D, execute, review, the place card at any point). Landing mode (screen all, a candidate's place data, the dossier, every tab). The drive window. The three crew displays fed by a running EVA (maps drawn on terrain, place data present) | 29 of 29 pass, with no console errors (the fonts are part of the app, so nothing is fetched from the internet) |
 
 ## Verification
 

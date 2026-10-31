@@ -3,7 +3,8 @@ import { MapView } from "./map.js";
 import { Timeline } from "./timeline.js";
 import { ahp, L1_IDS, L1_NAMES, L1_MATRIX, L1_REASONS } from "../engine/ahp.js";
 import { marsContext, missionClock, M2020_CLOCK, fmtHours, earthMarsLight } from "../engine/marstime.js";
-import { setProjection, lonlatToXY } from "../engine/geo.js";
+import { setProjection, lonlatToXY, xyToLonLat, haversine, bearing } from "../engine/geo.js";
+import { loadPlace, placeHtml, timeHere, timeHtml, placeCompass } from "./placeview.js";
 import { View3D } from "./view3d.js";
 import { fmtDuration } from "../engine/util.js";
 import { speak, tone, primeAudio } from "./speech.js";
@@ -56,6 +57,7 @@ async function pickSite() {
   const want = decodeURIComponent(location.hash.slice(1));
   const site = sites.find((x) => x.id === want) ?? sites[0] ?? null;
   if (site) DATA = new URL(site.path, DATA_ROOT).href;
+  state.siteEntry = site;
   const sel = $("siteSel");
   sel.innerHTML = sites.map((x) => `<option value="${x.id}"${x === site ? " selected" : ""}>${x.short}</option>`).join("");
   sel.closest("label").hidden = sites.length < 2;
@@ -83,6 +85,8 @@ async function pickSite() {
 async function boot() {
   try {
     await pickSite();
+    // what each station looks like from the ground: the rover's own photographs (tools/build_pov.py marks the site)
+    state.pov = state.siteEntry?.pov ? await fetch(new URL("pov.json", DATA)).then((r) => (r.ok ? r.json() : null)).catch(() => null) : null;
     const meta = await call("init", { base: DATA });
     state.meta = meta;
     if (meta.projection?.lat_ts != null) setProjection(meta.projection.lat_ts, meta.projection.clon ?? 0);
@@ -121,6 +125,11 @@ async function boot() {
     setInterval(tickClock, 1000);
     flashClock();
     fillProvenance();
+    loadSpaceWeather();
+    setInterval(loadSpaceWeather, 30 * 60 * 1000);
+    $("ckSwxBox").addEventListener("click", showSpaceWeather);
+    for (const b of document.querySelectorAll("[data-display]")) b.addEventListener("click", () => openDisplay(b.dataset.display));
+    if ("BroadcastChannel" in window) hudChannel();       // a display opened earlier (or reloaded) finds us
     const landers = await call("landers");
     $("landerSel").innerHTML = landers.map((l) => `<option value="${l.id}"${l.id === "m2020" ? " selected" : ""} title="${l.src}">${l.label}${l.trn ? " · TRN" : ""}</option>`).join("");
     const truths = await call("truths");
@@ -138,6 +147,38 @@ async function boot() {
 }
 
 // ---------------------------------------------------------------------------------------------------- clocks --
+// space weather at Mars (planet/spaceweather.py, NASA DONKI) when the MarsNav server is there; a static copy of the
+// planner has no server and simply does not show it
+async function loadSpaceWeather() {
+  let w;
+  try {
+    const r = await fetch("/api/spaceweather");
+    if (!r.ok) return;
+    w = await r.json();
+  } catch { return; }
+  state.swx = w;
+  const word = { quiet: "QUIET", watch: "WATCH", storm: "STORM" }[w.level] ?? "NO DATA";
+  $("ckSwx").textContent = word;
+  $("ckSwx").className = `v ${w.level === "storm" ? "bad" : w.level === "watch" ? "warn" : w.level === "quiet" ? "ok" : ""}`;
+  $("ckSwxBox").hidden = false;
+  $("ckSwxBox").title = `${w.headline}. ${(w.reasons || []).join(". ")}${w.action ? `. ${w.action}` : ""}`;
+  if (state.routes) renderCards();
+}
+
+function showSpaceWeather() {
+  const w = state.swx;
+  if (!w) return;
+  const g = w.geometry || {};
+  $("modalTitle").textContent = "Space weather at Mars";
+  $("modalBody").innerHTML = `<p><b class="${w.level === "storm" ? "bad" : w.level === "watch" ? "warn" : "ok"}">${w.headline}</b></p>
+    <ul>${(w.reasons || []).map((x) => `<li>${x}</li>`).join("")}</ul>${w.action ? `<p><b>For this EVA:</b> ${w.action}</p>` : ""}
+    <p class="note">Mars is ${g.separation_deg ?? "?"}° from Earth as seen from the Sun, ${g.light_min ?? "?"} light-minutes away. ${g.note ?? ""}</p>
+    <p class="note">${w.fetched_utc ? `NASA DONKI data fetched ${w.fetched_utc} (${w.age_h} h ago).` : "No DONKI data on this computer yet."} ${w.basis ?? ""}
+    The full list of CME arrivals, particle events and flares is in Landing mode (SPACE WX).</p>
+    <p class="note">To rehearse the response, Execute has a "Solar particle event" fault.</p>`;
+  $("modal").hidden = false;
+}
+
 function tickClock() {
   const now = Date.now();
   const ctx = marsContext(now, state.base.lon, state.base.lat, state.clock);
@@ -386,7 +427,8 @@ function renderStations() {
           · O₂ <input type="number" min="0" max="500" step="5" value="${s.extraO2g || 0}" data-f="extraO2g" style="width:52px;padding:2px 4px"> g
           · water <input type="number" min="0" max="2000" step="10" value="${s.extraWaterG || 0}" data-f="extraWaterG" style="width:58px;padding:2px 4px"> g</div>
         <div class="note">Stated for the full work time: tool and instrument energy from the suit battery, O₂ for a purge, water for sample handling.</div></details>
-      <div class="meta sb" id="sb${k}">${s.budget ? stationBudgetText(s.budget) : ""}</div></div>
+      <div class="meta sb" id="sb${k}">${s.budget ? stationBudgetText(s.budget) : ""}</div>
+      ${povOf(s).length ? `<button class="btn sm pov" data-pov="${k}" title="The rover's own photographs from this spot">What you'll see · ${povOf(s).length} photos</button>` : ""}</div>
       <div class="ord"><button aria-label="Visit earlier" title="Visit earlier" data-up="${k}">&uarr;</button><button aria-label="Visit later" title="Visit later" data-dn="${k}">&darr;</button><button aria-label="Remove" title="Remove" data-del="${k}">&times;</button></div>`;
     box.appendChild(d);
     d.querySelectorAll("[data-f]").forEach((el) => el.addEventListener("change", (e) => {
@@ -397,6 +439,7 @@ function renderStations() {
       scheduleReplan(1200);
     }));
   });
+  box.querySelectorAll("[data-pov]").forEach((b) => b.addEventListener("click", () => showPov(state.stations[+b.dataset.pov])));
   const changed = () => { renderStations(); scheduleReplan(); };
   box.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => { state.stations.splice(+b.dataset.del, 1); changed(); }));
   box.querySelectorAll("[data-up]").forEach((b) => b.addEventListener("click", () => {
@@ -559,6 +602,7 @@ function selectRoute(name) {
   showStationBudgets();
   renderWhy();
   renderGuidance();
+  hudPlan();
 }
 
 function marginClass(m) {
@@ -599,7 +643,7 @@ function renderCards() {
           <div><span class="k">Rover battery</span><span class="v">${(r.res.rbatt ?? 0).toFixed(0)} Wh</span></div>` : `<div><span class="k">Sand</span><span class="v">${(100 * (r.sandFrac ?? 0)).toFixed(0)} %</span></div>`}
         </div>
         ${r.wheelLeft != null && r.wheelLeft < 0.2 ? `<div class="dq">Wheels at ${(100 * Math.max(0, r.wheelLeft)).toFixed(0)} % life after this drive: inspect or avoid rocky ground</div>` : ""}
-        <div class="note">Radiation ≈ ${r.doseMSv.toFixed(2)} mSv at the RAD surface average.</div>`;
+        <div class="note">Radiation ≈ ${r.doseMSv.toFixed(2)} mSv from cosmic rays at this altitude (Curiosity RAD, scaled by the air overhead)${state.swx?.level === "storm" ? '; <span class="bad">a solar particle event in progress would add to it</span>' : ""}.</div>`;
     }
     el.addEventListener("click", () => r?.ok && selectRoute(name));
     el.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && r?.ok && selectRoute(name));
@@ -670,16 +714,8 @@ function wireMap() {
       runLanding(lon, lat);
       return;
     }
-    if (!state.addMode) return;
-    const g = state.meta.grid, [rr, cc] = rcOfLonLatGrid(g, lon, lat);
-    if (!(rr >= 0 && cc >= 0 && rr < g.height && cc < g.width)) {
-      $("planMsg").innerHTML = '<span class="warn">That point is outside this site\'s detailed terrain. Add points inside the mapped area, or use Landing mode to build a hub site there.</span>';
-      return;
-    }
-    let n = state.stations.length + 1;
-    while (state.stations.some((x) => x.name === `Point ${n}`)) n++;
-    addStation({ id: `P${Date.now().toString(36)}`, name: `Point ${n}`, lon, lat, dwell_min: 20, value: 0.3 });
-    scheduleReplan();
+    if (!state.addMode) { showPlaceCard(lon, lat); return; }
+    addPointStation(lon, lat);
     state.addMode = false;
     $("btnAddMode").setAttribute("aria-pressed", "false");
     $("btnAddMode").classList.remove("primary");
@@ -968,6 +1004,214 @@ function runSim(on) {
   }, 500);
 }
 
+// ------------------------------------------------------------------------------------- point-of-view photos --
+const povOf = (s) => (s && state.pov?.stations?.[s.id ?? ""]?.images) || [];
+const povCaption = (i) => [`${i.rover} ${i.camera}`, `sol ${i.sol}`, i.lmst ? `${i.lmst} LMST` : null,
+  i.azimuth_deg != null ? `facing ${((i.azimuth_deg % 360) + 360) % 360}°` : null, `rover ${i.rover_m_from_station} m from the station`].filter(Boolean).join(" · ");
+function showPov(st) {
+  const imgs = povOf(st);
+  if (!imgs.length) return;
+  $("modalTitle").textContent = `What you'll see · ${st.name}`;
+  $("modalBody").innerHTML = `<div class="povgrid">${imgs.map((i) => `<figure><a href="${new URL(i.source).href}" target="_blank" rel="noopener"><img src="${new URL(i.file, DATA).href}" alt="${povCaption(i)}" loading="lazy"></a>
+      <figcaption>${povCaption(i)}<br><span class="note">${i.credit} · raw image ${i.imageid}</span></figcaption></figure>`).join("")}</div>
+    <p class="note">${state.pov.note} Click a photo for NASA's full-resolution original.</p>`;
+  $("modal").hidden = false;
+}
+
+function addPointStation(lon, lat, name = null) {
+  if (!T_inside(state.meta.grid, lon, lat)) {
+    $("planMsg").innerHTML = '<span class="warn">That point is outside this site\'s detailed terrain. Add points inside the mapped area, or use Landing mode to build a hub site there.</span>';
+    return false;
+  }
+  let n = state.stations.length + 1;
+  while (state.stations.some((x) => x.name === `Point ${n}`)) n++;
+  addStation({ id: `P${Date.now().toString(36)}`, name: name || `Point ${n}`, lon, lat, dwell_min: 20, value: 0.3 });
+  scheduleReplan();
+  return true;
+}
+
+// ------------------------------------------------------------------------------------ everything at a point --
+// Click any point of the site: this site's own terrain model there (slope, steps, sand, wheel slip, cliffs, radio to
+// the habitat, walk home, the no-go reason, which elevation data it rests on), the rover's photographs if a station is
+// close, the time and sun at the spot, and every planet-wide layer (planet/place.py via /api/place: ground, water,
+// minerals, radiation, gravity, science, missions). The planet layers need the MarsNav server; the rest works anywhere.
+let placeTok = 0;
+const fmtMeters = (m) => !Number.isFinite(m) ? "–" : m >= 1000 ? `${(m / 1000).toFixed(2)} km` : `${Math.round(m)} m`;
+function namedNear(lon, lat, maxM = 250) {
+  const all = [...state.stations, ...(state.meta.targets || []), ...(state.meta.landmarks || [])].filter((t) => Number.isFinite(t?.lon));
+  let best = null;
+  for (const t of all) {
+    const d = haversine(lon, lat, t.lon, t.lat);
+    if (d <= maxM && (!best || d < best.d)) best = { t, d };
+  }
+  return best;
+}
+function siteCellHtml(c) {
+  if (!c) return `<section class="pv-sec"><h3>This site's terrain</h3><p class="pv-hint">Outside the detailed terrain of this site: the planet-wide data below still apply.</p></section>`;
+  const rows = [
+    ["Elevation", `${c.elevation.toFixed(0)} m <span class="pv-na">site elevation model</span>`],
+    ["Terrain", c.terrain],
+    ["Slope", `${c.slopeW.toFixed(1)}° <span class="pv-na">walking scale, 90th percentile per cell</span>`],
+    ["Steps", `${c.step.toFixed(2)} m`],
+    ["Sand", c.sand.toFixed(2)],
+    ["Wheel-slip risk", `<span class="${c.slipRisk > 0.5 ? "pv-warn" : ""}">${c.slipRisk.toFixed(2)}</span>`],
+    c.clutter != null ? ["Rock cover", `${c.clutter.toFixed(2)}`] : null,
+    ["Nearest cliff", c.cliffDist >= 1020 ? "more than 1 km" : `<span class="${c.cliffDist < 60 ? "pv-warn" : ""}">${c.cliffDist.toFixed(0)} m</span>`],
+    ["Hazard index", c.hazard.toFixed(2)],
+    ["No-go", c.veto ? `<span class="pc-veto">${c.veto}</span>` : '<span class="pv-ok">no</span>'],
+    ["Position error", `±${(2 * c.sigma).toFixed(0)} m (2σ)`],
+    ["Radio to habitat", c.los ? '<span class="pv-ok">line of sight</span>' : '<span class="pv-warn">no line of sight: relay or rover needed</span>'],
+    ["Walk home", Number.isFinite(c.walkbackS) ? fmtDuration(c.walkbackS).slice(0, 5) : '<span class="pv-na">plan an EVA to compute</span>'],
+    ["Elevation data", c.confidence > 0.5 ? "HiRISE 1 m (metre-scale hazards measured)" : "CTX 20 m (hazards under ~40 m not seen)"],
+  ].filter(Boolean);
+  return `<section class="pv-sec" data-pv="cell"><h3>This site's terrain <small>the planner's model of this cell</small></h3><div class="pv-kv">${rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join("")}</div></section>`;
+}
+async function showPlaceCard(lon, lat) {
+  const card = $("placeCard"), tok = ++placeTok;
+  state.probe = { lon, lat };
+  state.map.probe = state.probe; state.map.draw();
+  const b = state.base, dM = haversine(b.lon, b.lat, lon, lat), brg = bearing(b.lon, b.lat, lon, lat);
+  const nn = namedNear(lon, lat);
+  const name = nn ? (nn.d < 25 ? nn.t.name : `Near ${nn.t.name}`) : "Selected point";
+  const st = nn && nn.d < 150 ? nn.t : null, pov = povOf(st);
+  const c = await call("cell", { lon, lat }).catch(() => null);
+  if (tok !== placeTok) return;
+  card.hidden = false;
+  card.innerHTML = `<div class="pc-head"><span class="pc-name">${escH(name)}</span><button class="pc-x" id="pcClose" title="Close (Esc)" aria-label="Close">×</button>
+      <span class="pc-sub">${Math.abs(lat).toFixed(5)}°${lat >= 0 ? "N" : "S"} ${Math.abs(lon).toFixed(5)}°${lon >= 0 ? "E" : "W"} · ${fmtMeters(dM)} ${placeCompass(brg)} of the habitat (${Math.round(brg)}°)</span>
+      <div class="pc-btns"><button class="btn sm" id="pcAdd"${c ? "" : " disabled"}>Add as station</button>
+        <button class="btn sm" id="pcHud" title="This point on the crew displays: helmet visor, rover dashboard, wrist cuff">Crew displays</button>
+        ${pov.length ? `<button class="btn sm" id="pcPov">Photos · ${pov.length}</button>` : ""}</div></div>
+    ${siteCellHtml(c)}
+    ${pov.length ? `<section class="pv-sec"><h3>What you'll see <small>${escH(pov[0].rover)} at ${escH(st.name)}</small></h3><div class="pc-pov">${pov.slice(0, 2).map((i) => `<img src="${new URL(i.file, DATA).href}" alt="${escH(povCaption(i))}" loading="lazy">`).join("")}</div></section>` : ""}
+    <section class="pv-sec" data-pv="time"><h3>Time here now <small>Mars24 clock, live</small></h3><div id="pcTime"></div></section>
+    <div id="pcPlanet"><div class="pv-loading">Reading every planet-wide data layer at this point…</div></div>`;
+  tickPlaceCard();
+  $("pcClose").onclick = closePlaceCard;
+  $("pcAdd").onclick = () => { if (addPointStation(lon, lat, nn && nn.d < 25 ? nn.t.name : null)) closePlaceCard(); };
+  $("pcHud").onclick = () => {
+    const u = new URL("../hud.html", import.meta.url);
+    u.searchParams.set("lon", lon.toFixed(6)); u.searchParams.set("lat", lat.toFixed(6));
+    u.searchParams.set("name", `${name} · ${state.site?.short ?? state.site?.name ?? ""}`); u.searchParams.set("mode", "visor");
+    if (!window.open(u.href, "marsnav-hud-place", "popup=yes,width=1280,height=760")) $("planMsg").innerHTML = '<span class="bad">The browser blocked the display window. Allow pop-ups for this page.</span>';
+  };
+  if (pov.length) $("pcPov").onclick = () => showPov(st);
+  loadPlace(lon, lat, (d) => {
+    if (tok !== placeTok) return;
+    state.placeData = d;
+    $("pcPlanet").innerHTML = `<h3 class="pv-group">Planet-wide data at this point</h3>` + placeHtml(d, { fold: true, open: ["env", "ground", "water"] });
+  }, { stillWanted: () => tok === placeTok }).catch((e) => {
+    if (tok === placeTok) $("pcPlanet").innerHTML = `<p class="pv-loading">Planet-wide layers need the MarsNav server (${escH(e.message)}). The site terrain above is from this site's own data.</p>`;
+  });
+}
+function tickPlaceCard() {
+  const el = $("pcTime");
+  if (el && state.probe && !$("placeCard").hidden) el.innerHTML = timeHtml(timeHere(Date.now(), state.probe.lon, state.probe.lat));
+}
+setInterval(tickPlaceCard, 1000);
+function closePlaceCard() {
+  placeTok++;
+  $("placeCard").hidden = true;
+  state.probe = null; state.map.probe = null; state.map.draw();
+}
+addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("placeCard").hidden) closePlaceCard(); });
+const escH = (x) => String(x ?? "").replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+
+// ---------------------------------------------------------------------------------- crew displays (hud.html) --
+// The same EVA on the displays a crew would carry: a helmet-visor HUD, a rover dashboard and a wrist cuff. They get
+// the plan and every snapshot over a BroadcastChannel and send back the cuff's commands (acknowledge, silence, pin,
+// two-step return), so they work beside the simulator, live suit telemetry and the drive window alike.
+const HUD = "marsnav-hud";
+function hudChannel() {
+  if (state.hudCh || !("BroadcastChannel" in window)) return state.hudCh;
+  const ch = new BroadcastChannel(HUD);
+  state.hudCh = ch;
+  ch.onmessage = async (ev) => {
+    const m = ev.data;
+    try {
+      if (m.type === "hello") {
+        hudPlan();
+        if (state.hudPlace) ch.postMessage({ type: "place", place: state.hudPlace });
+        if (state.sim?.snap) hudSnap(state.sim.snap);
+      } else if (!state.sim?.snap) {
+        ch.postMessage({ type: "note", text: "No EVA running: start one in Execute (simulator, live suit or drive window)." });
+      } else if (m.type === "ack") onSnap(await call("simAck", { id: m.id ?? null }));
+      else if (m.type === "silence") { await call("simSilence"); state.silenced = true; }
+      else if (m.type === "pin") onSnap(await call("simPin", { note: m.note || "pin from the wrist cuff" }));
+      else if (m.type === "return") onSnap(await call("simAbort"));
+    } catch (e) { console.error(e); }
+  };
+  return ch;
+}
+function hudPlan() {
+  const ch = hudChannel();
+  if (!ch) return;
+  const r = state.routes?.[state.selected];
+  ch.postMessage({ type: "plan", site: state.site?.short ?? state.site?.name, siteId: state.site?.id, data: DATA, base: state.base,
+    clock: state.site?.clock ?? null, profile: $("profile").value, routeName: state.selected, departMs: state.cfg?.departMs ?? null,
+    route: r?.ok ? r.pts.filter((_, k) => k % 3 === 0).map((p) => [p.lon, p.lat]) : [],
+    stations: routeStops().map((st) => ({ lon: st.lon, lat: st.lat, name: st.name, id: st.id ?? null,
+      pov: povOf(st).map((i) => ({ src: new URL(i.file, DATA).href, caption: povCaption(i), alt: `${st.name}: ${povCaption(i)}` })) })),
+    summary: r?.ok ? { t: r.t, dist: r.dist, doseMSv: r.doseMSv, minMargin: r.minMargin } : null,
+    guidance: r?.ok ? r.legs.map((l) => ({ from: l.from, to: l.to, guidance: l.guidance })) : [],
+    swx: state.swx ? { level: state.swx.level, headline: state.swx.headline } : null, map: hudMap() });
+  hudPlace(state.base.lon, state.base.lat);
+}
+/** The site's map for the displays: the orbital image of the whole site, its lon / lat bounds (the grid is
+ *  equirectangular, so the image is axis-aligned in lon / lat) and the no-go areas as a see-through PNG. */
+function hudMap() {
+  const g = state.meta?.grid, im = state.meta?.imagery?.ortho5;
+  if (!g || !im) return null;
+  if (state.hudMapFor !== state.map.veto) {
+    const [w, n] = xyToLonLat(g.x0, g.y0), [e, s] = xyToLonLat(g.x0 + g.width * g.res, g.y0 - g.height * g.res);
+    let veto = null;
+    try { veto = state.map.veto ? state.map.veto.toDataURL("image/png") : null; } catch { /* no canvas */ }
+    // the HiRISE detail tiles the planner shows when zoomed in, each with its lon / lat box
+    const hi = (state.meta.imagery.hi2?.tiles || []).filter((t) => t.valid > 0).map((t) => {
+      const x0 = g.x0 + t.c0 * g.res, y0 = g.y0 - t.r0 * g.res, sz = t.cells * g.res;
+      const [tw, tn] = xyToLonLat(x0, y0), [te, ts] = xyToLonLat(x0 + sz, y0 - sz);
+      return { url: new URL(t.file, DATA).href, b: [tw, ts, te, tn] };
+    });
+    state.hudMapInfo = { ortho: new URL(im.file, DATA).href, bounds: [w, s, e, n], veto, res: im.res, hi, hiRes: state.meta.imagery.hi2?.res ?? null };
+    state.hudMapFor = state.map.veto;
+  }
+  return state.hudMapInfo;
+}
+/** Every layer at the crew's position for the displays: fetched again after 400 m of travel or 10 minutes. */
+function hudPlace(lon, lat) {
+  const last = state.hudPlaceAt;
+  if (state.hudPlaceBusy || (last && haversine(last.lon, last.lat, lon, lat) < 400 && Date.now() - last.t < 600e3)) return;
+  state.hudPlaceBusy = true;
+  state.hudPlaceAt = { lon, lat, t: Date.now() };
+  loadPlace(lon, lat, (d) => { state.hudPlace = d; state.hudCh?.postMessage({ type: "place", place: d }); })
+    .catch(() => { /* no server (static build): the displays go without */ })
+    .finally(() => { state.hudPlaceBusy = false; });
+}
+function hudSnap(s) {
+  const ch = hudChannel();
+  if (!ch) return;
+  if (Number.isFinite(s.lon)) {
+    hudPlace(s.lon, s.lat);
+    if (!state.hudCellT || Date.now() - state.hudCellT > 1000) {      // the site's terrain under the crew, once a second
+      state.hudCellT = Date.now();
+      call("cell", { lon: s.lon, lat: s.lat }).then((c) => { state.hudCell = c; }).catch(() => { state.hudCell = null; });
+    }
+  }
+  const c = state.hudCell;
+  ch.postMessage({ type: "snap", snap: { here: c ? { terrain: c.terrain, slopeW: c.slopeW, sand: c.sand, slipRisk: c.slipRisk, cliffDist: c.cliffDist, veto: c.veto, elevation: c.elevation } : null,
+    t: s.t, ms: s.ms, lon: s.lon, lat: s.lat, sigma: s.sigma, remaining: s.remaining, margins: s.margins,
+    back: s.back, dist: s.dist, returning: s.returning, done: s.done, los: s.los, shade: s.shade, alerts: s.alerts, counts: s.counts,
+    station: s.station, stops: s.loop?.stops ?? null, livePlan: s.livePlan, returnPts: s.returnPts, rs: s.rs ?? null, live: !!s.live,
+    res: s.res, cap: s.cap, track: s.track?.slice(-60) ?? null } });
+}
+function openDisplay(mode) {
+  hudChannel();
+  const size = { visor: "width=1280,height=720", rover: "width=1400,height=820", cuff: "width=480,height=860" }[mode];
+  const w = window.open(new URL(`../hud.html?mode=${mode}`, import.meta.url).href, `marsnav-hud-${mode}`, `popup=yes,${size}`);
+  if (!w) $("planMsg").innerHTML = '<span class="bad">The browser blocked the display window. Allow pop-ups for this page, then press the button again.</span>';
+  else w.focus?.();
+}
+
 // ------------------------------------------------------------------------------------ 3D drive window link --
 // The drive window (drive.html) is a telemetry source like a real suit: it sends TSS frames over a BroadcastChannel,
 // the engine runs its closed loop on them (LiveSession), and every snapshot goes back so the walker sees the re-plans.
@@ -1173,6 +1417,7 @@ const GAUGES = [["o2", "Oxygen"], ["co2", "CO₂ scrub"], ["water", "Cooling H�
 
 function onSnap(s) {
   state.sim.snap = s;
+  hudSnap(s);
   state.simCrew = { lon: s.lon, lat: s.lat, sigma: s.sigma, ellipse: s.ellipse };
   state.map.crew = state.simCrew;
   state.map.returnPts = s.returnPts;
@@ -1200,9 +1445,12 @@ function onSnap(s) {
       <div class="ret" style="left:${Math.min(99.5, 100 * need)}%"></div></div><span class="num">${(100 * s.remaining[k]).toFixed(0)}%</span></div>`;
   }).join("");
   // station procedure: current and completed steps visible
+  const here = s.station ? state.stations.find((x) => x.name === s.station.name) : null;
+  const pic = povOf(here)[0];
   $("proc").innerHTML = s.station
     ? `<strong>${s.station.name}</strong> <span class="num">${fmtDuration(s.station.done).slice(0, 5)} / ${fmtDuration(s.station.total).slice(0, 5)}</span><ol>${s.station.steps
-      .map((x, k) => `<li class="${k < s.station.step ? "done" : k === s.station.step ? "cur" : ""}">${x}</li>`).join("")}</ol>`
+      .map((x, k) => `<li class="${k < s.station.step ? "done" : k === s.station.step ? "cur" : ""}">${x}</li>`).join("")}</ol>
+      ${pic ? `<img class="procpov" src="${new URL(pic.file, DATA).href}" alt="${povCaption(pic)}"><div class="note">${povCaption(pic)} · ${pic.credit}</div>` : ""}`
     : "Shown while working at a station.";
   state.map.pins = s.pins;
   // alerts

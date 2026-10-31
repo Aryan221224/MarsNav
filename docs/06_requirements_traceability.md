@@ -16,13 +16,20 @@ Verification codes: **T** = automated test, **V** = validation on real data, **D
 | ID | Requirement | Source | Implementation | Verified |
 |---|---|---|---|---|
 | C1 | A layered, integrated view of a location or route on Mars | CH | 11 map layers + no-go, traverse, landmarks, alternatives; timeline of elevation, margin, sun and shade | D |
-| C2 | Data from multiple NASA science missions | CH | MRO HiRISE and CTX, MGS MOLA datum, Mars 2020 MEDA and traverse, MSL RAD dose, Apollo walking data | I (docs/04) |
+| C2 | Data from multiple NASA science missions | CH | MRO HiRISE, CTX, CRISM and gravity; MGS MOLA and TES; Odyssey THEMIS and GRS; Mars Express HRSC and OMEGA; Mars 2020 MEDA, traverse and images; MSL RAD, traverse and images; Viking; Apollo walking data | I (docs/04, docs/12) |
 | C3 | Help a human plan a Marswalk | CH | Plan mode: stations, optimiser, five named routes under hard limits, cue card | T, D |
 | C4 | Help a human carry out a Marswalk | CH | Execute mode: glance band, consumables, alerts, procedures, voice, pins, automatic and two-step return | T, D |
 | C5 | Details of routes and destinations | CH | Guidance legs (heading, distance, time, climb, arrival LMST, margin); target provenance | D |
 | C6 | Updates on current conditions | CH | Live Mars clock (sol, LMST, Ls, sun), sun and shade along the route, MEDA climatology by season and hour, dust τ, radio line of sight, position error | T, V |
 | C7 | Complete the mission quickly and safely | CH | Multi-criteria routes with hard vetoes and a walkback guarantee | T, V |
 | C8 | New science along the way | CH | Science criterion V, real sample-site targets, sortie optimiser by science value, station procedures | T, D |
+| C9 | Science goals first, and a location for them (example: boxwork at Mount Sharp, Curiosity 2025) | CH 2026 | Seven science objectives ranking every candidate site; the Mount Sharp boxwork EVA site with Curiosity's drill sites (docs/12) | T, D |
+| C10 | At least three kinds of data: optical, thermal, spectral, topographic, geophysical, atmospheric, radiation, chemical | CH 2026 | Whole-Mars science atlas grouped by kind: CRISM / OMEGA / TES minerals, GRS elements, MRO gravity, air pressure, cosmic-ray dose, plus optical, thermal and topographic bases | T, D |
+| C11 | Space weather and the radiation environment | CH 2026 | NASA DONKI CME arrivals at Mars, particle events and flares with an EVA advisory; route dose from each step's elevation | T |
+| C12 | A route that avoids obstacles for a suited crew carrying equipment | CH 2026 | Hard limits and walk-home guarantee (unchanged); cliff-bounded Mount Sharp as the hard case | T, V |
+| C13 | Display formats: habitat, tablet, helmet-visor HUD | CH 2026 | Habitat console (planner), helmet visor HUD, rover dashboard and wrist cuff (`app/hud.html`), visor overlay in the drive window | D |
+| C14 | Point-of-view images so the astronaut knows what to expect | CH 2026 | The rover's own photographs at each station (`tools/build_pov.py`) in the planner, station panel and cuff | D |
+| C15 | Past and future missions behind the map | CH 2026 | Catalogue of 31 missions with status on 2026-10-28 and their use in MarsNav; future landing regions on the globe | T |
 
 ## SUITS 2026-27 crew navigation display
 

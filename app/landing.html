@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="favicon-64.png">
 <link rel="apple-touch-icon" href="logo-192.png">
 <link rel="stylesheet" href="css/landing.css">
+<link rel="stylesheet" href="css/place.css">
 <link rel="stylesheet" href="css/theme.css">
 </head>
 <body>
@@ -32,6 +33,7 @@
     <span class="pill" id="netPill" title="Connection to the NASA / USGS data servers">…</span>
     <button class="pill" id="localPill" title="Local mode: every dataset on this computer, no internet needed (as on Mars)">LOCAL MODE</button>
     <span class="pill" id="dsPill" title="Science layers installed on this computer">…</span>
+    <button class="pill" id="swxPill" title="Space weather at Mars from NASA's DONKI: CME arrivals, solar particle events, flares">SPACE WX …</button>
     <button class="btn ghost icon" id="btnHelp" title="Help and keyboard shortcuts (?)" aria-label="Help">?</button>
   </div>
 </header>
@@ -55,6 +57,7 @@
 
     <nav class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="cand">Candidates</button>
+      <button role="tab" aria-selected="false" data-tab="sci" title="Science objectives and every Mars mission, past, present and future">Science</button>
       <button role="tab" aria-selected="false" data-tab="hubs">Hubs</button>
       <button role="tab" aria-selected="false" data-tab="trav">Traverse</button>
       <button role="tab" aria-selected="false" data-tab="data">Data</button>
@@ -76,6 +79,30 @@
       </div>
       <div class="hint" id="screenNote">Screening ranks the list on latitude, elevation, dust, water ice and craters. Open a candidate for the full landing assessment.</div>
       <ol class="list" id="candList" aria-label="Candidate sites"></ol>
+    </section>
+
+    <section class="tabpane" data-pane="sci" hidden>
+      <div class="chips" id="sciChips" role="group" aria-label="Science views">
+        <button class="chip on" data-sci="obj">Objectives</button>
+        <button class="chip" data-sci="mis" title="Past, active and future missions">Missions <b id="nMis">0</b></button>
+      </div>
+      <div id="sciObj">
+        <label><span class="lbl">Science objective</span><select id="objSel" aria-label="Science objective"></select></label>
+        <div id="objCard" class="objcard"></div>
+        <div class="row">
+          <button class="btn" id="btnObjLayers" title="Turn on the map layers that show this objective">Show its layers</button>
+          <button class="btn accent grow" id="btnObjRank" title="Score every candidate site and hub by the evidence within 100 km">Rank sites for it</button>
+        </div>
+        <ol class="list" id="objRank" aria-label="Sites ranked for the objective"></ol>
+      </div>
+      <div id="sciMis" hidden>
+        <div class="chips" id="misChips" role="group" aria-label="Mission status">
+          <button class="chip on" data-mis="all">All</button><button class="chip" data-mis="active">Active</button>
+          <button class="chip" data-mis="future">En route / planned</button><button class="chip" data-mis="past">Past</button>
+        </div>
+        <ol class="list" id="misList" aria-label="Mars missions"></ol>
+        <p class="hint" id="misNote"></p>
+      </div>
     </section>
 
     <section class="tabpane" data-pane="hubs" hidden>
@@ -133,6 +160,7 @@
             <option value="themis_day">THEMIS day IR, 100 m</option>
             <option value="viking">Viking colour mosaic, 232 m</option>
             <option value="mola">MOLA colour elevation</option>
+            <option value="hrsc_shade">HRSC + MOLA colour relief, 200 m (Mars Express)</option>
           </select></label>
         <div class="ovl">
           <label class="chk"><input type="checkbox" data-ovl="safety"><i class="sw" style="--c:#3ee07e"></i>Landing safety (lander)</label>
@@ -148,6 +176,7 @@
           <label class="chk"><input type="checkbox" id="covChk"><i class="sw ring" style="--c:#3ee07e"></i>HiRISE / CTX elevation footprints</label>
           <label class="chk"><input type="checkbox" id="namesChk" checked><i class="sw" style="--c:#e9dccd"></i>Place names</label>
         </div>
+        <div class="atlas" id="atlasBox" aria-label="Science atlas"></div>
         <label><span class="lbl">Relief × <b id="exagV">1</b></span><input type="range" id="exag" min="1" max="20" step="1" value="1"></label>
       </div>
     </div>
@@ -201,7 +230,8 @@
         <button class="btn" id="btnSafe" hidden>Move to nearest safe spot</button>
         <button class="btn" id="btnHub" disabled>Set as hub…</button>
         <button class="btn ghost" id="btnReport" disabled title="Printable dossier (save as PDF)">Report</button>
-        <button class="btn ghost" id="btnJson" disabled title="Download the dossier as JSON">JSON</button>
+        <button class="btn ghost" id="btnJson" disabled title="Download every data layer at this place (and the dossier, once assessed) as JSON">JSON</button>
+        <button class="btn ghost" id="btnCrew" title="This place on the crew displays: helmet visor HUD, rover dashboard and wrist cuff">HUD</button>
       </div>
       <div id="dProgress" class="progress" hidden><i></i><span>Assessing…</span></div>
       <div id="dSections"></div>
@@ -217,6 +247,7 @@
         <pre id="siteLog" class="log" hidden></pre>
         <div id="siteDone"></div>
       </section>
+      <div id="dPlace"></div>
     </div>
   </aside>
 </main>
@@ -268,6 +299,15 @@
         <pre class="log" id="lpLog"></pre>
       </div>
     </section>
+  </div>
+</div>
+
+<div id="swxModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="swxTitle">
+  <div class="mbox wide">
+    <header class="lhead"><div><h2 id="swxTitle">Space weather at Mars</h2><p class="hint" id="swxSub"></p></div>
+      <button class="btn ghost icon" id="swxClose" aria-label="Close">×</button></header>
+    <div id="swxBody"></div>
+    <div class="row"><button class="btn" id="swxRefresh">Fetch the latest from NASA DONKI</button><span class="hint" id="swxJob"></span></div>
   </div>
 </div>
 

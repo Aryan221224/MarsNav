@@ -4,6 +4,8 @@ GET  /api/planet/status                     data sources, cache, online state
 GET  /tiles/dem/{z}/{y}/{x}.mmd             elevation tile (MMD1, gzip)
 GET  /tiles/img/{z}/{y}/{x}.jpg?layer=best  imagery tile (best | viking | mola)
 GET  /api/point?lon=&lat=                   elevation, slope, data sources, nearest named features
+GET  /api/place?lon=&lat=&crit=             every layer at one place: ground, water, minerals, environment, science,
+                                            missions, data coverage, built sites, quick screen (planet/place.py)
 GET  /api/search?q=                         IAU named features
 GET  /api/coverage?w=&s=&e=&n=              footprints of HiRISE / CTX DTMs in a box
 GET  /api/landing?lon=&lat=&lander=&az=     global landing-site screen (ellipse + engineering constraints)
@@ -23,7 +25,16 @@ POST /api/local/estimate {plan}             sizes of a Local mode plan against t
 POST /api/local/install  {plan}             -> job (download it all, resumable)
 POST /api/local/cancel                      stop the running download (what is done is kept)
 POST /api/local/mode     {offline: bool}    Mars mode on / off (on: nothing is sent to the internet)
-GET  /tiles/img/{z}/{y}/{x}.jpg?layer=&ovl= base imagery + overlays (planet/imagery.py)"""
+GET  /tiles/img/{z}/{y}/{x}.jpg?layer=&ovl= base imagery + overlays (planet/imagery.py)
+GET  /api/atlas                             every map layer by kind of measurement (planet/atlas.py)
+GET  /api/features                          the bundled feature catalogues (planet/features.py)
+GET  /api/features/near?lon=&lat=&r=&layers= features near a place, and its science context
+GET  /api/missions                          past, present and future Mars missions (planet/science.py)
+GET  /api/objectives                        science objectives
+GET  /api/objective/rank?id=                every candidate site and hub scored for one objective
+GET  /api/objective/eval?lon=&lat=          every objective scored at one place
+GET  /api/spaceweather                      NASA DONKI digest for Mars with an EVA advisory (planet/spaceweather.py)
+POST /api/spaceweather/refresh              -> job (fetch the latest from DONKI)"""
 from __future__ import annotations
 
 import json
@@ -127,6 +138,10 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
                 r = dem.point(lon, lat, z)
             r["names"] = names.nearest(lon, lat, k=3)
             return _ok({"ok": True, **r})
+        if p == "/api/place":
+            from . import place
+            with workers.request(budget=30, cancel=client_gone):
+                return _ok(place.everything(float(q["lon"]), float(q["lat"]), q.get("crit", "hls2"), float(q.get("wait", 4))))
         if p == "/api/search":
             return _ok({"ok": True, "results": names.search(q.get("q", ""), int(q.get("limit", 20)))})
         if p == "/api/coverage":
@@ -157,12 +172,63 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
             from . import datasets
             return _ok({"ok": True, "datasets": datasets.status()})
         if p == "/api/legend":
-            from . import datasets
+            from . import atlas, datasets, features
             ov = q.get("ovl", "")
             if ov.startswith("safety"):
                 from . import safety
                 return _ok({"ok": True, "legend": {"title": "Landing safety", "classes": safety.LEGEND}})
+            if ov.startswith("f_"):
+                return _ok({"ok": True, "legend": features.legend(ov)})
+            if ov in atlas.TREK_OVL or ov in atlas.MODEL_OVL:
+                return _ok({"ok": True, "legend": atlas.legend(ov)})
             return _ok({"ok": True, "legend": datasets.legend(ov)})
+        if p == "/api/atlas":
+            from . import atlas, datasets
+            cat = atlas.catalogue()
+            inst = {k: v["installed"] for k, v in datasets.status().items()}
+            for g in cat["groups"]:
+                for L in g["layers"]:
+                    L["installed"] = inst.get(L["needs"], True) if L.get("needs") else True
+            return _ok({"ok": True, **cat})
+        if p == "/api/features":
+            from . import features
+            return _ok({"ok": True, **features.summary()})
+        if p == "/api/features/near":
+            from . import features
+            ids = {x for x in q.get("layers", "").split(",") if x} or None
+            lon, lat = float(q["lon"]), float(q["lat"])
+            return _ok({"ok": True, "features": features.in_radius(lon, lat, float(q.get("r", 50)), ids, int(q.get("limit", 60))),
+                        "context": features.context(lon, lat, float(q.get("r", 50)))})
+        if p == "/api/missions":
+            from . import science
+            return _ok({"ok": True, **science.missions()})
+        if p == "/api/objectives":
+            from . import science
+            return _ok({"ok": True, **science.objectives()})
+        if p == "/api/objective/rank":
+            from . import assess, science
+            c = assess.candidates()
+            pts = [[x["lon"], x["lat"], x["id"], x["name"]] for k in ("ez", "starship", "heritage") for x in c.get(k, [])]
+            f = config.PATHS["app_data"] / "sites.json"
+            for st in json.loads(f.read_text()) if f.exists() else []:
+                try:
+                    cfg = json.loads((config.PATHS["pipeline"] / "sites" / f"{st['id']}.json").read_text())
+                    w, so, e, n = cfg["ops_area"]
+                    pts.append([(w + e) / 2, (so + n) / 2, f"hub:{st['id']}", st.get("short") or st.get("name")])
+                except (OSError, ValueError, KeyError, TypeError):
+                    pass
+            with workers.request(budget=60, cancel=client_gone):
+                return _ok({"ok": True, "objective": science.objective(q["id"]), "ranked": science.rank(q["id"], pts)[:int(q.get("limit", 25))]})
+        if p == "/api/objective/eval":
+            from . import science
+            import numpy as np
+            lon, lat = float(q["lon"]), float(q["lat"])
+            e = float(megdr.sample16(np.array([lon]), np.array([lat]))[0])
+            return _ok({"ok": True, "objectives": [science.evaluate(o["id"], lon, lat, e) for o in science.objectives().get("objectives", [])]})
+        if p == "/api/spaceweather":
+            from . import spaceweather
+            spaceweather.ensure_fresh()
+            return _ok(spaceweather.summary())
         if p == "/api/assess":
             from . import assess
             with workers.request(budget=75, cancel=client_gone):
@@ -209,6 +275,9 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
                 from . import assess
                 pts = [[float(a[0]), float(a[1]), str(a[2]) if len(a) > 2 else ""] for a in data.get("points", [])][:400]
                 return _ok({"ok": True, "results": assess.screen(pts, str(data.get("crit", "hls2")))})
+            if p == "/api/spaceweather/refresh":
+                from . import spaceweather
+                return _ok({"ok": True, "job": jobs.start("spaceweather", spaceweather.refresh)})
             if p == "/api/datasets/install":
                 ids = [str(i) for i in data.get("ids") or []] or None
                 return _ok({"ok": True, "job": jobs.start_process("datasets", "planet.datasets:install", ids)})
