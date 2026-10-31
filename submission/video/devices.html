@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MarsNav · one EVA on every display</title>
+<style>
+  html, body { margin: 0; background: #06090d; overflow: hidden; }
+  canvas { display: block; width: 1920px; height: 1080px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module">
+// The same EVA on four displays a Mars crew would use: the habitat console (the planner), the rover dashboard,
+// the wrist cuff and the helmet visor. Each screen plays the frames captured from the running app at the same moment
+// (capture_eva.mjs); the devices are simple models built here. render.mjs calls renderFrame(i) once per video frame.
+import * as THREE from "/app/vendor/three.module.min.js";
+
+const W = 1920, H = 1080;
+const q = new URLSearchParams(location.search);
+const FRAMES = q.get("frames") || "/submission/video/build/eva";
+const canvas = document.getElementById("c");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(+(q.get("ss") || 1.5));
+renderer.setSize(W, H, false);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.25;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x06090d);
+scene.fog = new THREE.Fog(0x06090d, 5, 11);
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.05, 50);
+
+// ---------------------------------------------------------------------------------------------- environment --
+// a soft studio environment (no image files): a gradient room baked into a PMREM so glossy parts catch light
+{
+  const pm = new THREE.PMREMGenerator(renderer);
+  const env = new THREE.Scene();
+  const g = new THREE.SphereGeometry(10, 32, 16);
+  const c = document.createElement("canvas"); c.width = 16; c.height = 256;
+  const x = c.getContext("2d"), gr = x.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, "#5a6e86"); gr.addColorStop(0.45, "#1d2633"); gr.addColorStop(0.55, "#2a1d16"); gr.addColorStop(1, "#050608");
+  x.fillStyle = gr; x.fillRect(0, 0, 16, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  env.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: t, side: THREE.BackSide })));
+  const lamp = new THREE.Mesh(new THREE.PlaneGeometry(6, 2), new THREE.MeshBasicMaterial({ color: 0xffe2c4 }));
+  lamp.position.set(-3, 5, 4); lamp.lookAt(0, 0, 0); env.add(lamp);
+  const rim = new THREE.Mesh(new THREE.PlaneGeometry(4, 1.5), new THREE.MeshBasicMaterial({ color: 0x7fb2ff }));
+  rim.position.set(4, 3, -5); rim.lookAt(0, 0, 0); env.add(rim);
+  scene.environment = pm.fromScene(env, 0.04).texture;
+}
+
+const hemi = new THREE.HemisphereLight(0x9fb8d6, 0x0b0f14, 0.55); scene.add(hemi);
+const key = new THREE.DirectionalLight(0xffdcb8, 2.2);
+key.position.set(-2.6, 4.2, 3.2); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.camera.left = -3; key.shadow.camera.right = 3; key.shadow.camera.top = 3; key.shadow.camera.bottom = -3;
+key.shadow.radius = 6; key.shadow.bias = -0.0004; scene.add(key);
+const rimL = new THREE.DirectionalLight(0x7fb2ff, 1.6); rimL.position.set(3.5, 2.2, -3.5); scene.add(rimL);
+const alarm = new THREE.PointLight(0xff3b30, 0, 6, 1.6); alarm.position.set(0, 1.4, 1.2); scene.add(alarm);
+
+// floor: dark, faint grid fading out from the centre
+{
+  const c = document.createElement("canvas"); c.width = c.height = 1024;
+  const x = c.getContext("2d");
+  const rg = x.createRadialGradient(512, 512, 40, 512, 512, 512);
+  rg.addColorStop(0, "#1a2230"); rg.addColorStop(0.55, "#0d1219"); rg.addColorStop(1, "#06090d");
+  x.fillStyle = rg; x.fillRect(0, 0, 1024, 1024);
+  x.strokeStyle = "rgba(120,150,190,0.07)"; x.lineWidth = 1;
+  for (let i = 0; i <= 1024; i += 32) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, 1024); x.stroke(); x.beginPath(); x.moveTo(0, i); x.lineTo(1024, i); x.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(9, 9), new THREE.MeshStandardMaterial({ map: t, roughness: 0.55, metalness: 0.25 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+}
+
+// ----------------------------------------------------------------------------------------------- materials --
+const M = {
+  graphite: new THREE.MeshPhysicalMaterial({ color: 0x1c2229, roughness: 0.42, metalness: 0.55, clearcoat: 0.3 }),
+  dark: new THREE.MeshStandardMaterial({ color: 0x0c1015, roughness: 0.6, metalness: 0.3 }),
+  rubber: new THREE.MeshStandardMaterial({ color: 0x2a2f36, roughness: 0.85, metalness: 0.05 }),
+  accent: new THREE.MeshStandardMaterial({ color: 0xd8a57a, roughness: 0.4, metalness: 0.6 }),
+  suit: new THREE.MeshPhysicalMaterial({ color: 0xe9e7e2, roughness: 0.78, metalness: 0.0, sheen: 0.6, sheenRoughness: 0.8, sheenColor: 0xffffff }),
+  shell: new THREE.MeshPhysicalMaterial({ color: 0xf1f2f3, roughness: 0.28, metalness: 0.05, clearcoat: 0.8, clearcoatRoughness: 0.15 }),
+  metal: new THREE.MeshStandardMaterial({ color: 0x9aa6b4, roughness: 0.25, metalness: 0.95 }),
+  visor: new THREE.MeshPhysicalMaterial({ color: 0x1a1408, roughness: 0.06, metalness: 0.9, clearcoat: 1, clearcoatRoughness: 0.03 }),
+};
+
+/** A rounded rectangle extruded to depth d (centred), for bezels and cases. */
+function roundedBox(w, h, d, r, mat) {
+  const s = new THREE.Shape(), x = -w / 2, y = -h / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r); s.lineTo(x + w, y + h - r);
+  s.quadraticCurveTo(x + w, y + h, x + w - r, y + h); s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  const g = new THREE.ExtrudeGeometry(s, { depth: d, bevelEnabled: true, bevelThickness: Math.min(0.006, d / 3), bevelSize: Math.min(0.005, r / 2), bevelSegments: 4, curveSegments: 10 });
+  g.translate(0, 0, -d / 2);
+  const m = new THREE.Mesh(g, mat); m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+
+/** A screen showing frames: an unlit plane (true colours, glowing slightly in the dark). */
+function screenMat() {
+  const t = new THREE.Texture(); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  return new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
+}
+const screens = {};
+
+// ------------------------------------------------------------------------------------------------ devices --
+const devices = new THREE.Group(); scene.add(devices);
+
+// 1. Habitat console: the planner on a monitor, on a desk
+{
+  const g = new THREE.Group();
+  const sw = 1.02, sh = sw * 9 / 16;
+  const desk = roundedBox(1.5, 0.05, 0.62, 0.02, M.graphite); desk.position.set(0, 0.475, 0); g.add(desk);
+  for (const sx of [-0.68, 0.68]) { const leg = roundedBox(0.05, 0.45, 0.5, 0.01, M.graphite); leg.position.set(sx, 0.225, 0); g.add(leg); }
+  const base = roundedBox(0.3, 0.018, 0.2, 0.008, M.graphite); base.position.set(0, 0.51, -0.08); g.add(base);
+  const neck = roundedBox(0.06, 0.26, 0.03, 0.01, M.graphite); neck.position.set(0, 0.62, -0.1); g.add(neck);
+  const bez = roundedBox(sw + 0.04, sh + 0.04, 0.03, 0.012, M.graphite); bez.position.set(0, 0.5 + 0.06 + sh / 2 + 0.04, -0.06); g.add(bez);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), screens.console = screenMat());
+  scr.position.set(0, bez.position.y, -0.06 + 0.0215); g.add(scr);
+  const kb = roundedBox(0.42, 0.014, 0.14, 0.006, M.rubber); kb.position.set(-0.05, 0.508, 0.16); g.add(kb);
+  g.position.set(-1.18, 0, -0.95); g.rotation.y = 0.45;
+  devices.add(g);
+}
+
+// 2. Rover dashboard: a rugged tablet on a console arm
+{
+  const g = new THREE.Group();
+  const sw = 0.62, sh = sw * 9 / 16;
+  const pedestal = roundedBox(0.36, 0.62, 0.3, 0.03, M.dark); pedestal.position.set(0, 0.31, 0); g.add(pedestal);
+  const top = roundedBox(0.4, 0.03, 0.34, 0.01, M.graphite); top.position.set(0, 0.635, 0); g.add(top);
+  const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.2, 20), M.metal); arm.position.set(0, 0.74, -0.03); arm.castShadow = true; g.add(arm);
+  const tab = new THREE.Group();
+  const caseM = roundedBox(sw + 0.07, sh + 0.07, 0.045, 0.03, M.rubber); tab.add(caseM);
+  for (const [cx, cy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    const b = roundedBox(0.07, 0.07, 0.055, 0.02, M.accent); b.position.set(cx * (sw / 2 + 0.03), cy * (sh / 2 + 0.03), 0); tab.add(b);
+  }
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), screens.rover = screenMat());
+  scr.position.z = 0.0305; tab.add(scr);
+  tab.position.set(0, 0.84 + sh / 2, 0); tab.rotation.x = -0.32; g.add(tab);
+  g.position.set(1.14, 0, -0.62); g.rotation.y = -0.5;
+  devices.add(g);
+}
+
+// 3. Helmet: a suit helmet on a stand; the visor HUD glows on the gold visor
+{
+  const g = new THREE.Group();
+  const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.38, 48), M.dark); stand.position.y = 0.19; stand.castShadow = stand.receiveShadow = true; g.add(stand);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.165, 0.028, 24, 64), M.metal); ring.rotation.x = Math.PI / 2; ring.position.y = 0.41; ring.castShadow = true; g.add(ring);
+  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.168, 0.012, 16, 64), M.accent); ring2.rotation.x = Math.PI / 2; ring2.position.y = 0.385; g.add(ring2);
+  const R = 0.235;
+  const shell = new THREE.Mesh(new THREE.SphereGeometry(R, 72, 48), M.shell);
+  shell.scale.set(1, 1.08, 1.04); shell.position.y = 0.43 + R * 0.95; shell.castShadow = true; g.add(shell);
+  // visor: the front of a slightly larger sphere (gold glass), and the HUD on it, added to the light it reflects
+  const ph0 = Math.PI * 0.5 - 0.95, phL = 1.9, th0 = Math.PI * 0.30, thL = Math.PI * 0.36;
+  const vis = new THREE.Mesh(new THREE.SphereGeometry(R * 1.012, 72, 48, ph0, phL, th0, thL), M.visor);
+  vis.scale.copy(shell.scale); vis.position.copy(shell.position); g.add(vis);
+  const hudM = screenMat(); hudM.transparent = true; hudM.opacity = 0.92; hudM.depthWrite = false;
+  screens.visor = hudM;
+  const hud = new THREE.Mesh(new THREE.SphereGeometry(R * 1.018, 72, 48, ph0, phL, th0, thL), hudM);
+  hud.scale.copy(shell.scale); hud.position.copy(shell.position); g.add(hud);
+  // visor rim
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(R * 1.02, 0.012, 12, 96, 2.2), M.metal);
+  rim.scale.copy(shell.scale); rim.position.copy(shell.position); rim.rotation.set(0, 0, Math.PI / 2 + 0.0); rim.rotation.y = Math.PI / 2 - 1.1; rim.visible = false; g.add(rim);
+  // ear lights
+  for (const s of [-1, 1]) {
+    const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.04, 24), M.graphite);
+    lamp.rotation.z = Math.PI / 2; lamp.position.set(s * R * 1.02, shell.position.y + 0.02, 0.02); g.add(lamp);
+  }
+  g.position.set(-0.08, 0, 0.3); g.rotation.y = 0.1;
+  devices.add(g);
+}
+
+// 4. Wrist cuff: a suited forearm resting on a block, the cuff display wrapped round its top
+{
+  const g = new THREE.Group();
+  const arm = new THREE.Group();
+  const L = 0.56, r0 = 0.072, r1 = 0.06;
+  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, L, 64, 1, false), M.suit);
+  sleeve.castShadow = true; arm.add(sleeve);
+  for (let i = 0; i < 4; i++) {
+    const b = new THREE.Mesh(new THREE.TorusGeometry(r0 + 0.003, 0.009, 12, 64), M.suit);
+    b.rotation.x = Math.PI / 2; b.position.y = -L / 2 + 0.035 + i * 0.028; arm.add(b);
+  }
+  // wrist disconnect ring and the start of the glove
+  const wrist = new THREE.Mesh(new THREE.CylinderGeometry(r1 + 0.012, r1 + 0.012, 0.035, 64), M.metal); wrist.position.y = L / 2 + 0.012; wrist.castShadow = true; arm.add(wrist);
+  const ringA = new THREE.Mesh(new THREE.TorusGeometry(r1 + 0.013, 0.006, 12, 64), M.accent); ringA.rotation.x = Math.PI / 2; ringA.position.y = L / 2 - 0.004; arm.add(ringA);
+  const gauntlet = new THREE.Mesh(new THREE.CylinderGeometry(r1 - 0.004, r1 + 0.006, 0.07, 64), M.rubber); gauntlet.position.y = L / 2 + 0.064; gauntlet.castShadow = true; arm.add(gauntlet);
+  // the cuff: a curved band and its screen, centred on the side that faces the viewer and up
+  // (CylinderGeometry: theta 0 points along local +z; after the arm is laid along +x, local -x points up)
+  const cw = 1.7, ch = 0.27, rc = r1 + 0.004 + (r0 - r1) * 0.62, thc = -0.55;
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(rc + 0.002, rc + 0.004, ch + 0.034, 64, 1, true, thc - cw / 2 - 0.14, cw + 0.28), M.rubber);
+  band.material.side = THREE.DoubleSide; band.position.y = 0.06; arm.add(band);
+  const scr = new THREE.Mesh(new THREE.CylinderGeometry(rc + 0.006, rc + 0.008, ch, 64, 1, true, thc - cw / 2, cw), screens.cuff = screenMat());
+  scr.position.y = 0.06; arm.add(scr);
+  arm.rotation.z = -Math.PI / 2 + 0.12; arm.position.set(0, 0.29, 0);
+  g.add(arm);
+  const block = roundedBox(0.26, 0.2, 0.24, 0.04, M.graphite); block.position.set(-0.2, 0.1, 0); g.add(block);
+  const pad = roundedBox(0.22, 0.02, 0.2, 0.01, M.rubber); pad.position.set(-0.2, 0.21, 0); g.add(pad);
+  g.position.set(0.66, 0, 0.6); g.rotation.y = -0.62;
+  devices.add(g);
+}
+
+// ----------------------------------------------------------------------------------------------- labels --
+async function fonts() {
+  const f = new FontFace("BC", "url(/app/vendor/fonts/BarlowCondensed-SemiBold.woff)");
+  document.fonts.add(await f.load());
+}
+function label(text, pos, scale = 0.6) {
+  const c = document.createElement("canvas"); c.width = 1024; c.height = 128;
+  const x = c.getContext("2d");
+  x.font = "600 64px BC"; x.textAlign = "center"; x.textBaseline = "middle";
+  x.letterSpacing = "10px";
+  x.fillStyle = "rgba(216,165,122,0.95)"; x.beginPath(); x.arc(512 - x.measureText(text).width / 2 - 34, 64, 10, 0, 7); x.fill();
+  x.fillStyle = "#dfe6ee"; x.fillText(text, 512, 66);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, toneMapped: false }));
+  s.scale.set(scale, scale / 8, 1); s.position.copy(pos); s.renderOrder = 10; scene.add(s);
+  return s;
+}
+
+// ------------------------------------------------------------------------------------------ frame driver --
+const loader = async (url) => {
+  const r = await fetch(url);
+  if (!r.ok) return null;
+  return createImageBitmap(await r.blob(), { imageOrientation: "flipY" });
+};
+const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const lerp = (a, b, t) => a + (b - a) * t;
+
+let CFG = null;
+window.setup = async (cfg) => {
+  CFG = cfg;
+  await fonts();
+  label("HABITAT CONSOLE", new THREE.Vector3(-1.12, 1.33, -0.86));
+  label("ROVER DASHBOARD", new THREE.Vector3(1.16, 1.36, -0.58));
+  label("HELMET VISOR", new THREE.Vector3(-0.08, 0.035, 0.66), 0.5);
+  label("WRIST CUFF", new THREE.Vector3(0.74, 0.035, 0.9), 0.44);
+  return true;
+};
+
+/** Frame k of the shot (0..count-1): screens show the captured frame from + k, the camera glides. */
+window.renderFrame = async (k) => {
+  const { from, count, every, leakFrame, fps } = CFG;
+  const f = from + k;
+  const pick = (name, n) => `${FRAMES}/${name}/${String(Math.floor(f / n) * n).padStart(4, "0")}.jpg`;
+  const want = { console: pick("planner", every.planner), rover: pick("rover", every.rover), cuff: pick("cuff", every.cuff), visor: pick(CFG.visorDir || "visor", every.visor) };
+  await Promise.all(Object.entries(want).map(async ([k2, url]) => {
+    const m = screens[k2];
+    if (m.userData.url === url) return;
+    const bmp = await loader(url);
+    if (!bmp) return;
+    m.map.image?.close?.();
+    m.map.image = bmp; m.map.needsUpdate = true; m.userData.url = url;
+  }));
+  // camera: a slow push-in with a little arc
+  const t = ease(k / Math.max(1, count - 1));
+  camera.position.set(lerp(0.55, 0.05, t), lerp(1.18, 0.98, t), lerp(4.05, 3.35, t));
+  camera.lookAt(lerp(0.02, -0.05, t), lerp(0.64, 0.62, t), 0);
+  // the warning: a red light pulsing at the caution-and-warning flash rate (3 Hz) for a second after the leak
+  const since = (f - leakFrame) / fps;
+  alarm.intensity = since >= 0 && since < 1.6 ? 3.2 * (0.5 + 0.5 * Math.cos(2 * Math.PI * 3 * since)) * Math.exp(-since * 0.9) : 0;
+  renderer.render(scene, camera);
+  return true;
+};
+window.ready = true;
+</script>
+</body>
+</html>

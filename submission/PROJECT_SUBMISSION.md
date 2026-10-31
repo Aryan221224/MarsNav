@@ -25,7 +25,7 @@ Download for Windows: `https://github.com/Aryan221224/MarsNav/releases/latest` (
 
 ## Link to Project Demo
 
-*(to add: the 30-second video with English subtitles, or the 7-slide deck)*
+*(to add: the YouTube link to `submission/video/MarsNav_demo_30s.mp4`, the 30-second video with English subtitles; source and rebuild steps in `submission/video/`)*
 
 ## Detailed Project Description
 
@@ -82,10 +82,10 @@ On a site the card adds the planner's own terrain model at that cell and the rov
 | Hazard model vs JPL's route choices | On 30 detour drives the rover's real path scores lower hazard than the straight line on 21 of 30 |
 | Route geometry vs the rover's drives | **Not** better than a straight line (38 m vs 34 m mean offset). Reported as a negative result: drives are shaped by science stops and sub-metre hazards |
 | Closed loop vs flying the filed plan | 40 paired EVAs with crews and hardware the planner was not told about: 0 of 40 dipped into the reserve, against 31 of 40 (Wilcoxon p < 0.001) |
-| Against NASA's TSS2027 telemetry server | Learned an 8× faster battery and CO₂ drain and turned the EVA home within about 2 minutes |
+| Against NASA's TSS2027 telemetry server | Detected a battery and CO₂ drain beyond its 8× estimator limit (O₂ about 4×) and turned the EVA home within about 2 minutes |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-97 automated tests pass (63 engine and closed-loop, 34 pipeline, downloader and science-atlas), and the local server passes an end-to-end self-test under load, including a first run on an empty computer.
+118 automated tests pass (65 engine and closed-loop, 53 pipeline, downloader, science-atlas and place), and the local server passes an end-to-end self-test under load, including a first run on an empty computer.
 
 ### Use-case evidence: the same trip as Perseverance
 
@@ -201,6 +201,7 @@ We used AI tools the way a modern engineering team does: to move faster, while e
 - **Software development.** We used an AI coding assistant (Anthropic's Claude) to help write, refactor, test and debug code to our design. The team designed the system, chose the methods and data, set the safety rules, and reviewed and tested every change. The repository acknowledges the AI-assisted code in `docs/AI_USE.md`, linked from the README.
 - **Documentation.** The assistant helped draft and edit the README, the technical documents, the user guide and this submission from our results; we checked every statement against the code and data.
 - **Logo.** The MarsNav logo was created with an AI image generator and carries a visible "AI-generated" watermark.
+- **Demo video.** The AI assistant scripted the captures of the running app, the 3D device models and the edit; the music is synthesised by our own script (no samples, no AI audio), and the narration is a team member's voice.
 - **Not AI-generated.** All data is real NASA, ESA and USGS mission data, downloaded from its source with recorded checksums. Every number in this submission comes from running our code on that data and can be reproduced with the scripts in `validation/`. Screenshots are captures of the running app. No AI-generated content uses NASA branding.
 
 ## Images for the project page

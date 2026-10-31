@@ -83,11 +83,11 @@ Every result is reported, including the one that did not go our way. Figures re-
 | Hazard model vs JPL's route choices | The rover's real path scores lower than the straight line on 21 of 30 detour drives |
 | Route geometry vs the rover's drives | **Not** better than a straight line (38 m vs 34 m): reported as a negative result |
 | Closed loop vs flying the filed plan | 40 paired EVAs: 0 of 40 dipped into the reserve with the loop, 31 of 40 without (Wilcoxon p < 0.001) |
-| Against NASA's TSS2027 telemetry server | Learned an 8× faster battery and CO₂ drain and turned the EVA home within about 2 minutes |
+| Against NASA's TSS2027 telemetry server | Detected a battery and CO₂ drain beyond its 8× estimator limit (O₂ about 4×) and turned the EVA home within about 2 minutes |
 | Same trip as the rover | Séítah to the delta front: Perseverance drove 7.1 km over 85 sols; MarsNav planned 3.07 km in under a second (a suited crew: 2.92 km, 1.4 h). Over 45 real drives its routes cross 47 % less mapped sand and 55 % less rocky ground than the rover did, and its speed model reproduces the rover's measured 79.7 m/h (79 m/h) |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-97 automated tests pass: 63 engine and closed-loop tests (Node) and 34 pipeline, downloader and science-atlas tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
+118 automated tests pass: 65 engine and closed-loop tests (Node) and 53 pipeline, downloader, science-atlas and place tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
 
 ## How it works
 

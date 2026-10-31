@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MarsNav demo · compositor</title>
+<style>
+  @font-face { font-family: "Barlow"; font-weight: 500; src: url("/app/vendor/fonts/Barlow-Medium.woff") format("woff"); }
+  @font-face { font-family: "Barlow"; font-weight: 600; src: url("/app/vendor/fonts/Barlow-SemiBold.woff") format("woff"); }
+  @font-face { font-family: "Barlow"; font-weight: 700; src: url("/app/vendor/fonts/Barlow-Bold.woff") format("woff"); }
+  @font-face { font-family: "Barlow"; font-style: italic; font-weight: 400; src: url("/app/vendor/fonts/Barlow-Italic.woff") format("woff"); }
+  @font-face { font-family: "BC"; font-weight: 600; src: url("/app/vendor/fonts/BarlowCondensed-SemiBold.woff") format("woff"); }
+  @font-face { font-family: "BC"; font-weight: 700; src: url("/app/vendor/fonts/BarlowCondensed-Bold.woff") format("woff"); }
+  @font-face { font-family: "Plex"; font-weight: 500; src: url("/app/vendor/fonts/IBMPlexMono-Medium.woff") format("woff"); }
+  :root { --accent: #e8b48a; --accent2: #d8a57a; --ink: #eef2f6; --dim: #9fb0c3; --line: #34445a; --bg: #070a0e; --warn: #ff5b4f; --ok: #45d483; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #000; }
+  #bg { position: absolute; inset: 0; }
+  #ov { position: absolute; inset: 0; font-family: "Barlow", sans-serif; color: var(--ink); }
+  .abs { position: absolute; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 14px; padding: 12px 20px 12px 16px; border-radius: 6px;
+    background: rgba(8, 12, 18, 0.78); border: 1px solid rgba(120, 140, 165, 0.45); font: 600 25px/1 "BC"; letter-spacing: 0.12em;
+    text-transform: uppercase; white-space: nowrap; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35); }
+  .chip i { width: 11px; height: 11px; border-radius: 2px; background: var(--accent2); flex: 0 0 auto; }
+  .chip.warn { border-color: rgba(255, 91, 79, 0.85); }
+  .chip.warn i { background: var(--warn); }
+  .cap { position: absolute; left: 50%; bottom: 112px; transform: translateX(-50%); text-align: center; padding: 10px 26px 12px;
+    border-radius: 10px; background: rgba(6, 9, 13, 0.62); font: 600 44px/1.22 "Barlow"; letter-spacing: 0.005em; white-space: nowrap;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6); }
+  .brand { position: absolute; left: 56px; top: 44px; display: flex; align-items: center; gap: 18px; }
+  .brand img { width: 74px; height: 74px; }
+  .brand b { font: 700 50px/1 "BC"; letter-spacing: 0.18em; }
+  .card { position: absolute; padding: 18px 26px 20px; border-radius: 10px; background: rgba(7, 10, 14, 0.8); border: 1px solid rgba(120, 140, 165, 0.4); }
+  .card .k { font: 600 24px/1 "BC"; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .card .v { margin-top: 10px; font: 500 54px/1 "Plex"; letter-spacing: -0.01em; }
+  .card .v small { font-size: 0.55em; color: var(--dim); }
+  .card.mn { border-color: rgba(232, 180, 138, 0.75); }
+  .card.mn .k { color: var(--accent); }
+  .pin { position: absolute; transform: translate(-50%, -50%); }
+  .pin span { position: absolute; white-space: nowrap; font: 600 24px/1 "BC"; letter-spacing: 0.1em; text-transform: uppercase; color: #fff;
+    text-shadow: 0 1px 3px #000, 0 0 12px rgba(0, 0, 0, 0.9); }
+  .cell-l { position: absolute; padding: 7px 12px 8px; border-radius: 5px; background: rgba(6, 9, 13, 0.82); }
+  .cell-l b { display: block; font: 600 22px/1 "BC"; letter-spacing: 0.1em; }
+  .cell-l em { display: block; margin-top: 5px; font: normal 600 17px/1 "BC"; letter-spacing: 0.12em; color: var(--accent); }
+  .ph { position: absolute; text-align: center; }
+  .ph h2 { margin: 0; font: 600 34px/1 "BC"; letter-spacing: 0.12em; text-transform: uppercase; }
+  .ph .n { margin-top: 26px; font: 500 116px/1 "Plex"; letter-spacing: -0.02em; }
+  .ph .n small { font-size: 0.42em; color: var(--dim); }
+  .ph p { margin: 12px 0 0; font: 500 30px/1.2 "Barlow"; color: var(--dim); }
+  .endc { position: absolute; inset: 0; text-align: center; }
+</style>
+</head>
+<body>
+<canvas id="bg" width="1920" height="1080"></canvas>
+<div id="ov"></div>
+<script type="module">
+const TL = await (await fetch("timeline.json")).json();
+const FPS = TL.fps, W = 1920, H = 1080;
+const BUILD = "/submission/video/build/";
+const src = (p) => (p.startsWith("/") ? p : BUILD + p);
+const cv = document.getElementById("bg"), g = cv.getContext("2d");
+const ov = document.getElementById("ov");
+g.imageSmoothingQuality = "high";
+
+const cache = new Map();
+function img(url) {
+  if (!cache.has(url)) cache.set(url, new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = url; }));
+  return cache.get(url);
+}
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+const lerp = (a, b, t) => a + (b - a) * t;
+const ramp = (t, a, b) => clamp((t - a) / (b - a));
+const lerpRect = (A, B, t) => A.map((v, i) => lerp(v, B[i], t));
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+function drawCrop(im, r, alpha = 1) {
+  if (!im) return;
+  g.globalAlpha = alpha;
+  g.drawImage(im, r[0], r[1], r[2], r[3], 0, 0, W, H);
+  g.globalAlpha = 1;
+}
+function vignette(k = 0.55) {
+  const v = g.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
+  v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, `rgba(0,0,0,${k})`);
+  g.fillStyle = v; g.fillRect(0, 0, W, H);
+}
+function darkBg() {
+  g.fillStyle = "#070a0e"; g.fillRect(0, 0, W, H);
+  g.strokeStyle = "rgba(110,140,175,0.06)"; g.lineWidth = 1;
+  for (let x = 0; x <= W; x += 48) { g.beginPath(); g.moveTo(x + 0.5, 0); g.lineTo(x + 0.5, H); g.stroke(); }
+  for (let y = 0; y <= H; y += 48) { g.beginPath(); g.moveTo(0, y + 0.5); g.lineTo(W, y + 0.5); g.stroke(); }
+}
+
+// ------------------------------------------------------------------------------------------ data for shots --
+const geo = await (await fetch(BUILD + "rover/geo.json")).json();
+const loop = await (await fetch("/validation/results/closed_loop.json")).json();
+const breachOpen = loop.runs.map((r) => !!r.open.breach), breachClosed = loop.runs.map((r) => !!r.closed.breach);
+const nOpen = breachOpen.filter(Boolean).length, nClosed = breachClosed.filter(Boolean).length;
+function cum(pts) { const c = [0]; for (let i = 1; i < pts.length; i++) c.push(c[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return c; }
+const roverC = cum(geo.rover), crewC = cum(geo.crew);
+
+// ------------------------------------------------------------------------------------------------- shots --
+const SHOTS = {
+  async seq(s, t) {
+    const n = Math.max(0, Math.floor(t * FPS + 1e-6));
+    const f = (s.from || 0) + n;
+    const im = await img(`${BUILD}${s.dir}/${String(f).padStart(4, "0")}.jpg`);
+    if (im) drawCrop(im, s.crop || [0, 0, im.width, im.height]);
+    return "";
+  },
+  async xfade(s, t, d) {
+    const a = await img(src(s.a)), b = await img(src(s.b));
+    const r = lerpRect(s.kb[0], s.kb[1], ease(t / d));
+    drawCrop(a, r);
+    drawCrop(b, r, ease(ramp(t, s.fade[0], s.fade[1])));
+    vignette(0.35);
+    return "";
+  },
+  async still(s, t, d) {
+    const a = await img(src(s.src));
+    drawCrop(a, lerpRect(s.kb[0], s.kb[1], ease(t / d)));
+    vignette(0.3);
+    return "";
+  },
+  async grid(s, t) {
+    darkBg();
+    const L = 72, T = 150, B = 196, G = 22, cols = 3, rows = 2;
+    const cw = (W - 2 * L - (cols - 1) * G) / cols, ch = (H - T - B - (rows - 1) * G) / rows;
+    let html = "";
+    for (let i = 0; i < s.cells.length; i++) {
+      const c = s.cells[i], im = await img(src(c.src));
+      const a = easeOut(ramp(t, 0.06 * i - 0.12, 0.06 * i + 0.3));     // the first cells are already in on frame one
+      if (!im || a <= 0) continue;
+      const x = L + (i % cols) * (cw + G), y = T + Math.floor(i / cols) * (ch + G);
+      const sc = lerp(0.94, 1, a), w = cw * sc, h = ch * sc, cx = x + cw / 2, cy = y + ch / 2;
+      // crop the source to the cell's shape, keeping the site markers and the app's legend
+      const sw = im.width, sh = sw * ch / cw, sy = Math.min(im.height - sh, 330);
+      g.save(); g.globalAlpha = a;
+      g.beginPath(); g.roundRect(cx - w / 2, cy - h / 2, w, h, 10); g.clip();
+      g.drawImage(im, 0, sy, sw, sh, cx - w / 2, cy - h / 2, w, h);
+      g.restore();
+      g.globalAlpha = a; g.strokeStyle = "rgba(140,160,185,0.5)"; g.lineWidth = 1.5;
+      g.beginPath(); g.roundRect(cx - w / 2, cy - h / 2, w, h, 10); g.stroke(); g.globalAlpha = 1;
+      html += `<div class="cell-l" style="left:${x + 14}px;top:${y + 14}px;opacity:${a}"><b>${esc(c.label)}</b><em>${esc(c.by)}</em></div>`;
+    }
+    return html;
+  },
+  async rover(s, t, d) {
+    const base = await img(BUILD + "rover/base.jpg");
+    const [bw, bh] = geo.size;
+    const z = lerp(1.0, 1.06, ease(t / d));
+    const sc = Math.max(W / bw, H / bh) * z;
+    const ox = W / 2 - (bw / 2) * sc, oy = H / 2 - (bh / 2) * sc;
+    const P = (p) => [ox + p[0] * sc, oy + p[1] * sc];
+    g.drawImage(base, ox, oy, bw * sc, bh * sc);
+    g.fillStyle = "rgba(6,9,13,0.16)"; g.fillRect(0, 0, W, H);
+    vignette(0.45);
+    const part = (pts, c, frac) => {
+      const L = c[c.length - 1] * frac, out = [P(pts[0])];
+      for (let i = 1; i < pts.length; i++) {
+        if (c[i] <= L) { out.push(P(pts[i])); continue; }
+        const k = (L - c[i - 1]) / (c[i] - c[i - 1]);
+        out.push(P([lerp(pts[i - 1][0], pts[i][0], k), lerp(pts[i - 1][1], pts[i][1], k)]));
+        break;
+      }
+      return out;
+    };
+    const stroke = (pts, w, col, blur = 0, glow = null) => {
+      if (pts.length < 2) return;
+      g.save(); g.lineJoin = g.lineCap = "round"; g.lineWidth = w; g.strokeStyle = col;
+      if (blur) { g.shadowBlur = blur; g.shadowColor = glow; }
+      g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.stroke(); g.restore();
+    };
+    const fr = ease(ramp(t, 0.25, 2.9)), fc = ease(ramp(t, 3.15, 4.95));
+    const rp = part(geo.rover, roverC, fr), cp = part(geo.crew, crewC, fc);
+    stroke(rp, 10, "rgba(0,0,0,0.55)"); stroke(rp, 4.5, "#d9dee4");
+    if (fc > 0) { stroke(cp, 14, "rgba(0,0,0,0.65)"); stroke(cp, 7, "#ffa955", 24, "rgba(255,169,85,0.9)"); }
+    const dot = (p, r, col) => { g.beginPath(); g.arc(p[0], p[1], r, 0, 7); g.fillStyle = col; g.fill(); g.lineWidth = 3; g.strokeStyle = "rgba(0,0,0,0.6)"; g.stroke(); };
+    if (fr > 0 && fr < 1) dot(rp[rp.length - 1], 8, "#ffffff");
+    if (fc > 0 && fc < 1) dot(cp[cp.length - 1], 9, "#ffd9b5");
+    const A = P(geo.from.px), Bp = P(geo.to.px);
+    dot(A, 11, "#ffffff"); dot(Bp, 11, "#ffffff");
+    const N = geo.numbers;
+    const sol = Math.round(lerp(N.rover_sol_from, N.rover_sol_to, fr));
+    const mins = Math.round(N.crew_min * fc);
+    const cardA = t >= 0.25 ? `<div class="card" style="left:56px;top:52px;opacity:${ramp(t, 0.25, 0.6)}"><div class="k">Perseverance · 2022 · driven from Earth</div>
+      <div class="v">${fr >= 1 ? `${N.rover_km.toFixed(2)} km · ${N.rover_sols} sols` : `sol ${sol}`}</div></div>` : "";
+    const cardB = t >= 3.15 ? `<div class="card mn" style="left:56px;top:206px;opacity:${ramp(t, 3.15, 3.5)}"><div class="k">MarsNav · suited crew · walk home kept</div>
+      <div class="v">${fc >= 1 ? `${N.crew_km.toFixed(2)} km · ${Math.round(N.crew_min)} min` : `${mins} min`}</div></div>` : "";
+    const lbl = (p, txt, dx, dy, align) => `<div class="pin" style="left:${p[0]}px;top:${p[1]}px"><span style="left:${dx}px;top:${dy}px;${align}">${esc(txt)}</span></div>`;
+    const foot = t >= 5.0 ? `<div class="chip" style="left:56px;bottom:40px;opacity:${ramp(t, 5.0, 5.3)}"><i></i>Same start, same end · same 1 m HiRISE terrain</div>` : "";
+    return cardA + cardB + lbl(A, geo.from.name, 18, -40, "") + lbl(Bp, geo.to.name, -18, 22, "transform:translateX(-100%)") + foot;
+  },
+  async proof(s, t) {
+    darkBg();
+    const panel = (x0, title, flags, col, tone, n, label) => {
+      const cols = 10, rows = 4, R = 17, gap = 62, gw = (cols - 1) * gap, gx = x0 + (720 - gw) / 2, gy = 330;
+      let lit = 0;
+      for (let i = 0; i < 40; i++) {
+        const r = Math.floor(i / cols), c = i % cols, x = gx + c * gap, y = gy + r * gap;
+        const at = 0.35 + 1.1 * (i / 39);
+        const on = t >= at;
+        let fill = "#2a3644";
+        if (on) fill = flags[i] ? "#ff5b4f" : col;
+        if (on && flags[i]) lit++;
+        g.beginPath(); g.arc(x, y, R, 0, 7); g.fillStyle = fill; g.fill();
+      }
+      const shown = t >= 1.45 ? n : lit;
+      return `<div class="ph" style="left:${x0}px;top:200px;width:720px"><h2 style="color:${tone}">${esc(title)}</h2></div>
+        <div class="ph" style="left:${x0}px;top:560px;width:720px;opacity:${ramp(t, 0.3, 0.55)}"><div class="n" style="color:${shown ? "#ff7a70" : "var(--accent)"}">${shown}<small> / 40</small></div><p>${esc(label)}</p></div>`;
+    };
+    const head = `<div class="ph" style="left:0;top:92px;width:1920px"><h2 style="color:var(--dim);font-size:30px">40 paired simulated EVAs · crews and suits the plan was not told about</h2></div>`;
+    const a = panel(170, "Flying the filed plan", breachOpen, "#5c6b7c", "#c3ccd6", nOpen, "dipped into their reserve");
+    const b = panel(1030, "With MarsNav's closed loop", breachClosed, "#45d483", "var(--accent)", nClosed, "dipped into their reserve");
+    const foot = `<div class="ph" style="left:0;top:792px;width:1920px;font:500 24px/1 Plex;color:#7f91a6">Wilcoxon signed-rank p &lt; 0.001 · validation/CLOSED_LOOP.md</div>`;
+    return head + a + b + foot;
+  },
+  async end(s, t) {
+    g.fillStyle = "#06090d"; g.fillRect(0, 0, W, H);
+    const gl = g.createRadialGradient(W / 2, 380, 20, W / 2, 380, 700);
+    gl.addColorStop(0, "rgba(216,165,122,0.22)"); gl.addColorStop(1, "rgba(216,165,122,0)");
+    g.fillStyle = gl; g.fillRect(0, 0, W, H);
+    const E = TL.end, a = (x, y) => ramp(t, x, y);
+    return `<div class="endc">
+      <img src="/app/logo-512.png" style="position:absolute;left:${W / 2 - 115}px;top:118px;width:230px;height:230px;opacity:${a(0, 0.35)};transform:scale(${lerp(0.92, 1, easeOut(a(0, 0.6)))})">
+      <div class="abs" style="left:0;width:1920px;top:378px;font:700 128px/1 BC;letter-spacing:0.2em;opacity:${a(0.1, 0.45)}">MARSNAV</div>
+      <div class="abs" style="left:0;width:1920px;top:528px;font:italic 400 54px/1 Barlow;color:var(--accent);opacity:${a(0.35, 0.7)}">${esc(E.tagline)}</div>
+      <div class="abs" style="left:0;width:1920px;top:624px;font:500 34px/1 Plex;color:var(--ink);opacity:${a(0.5, 0.85)}">${esc(E.url)}</div>
+      <div class="abs" style="left:0;width:1920px;top:684px;font:600 26px/1 BC;letter-spacing:0.1em;color:var(--dim);opacity:${a(0.6, 0.95)}">${esc(E.event.toUpperCase())}</div>
+      <div class="abs" style="left:0;width:1920px;top:1038px;font:500 19px/1 Barlow;color:#6f8093;opacity:${a(0.6, 0.95)}">${esc(E.credit)}</div>
+    </div>`;
+  },
+};
+
+function shotAt(t) { return TL.shots.find((s) => t >= s.start && t < s.end) || TL.shots[TL.shots.length - 1]; }
+
+const drawShot = {};   // holds the scratch canvas used by dissolves
+
+window.renderAt = async (t) => {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const s = shotAt(t);
+  let html = "";
+  // dissolves: the outgoing shot first, then the incoming one faded in on a second canvas pass
+  const dz = TL.dissolves.find((d) => t >= d.at - d.len / 2 && t < d.at + d.len / 2);
+  if (dz) {
+    const before = shotAt(dz.at - 0.001), after = shotAt(dz.at);
+    const k = ease(clamp((t - (dz.at - dz.len / 2)) / dz.len));
+    const tb = Math.min(t, before.end - 1 / FPS), ta = Math.max(t, after.start);
+    const hb = await SHOTS[before.kind](before, tb - before.start, before.end - before.start);
+    const snap = g.getImageData(0, 0, W, H);
+    g.clearRect(0, 0, W, H);
+    const ha = await SHOTS[after.kind](after, ta - after.start, after.end - after.start);
+    const top = g.getImageData(0, 0, W, H);
+    g.putImageData(snap, 0, 0);
+    const tmp = drawShot.tmp ||= Object.assign(document.createElement("canvas"), { width: W, height: H });
+    tmp.getContext("2d").putImageData(top, 0, 0);
+    g.globalAlpha = k; g.drawImage(tmp, 0, 0); g.globalAlpha = 1;
+    html += `<div style="position:absolute;inset:0;opacity:${1 - k}">${hb}</div><div style="position:absolute;inset:0;opacity:${k}">${ha}</div>`;
+  } else {
+    html += await SHOTS[s.kind](s, t - s.start, s.end - s.start);
+  }
+  // brand lockup
+  const B = TL.brand;
+  if (t >= B.in && t < B.out) {
+    const a = Math.min(ramp(t, B.in, B.in + 0.35), 1 - ramp(t, B.out - 0.2, B.out));
+    html += `<div class="brand" style="opacity:${a}"><img src="/app/logo-192.png" alt=""><b>MARSNAV</b></div>`;
+  }
+  // chips
+  for (const c of TL.chips) {
+    if (t < c.in || t >= c.out) continue;
+    const a = Math.min(ramp(t, c.in, c.in + 0.22), 1 - ramp(t, c.out - 0.15, c.out));
+    const pos = c.pos === "bl" ? "left:56px;bottom:40px" : c.pos === "visor" ? "left:24px;top:300px" : "left:56px;top:52px";
+    html += `<div class="chip ${c.tone || ""}" style="${pos};opacity:${a};transform:translateY(${lerp(8, 0, easeOut(a))}px)"><i></i>${esc(c.text)}</div>`;
+  }
+  // captions (the narration, burned in)
+  const cap = TL.captions.find((c) => t >= c.in && t < c.out);
+  if (cap) {
+    const a = Math.min(ramp(t, cap.in, cap.in + 0.12), 1 - ramp(t, cap.out - 0.1, cap.out));
+    html += `<div class="cap" style="opacity:${a}">${esc(cap.text).replace(/\n/g, "<br>")}</div>`;
+  }
+  ov.innerHTML = html;
+  await Promise.all([...ov.querySelectorAll("img")].map((i) => i.decode().catch(() => {})));
+  return true;
+};
+await document.fonts.ready;
+for (const f of ["600 25px BC", "600 44px Barlow", "500 54px Plex", "700 128px BC", "italic 400 54px Barlow", "500 30px Barlow"]) await document.fonts.load(f);
+window.ready = true;
+</script>
+</body>
+</html>

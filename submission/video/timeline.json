@@ -1,0 +1,69 @@
+{
+  "title": "MarsNav - NASA Space Apps 2026 - Interplanetary Survival Guide: Martian Map",
+  "fps": 30,
+  "duration": 29.5,
+  "size": [1920, 1080],
+  "shots": [
+    { "id": "visor", "start": 0.0, "end": 4.6, "kind": "seq", "dir": "eva/visor", "from": 0, "crop": [0, 34, 1920, 1046] },
+    { "id": "walkback", "start": 4.6, "end": 7.6, "kind": "xfade",
+      "a": "stills/jezero_plan_none.png", "b": "stills/jezero_plan_walkback.png", "fade": [0.35, 1.35],
+      "kb": [[0, 200, 2240, 1260], [150, 300, 1920, 1080]] },
+    { "id": "globe", "start": 7.6, "end": 9.0, "kind": "still", "src": "/submission/screens/13_landing_mode.jpg",
+      "kb": [[0, 0, 1800, 1012], [230, 70, 1360, 765]] },
+    { "id": "layers", "start": 9.0, "end": 11.0, "kind": "grid",
+      "cells": [
+        { "src": "/tools/guide/assets/img/c_l06_ice_c452_70_1247_950.jpg", "label": "WATER ICE", "by": "SWIM" },
+        { "src": "/tools/guide/assets/img/c_l06c_grs_c452_70_1247_950.jpg", "label": "NEAR-SURFACE WATER", "by": "MARS ODYSSEY GRS" },
+        { "src": "/tools/guide/assets/img/c_l06d_themis_night_c452_70_1247_950.jpg", "label": "NIGHT-TIME HEAT", "by": "MARS ODYSSEY THEMIS" },
+        { "src": "/tools/guide/assets/img/c_l06e_mola_c452_70_1247_950.jpg", "label": "ELEVATION", "by": "MGS MOLA" },
+        { "src": "/tools/guide/assets/img/c_l07b_thermal_c452_70_1247_950.jpg", "label": "THERMAL INERTIA", "by": "MGS TES" },
+        { "src": "/tools/guide/assets/img/c_l07_geology_craters_c452_70_1247_950.jpg", "label": "GEOLOGY AND CRATERS", "by": "USGS" }
+      ] },
+    { "id": "sharp", "start": 11.0, "end": 12.8, "kind": "still", "src": "stills/sharp_3d.png",
+      "kb": [[900, 470, 2160, 1215], [1240, 614, 1300, 731]] },
+    { "id": "devices", "start": 12.8, "end": 17.3, "kind": "seq", "dir": "devices", "from": 0 },
+    { "id": "rover", "start": 17.3, "end": 23.9, "kind": "rover" },
+    { "id": "proof", "start": 23.9, "end": 27.1, "kind": "proof" },
+    { "id": "end", "start": 27.1, "end": 29.5, "kind": "end" }
+  ],
+  "dissolves": [
+    { "at": 4.6, "len": 0.3 },
+    { "at": 27.1, "len": 0.3 }
+  ],
+  "captions": [
+    { "in": 0.15, "out": 4.45, "text": "The first crew on Mars will walk\nwith no GPS, and limited air." },
+    { "in": 4.75, "out": 7.45, "text": "MarsNav keeps a way home on every step." },
+    { "in": 7.7, "out": 10.3, "text": "It ranks landing sites and science targets," },
+    { "in": 10.3, "out": 12.65, "text": "then plans each walk on NASA terrain\ndown to one metre." },
+    { "in": 12.9, "out": 17.1, "text": "From habitat to helmet,\nit reads the suit and re-plans." },
+    { "in": 17.45, "out": 20.4, "text": "Perseverance took 85 sols\nto make this trip." },
+    { "in": 20.4, "out": 23.75, "text": "For a crew, MarsNav plans it\nas an 84-minute walk." },
+    { "in": 24.0, "out": 26.95, "text": "In 40 simulated EVAs,\nno crew touched their reserve." },
+    { "in": 27.3, "out": 29.4, "text": "MarsNav. Every step, a way home." }
+  ],
+  "voiceover": [
+    { "line": 1, "in": 0.15, "out": 4.45, "text": "The first crew on Mars will walk with no GPS, and limited air." },
+    { "line": 2, "in": 4.75, "out": 7.45, "text": "MarsNav keeps a way home on every step." },
+    { "line": 3, "in": 7.7, "out": 12.65, "text": "It ranks landing sites and science targets, then plans each walk on NASA terrain down to one metre." },
+    { "line": 4, "in": 12.9, "out": 17.1, "text": "From habitat to helmet, it reads the suit and re-plans." },
+    { "line": 5, "in": 17.45, "out": 23.75, "text": "Perseverance took 85 sols to make this trip. For a crew, MarsNav plans it as an 84-minute walk." },
+    { "line": 6, "in": 24.0, "out": 26.95, "text": "In 40 simulated EVAs, no crew touched their reserve." },
+    { "line": 7, "in": 27.3, "out": 29.4, "text": "MarsNav. Every step, a way home." }
+  ],
+  "chips": [
+    { "in": 0.5, "out": 4.4, "text": "HELMET-VISOR DISPLAY · SIMULATED EVA, JEZERO CRATER", "pos": "visor" },
+    { "in": 5.2, "out": 7.5, "text": "WALK-HOME TIME FROM EVERY POINT · 15-MINUTE BANDS", "pos": "bl" },
+    { "in": 7.7, "out": 8.95, "text": "66 CANDIDATE LANDING SITES · NASA HUMAN LANDING CRITERIA", "pos": "tl" },
+    { "in": 9.1, "out": 10.95, "text": "ARCADIA PLANITIA · SIX NASA DATA LAYERS, ONE PLACE", "pos": "tl" },
+    { "in": 11.1, "out": 12.75, "text": "CURIOSITY'S BOXWORK · MOUNT SHARP · HIRISE 1 M TERRAIN", "pos": "tl" },
+    { "in": 12.95, "out": 14.25, "text": "ONE LIVE PLAN · FOUR CREW DISPLAYS", "pos": "tl" },
+    { "in": 14.35, "out": 17.2, "text": "SUIT LEAK → EVERY DISPLAY TURNS HOME", "pos": "tl", "tone": "warn" }
+  ],
+  "brand": { "in": 4.85, "out": 7.6 },
+  "end": {
+    "tagline": "Every step, a way home.",
+    "url": "github.com/Aryan221224/MarsNav",
+    "event": "NASA Space Apps Challenge 2026 · Interplanetary Survival Guide: Martian Map",
+    "credit": "Terrain and imagery: NASA/JPL/University of Arizona, USGS · Logo AI-generated · Not a NASA product"
+  }
+}

@@ -10,13 +10,19 @@ Two versions: a 30-second video for the project page, and a 2-minute live walkth
 
 ## 30-second video
 
+Built and rendered from the running app: `submission/video/MarsNav_demo_30s_music.mp4` (music and burned-in
+captions; add the narration with `submission/video/README.md`). Shot times, captions and narration cues live in
+`submission/video/timeline.json`.
+
 | Time | On screen | Voice-over |
 |---|---|---|
-| 0 to 5 s | Plan mode, Jezero, balanced route to Amalik drawn | "The first astronauts on Mars will walk with no GPS, hours from help. MarsNav plans their Marswalk on real NASA data." |
-| 5 to 12 s | Layers: Sand bedforms, then Slope. Zoom in to 2 m HiRISE relief. | "It reads 1-metre HiRISE terrain the way a boot meets it: slope, steps, ripples that trapped rovers." |
-| 12 to 18 s | Route cards, then 3D: "Walk route" at eye height with the margin readout | "Hard limits first. Every step of every route keeps a walk home within the oxygen, water and battery left." |
-| 18 to 26 s | Execute at 600×, hidden truth "Crew working 35 % harder". The closed-loop panel learns x1.35; a re-plan cuts the second station short. | "In the field it reads the suit's telemetry, learns how hard the crew is really working, and re-plans before the margin is gone." |
-| 26 to 30 s | Review: validation table | "Checked against Perseverance's own records. MarsNav." |
+| 0.0 to 4.6 s | First-person walk at Jezero through the helmet-visor HUD | "The first crew on Mars will walk with no GPS, and limited air." |
+| 4.6 to 7.6 s | The walkback field fades in over the route; MarsNav name | "MarsNav keeps a way home on every step." |
+| 7.6 to 12.8 s | Landing mode (66 candidates), six NASA data layers at one place, Curiosity's boxwork at Mount Sharp in 3D | "It ranks landing sites and science targets, then plans each walk on NASA terrain down to one metre." |
+| 12.8 to 17.3 s | One EVA on the habitat console, rover dashboard, wrist cuff and helmet visor; a suit leak turns all four home | "From habitat to helmet, it reads the suit and re-plans." |
+| 17.3 to 23.9 s | Perseverance's real 7.15 km route drawn, then MarsNav's 2.92 km crew route | "Perseverance took 85 sols to make this trip. For a crew, MarsNav plans it as an 84-minute walk." |
+| 23.9 to 27.1 s | 0 of 40 against 31 of 40, one dot per paired run | "In 40 simulated EVAs, no crew touched their reserve." |
+| 27.1 to 29.5 s | End card: logo, tagline, repository | "MarsNav. Every step, a way home." |
 
 ## 2-minute walkthrough
 
@@ -42,7 +48,7 @@ Two versions: a 30-second video for the project page, and a 2-minute live walkth
 ## Backup if the network or the app fails
 
 - The EVA planner needs no internet. For Landing mode without internet, switch on Mars mode (Local mode panel) after the data is on the computer.
-- `node --test tests/*.test.mjs` runs the safety contract and the closed-loop tests in the terminal (61 tests, about 2 min).
+- `node --test tests/*.test.mjs` runs the safety contract and the closed-loop tests in the terminal (65 tests, about 40 s).
 - `node validation/closed_loop_campaign.mjs` prints the paired closed-loop table.
 - `node validation/validate.mjs` prints the validation table.
 - Screenshots of each mode are in `submission/screens/`.
