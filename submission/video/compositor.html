@@ -142,6 +142,49 @@ const SHOTS = {
     vignette(0.3);
     return "";
   },
+  // the science atlas behind, and one science objective as a card from the app's Science tab, sliding in
+  async sci(s, t, d) {
+    const a = await img(src(s.bg)), card = await img(src(s.card));
+    drawCrop(a, lerpRect(s.kb[0], s.kb[1], ease(t / d)));
+    g.fillStyle = "rgba(4,6,9,0.18)"; g.fillRect(0, 0, W, H);
+    vignette(0.3);
+    const k = easeOut(ramp(t, s.card_in[0], s.card_in[1]));
+    if (card && k > 0) {
+      const [x, y, w, h] = s.card_box, dx = lerp(70, 0, k);
+      g.save(); g.globalAlpha = k;
+      g.shadowColor = "rgba(0,0,0,0.6)"; g.shadowBlur = 40; g.shadowOffsetY = 10;
+      g.fillStyle = "#121820"; g.beginPath(); g.roundRect(x + dx - 2, y - 2, w + 4, h + 4, 12); g.fill();
+      g.shadowColor = "transparent";
+      g.beginPath(); g.roundRect(x + dx, y, w, h, 10); g.clip();
+      g.drawImage(card, 0, 0, card.width, card.width * h / w, x + dx, y, w, h);
+      g.restore();
+      g.globalAlpha = k; g.strokeStyle = "rgba(232,180,138,0.75)"; g.lineWidth = 2;
+      g.beginPath(); g.roundRect(x + dx, y, w, h, 10); g.stroke(); g.globalAlpha = 1;
+    }
+    return "";
+  },
+  // the closed loop, captured one simulator tick per frame (capture_loop.mjs): a time map picks the frame (slow while
+  // the rates are learned, quick through the quiet middle, slow again at the re-plan), a slow push-in, and boxes that
+  // follow the rows that matter (given in captured pixels, drawn through the crop)
+  async loop(s, t, d) {
+    const m = s.map;
+    let f = m[m.length - 1][1];
+    for (let i = 1; i < m.length; i++) if (t < m[i][0]) { f = Math.round(lerp(m[i - 1][1], m[i][1], clamp((t - m[i - 1][0]) / (m[i][0] - m[i - 1][0])))); break; }
+    const im = await img(`${BUILD}${s.dir}/${String(f).padStart(3, "0")}.jpg`);
+    const r = lerpRect(s.kb[0], s.kb[1], ease(t / d));
+    drawCrop(im, r);
+    vignette(0.28);
+    const sx = W / r[2], sy = H / r[3];
+    for (const mk of s.marks || []) {
+      if (t < mk.in || t >= mk.out) continue;
+      const a = Math.min(easeOut(ramp(t, mk.in, mk.in + 0.18)), 1 - ramp(t, mk.out - 0.12, mk.out));
+      const col = mk.col || "#e8b48a";
+      const x = (mk.r[0] - r[0]) * sx, y = (mk.r[1] - r[1]) * sy, w = mk.r[2] * sx, h = mk.r[3] * sy;
+      g.save(); g.globalAlpha = a; g.lineWidth = 4; g.strokeStyle = col; g.shadowBlur = 16; g.shadowColor = col;
+      g.beginPath(); g.roundRect(x, y, w, h, 8); g.stroke(); g.restore();
+    }
+    return "";
+  },
   async grid(s, t) {
     darkBg();
     const L = 72, T = 150, B = 196, G = 22, cols = 3, rows = 2;
@@ -312,7 +355,7 @@ window.renderAt = async (t) => {
   for (const c of TL.chips) {
     if (t < c.in || t >= c.out) continue;
     const a = Math.min(ramp(t, c.in, c.in + 0.22), 1 - ramp(t, c.out - 0.15, c.out));
-    const pos = { bl: "left:56px;bottom:40px", br: "right:56px;bottom:40px", brs: "right:40px;bottom:32px", tl: "left:56px;top:52px" }[c.pos] || "left:56px;top:52px";
+    const pos = { bl: "left:56px;bottom:40px", bl2: "left:56px;bottom:108px", br: "right:56px;bottom:40px", brs: "right:40px;bottom:32px", tl: "left:56px;top:52px" }[c.pos] || "left:56px;top:52px";
     html += `<div class="chip ${c.tone || ""} ${c.pos === "brs" ? "small" : ""}" style="${pos};opacity:${a};transform:translateY(${lerp(8, 0, easeOut(a))}px)"><i></i>${esc(c.text)}</div>`;
   }
   // subtitles of the narration: only in the narrated cut (the music cut tells the story in the headlines)

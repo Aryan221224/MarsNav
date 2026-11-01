@@ -27,17 +27,20 @@ page.on("pageerror", (e) => errs.push(e.message));
 page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
 await page.goto(new URL("submission/video/devices.html", BASE).href, { waitUntil: "load" });
 await page.waitForFunction(() => window.ready === true || window.__err, null, { timeout: 120000 });
+// the shot plays device frames shot.from .. shot.from + COUNT - 1 (the compositor's "from"); the device frame k shows
+// captured frame capture_from + k
+const K0 = INTRO ? 0 : (shot.from || 0), K1 = K0 + COUNT;
 await page.evaluate((cfg) => window.setup(cfg), {
-  from: shot.capture_from, count: COUNT, fps: cap.fps, leakFrame: cap.leakFrame, cuts: shot.cuts,
+  from: shot.capture_from, start: K0, count: K1, fps: cap.fps, leakFrame: cap.leakFrame, cuts: shot.cuts,
   every: { planner: cap.planner_every, rover: cap.displays.rover.every, cuff: cap.displays.cuff.every, visorPlain: cap.displays.visor_plain.every },
 });
 const t0 = Date.now();
-for (let k = 0; k < COUNT; k++) {
+for (let k = K0; k < K1; k++) {
   if (ONLY.length && !ONLY.includes(k)) continue;
   if (!ONLY.length && process.env.RESUME && fs.existsSync(path.join(OUT, `${String(k).padStart(4, "0")}.jpg`))) continue;
   await page.evaluate(([k, intro]) => (intro ? window.renderIntro(k) : window.renderFrame(k)), [k, INTRO]);
   await page.screenshot({ path: path.join(OUT, `${String(k).padStart(4, "0")}.jpg`), type: "jpeg", quality: 94 });
-  if (k % 15 === 0) console.log(`device frame ${k}/${COUNT}  ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  if (k % 15 === 0) console.log(`device frame ${k}/${K1}  ${((Date.now() - t0) / 1000).toFixed(0)} s`);
 }
 if (errs.length) console.log("errors:", errs.slice(0, 6));
 await browser.close();

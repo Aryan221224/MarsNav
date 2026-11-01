@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Renders the demo from the captures already in submission/video/build (stills, eva) and assembles it:
 # the opening and the devices shot (devices.html), the rover map, every frame (compositor.html), the sound, the MP4.
-# Safe to re-run: with RESUME=1 frames that already exist are kept.  Add --vo to mix in submission/video/vo/line1..7.
+# Safe to re-run: with RESUME=1 frames that already exist are kept.  Add --vo to mix in submission/video/vo/line1..9.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 PORT=8800

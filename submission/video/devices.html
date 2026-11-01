@@ -644,7 +644,7 @@ window.renderIntro = async (k) => {
 /** Frame k of the shot: which shot, the screens at captured frame from + k, the camera, the alarm. */
 window.renderFrame = async (k) => {
   marsLights.sun.position.set(...SUN_DAY); marsLights.sun.intensity = 3.1; marsLights.dust.visible = false;
-  const { from, count, every, leakFrame, fps, cuts } = CFG;
+  const { from, count, every, leakFrame, fps, cuts, start = 0 } = CFG;
   const f = from + k;
   const src = (name, n) => `${FRAMES}/${name}/${String(Math.floor(f / n) * n).padStart(4, "0")}.jpg`;
   const urls = { planner: src("planner", every.planner), rover: src("rover", every.rover), cuff: src("cuff", every.cuff), visorPlain: src("visor_plain", every.visorPlain) };
@@ -665,7 +665,7 @@ window.renderFrame = async (k) => {
   const lab = (t, x, y, warn) => `<div class="lab ${warn ? "warn" : ""}" style="left:${x}px;top:${y}px"><i></i>${t}</div>`;
   if (k < cuts.grid) {
     const name = k < cuts.rover ? "station" : k < cuts.astro ? "rover" : "astro";
-    const s = SHOTS[name], k0 = name === "station" ? 0 : name === "rover" ? cuts.rover : cuts.astro, k1 = name === "station" ? cuts.rover : name === "rover" ? cuts.astro : cuts.grid;
+    const s = SHOTS[name], k0 = name === "station" ? start : name === "rover" ? cuts.rover : cuts.astro, k1 = name === "station" ? cuts.rover : name === "rover" ? cuts.astro : cuts.grid;
     const t = ease((k - k0) / Math.max(1, k1 - k0 - 1));
     draw(s.scene, [0, 0, W, H], lerp3(s.cam[0], s.cam[1], t), lerp3(s.look[0], s.look[1], t), s.fov, s.exp);
     html += lab(s.label, 56, 1080 - 96, on);

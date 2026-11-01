@@ -18,7 +18,7 @@
   {
    "id": "walkback",
    "start": 5.2,
-   "end": 7.4,
+   "end": 7.2,
    "kind": "xfade",
    "a": "stills/jezero_plan_none.png",
    "b": "stills/jezero_plan_walkback.png",
@@ -43,36 +43,15 @@
    "dim": 0.38
   },
   {
-   "id": "plan_ui",
-   "start": 7.4,
-   "end": 8.9,
-   "kind": "still",
-   "src": "stills/jezero_planner_full.png",
-   "kb": [
-    [
-     0,
-     0,
-     3840,
-     2160
-    ],
-    [
-     560,
-     160,
-     3080,
-     1732
-    ]
-   ]
-  },
-  {
    "id": "plan_map",
-   "start": 8.9,
-   "end": 11.1,
+   "start": 7.2,
+   "end": 9.8,
    "kind": "xfade",
    "a": "stills/jezero_plan_hazard.png",
    "b": "stills/jezero_plan_none.png",
    "fade": [
-    0.5,
-    1.4
+    0.6,
+    1.5
    ],
    "kb": [
     [
@@ -90,30 +69,41 @@
    ]
   },
   {
-   "id": "globe",
-   "start": 11.1,
-   "end": 12.1,
-   "kind": "still",
-   "src": "/submission/screens/13_landing_mode.jpg",
+   "id": "science",
+   "start": 9.8,
+   "end": 11.3,
+   "kind": "sci",
+   "bg": "/tools/guide/assets/img/g06_atlas.jpg",
    "kb": [
     [
-     120,
-     40,
-     1560,
-     877
+     0,
+     0,
+     1800,
+     1012
     ],
     [
-     300,
-     100,
-     1240,
-     697
+     90,
+     40,
+     1620,
+     911
     ]
+   ],
+   "card": "stills/sci_objective_card.png",
+   "card_box": [
+    1356,
+    128,
+    512,
+    782
+   ],
+   "card_in": [
+    0.1,
+    0.45
    ]
   },
   {
    "id": "layers",
-   "start": 12.1,
-   "end": 13.6,
+   "start": 11.3,
+   "end": 12.5,
    "kind": "grid",
    "cells": [
     {
@@ -150,8 +140,8 @@
   },
   {
    "id": "sharp",
-   "start": 13.6,
-   "end": 14.7,
+   "start": 12.5,
+   "end": 13.4,
    "kind": "still",
    "src": "stills/sharp_3d.png",
    "kb": [
@@ -170,28 +160,105 @@
    ]
   },
   {
+   "id": "loop",
+   "start": 13.4,
+   "end": 16.4,
+   "kind": "loop",
+   "dir": "loop",
+   "map": [
+    [
+     0,
+     3
+    ],
+    [
+     0.95,
+     26
+    ],
+    [
+     1.35,
+     68
+    ],
+    [
+     1.45,
+     71
+    ],
+    [
+     3.0,
+     101
+    ]
+   ],
+   "replan_at": 1.45,
+   "kb": [
+    [
+     1520,
+     240,
+     2320,
+     1305
+    ],
+    [
+     1800,
+     340,
+     2040,
+     1148
+    ]
+   ],
+   "marks": [
+    {
+     "in": 0.2,
+     "out": 1.08,
+     "r": [
+      3480,
+      514,
+      344,
+      58
+     ]
+    },
+    {
+     "in": 1.12,
+     "out": 3.0,
+     "r": [
+      3480,
+      616,
+      344,
+      58
+     ]
+    },
+    {
+     "in": 1.5,
+     "out": 3.0,
+     "r": [
+      2072,
+      1254,
+      198,
+      64
+     ],
+     "col": "#5fe0ff"
+    }
+   ]
+  },
+  {
    "id": "devices",
-   "start": 14.7,
-   "end": 18.8667,
+   "start": 16.4,
+   "end": 20.0,
    "kind": "seq",
    "dir": "devices",
-   "from": 10,
+   "from": 24,
    "capture_from": 103,
    "cuts": {
-    "rover": 30,
-    "astro": 58,
-    "grid": 87
+    "rover": 42,
+    "astro": 62,
+    "grid": 84
    }
   },
   {
    "id": "rover",
-   "start": 18.8667,
-   "end": 24.8,
+   "start": 20.0,
+   "end": 25.0,
    "kind": "rover"
   },
   {
    "id": "proof",
-   "start": 24.8,
+   "start": 25.0,
    "end": 27.5,
    "kind": "proof"
   },
@@ -239,12 +306,12 @@
   },
   {
    "in": 5.3,
-   "out": 7.35,
+   "out": 7.15,
    "kind": "title"
   },
   {
-   "in": 7.55,
-   "out": 11.0,
+   "in": 7.35,
+   "out": 9.75,
    "x": 72,
    "y": 70,
    "panel": true,
@@ -269,22 +336,74 @@
    ]
   },
   {
-   "in": 11.2,
-   "out": 14.6,
-   "x": 72,
-   "y": 40,
+   "in": 9.9,
+   "out": 11.25,
+   "x": 56,
+   "y": 52,
    "panel": true,
    "lines": [
     {
-     "text": "66 LANDING SITES · 7 NASA MISSIONS",
-     "size": 66,
+     "text": "IT FINDS THE SCIENCE.",
+     "size": 84,
+     "at": 0.0
+    },
+    {
+     "text": "7 SCIENCE GOALS · 66 LANDING SITES",
+     "size": 50,
+     "at": 0.2,
+     "accent": true
+    },
+    {
+     "text": "Each goal ranks every site by what orbiters found near it",
+     "size": 28,
+     "at": 0.45,
+     "body": true
+    }
+   ]
+  },
+  {
+   "in": 11.35,
+   "out": 13.35,
+   "x": 72,
+   "y": 36,
+   "panel": true,
+   "lines": [
+    {
+     "text": "8 KINDS OF DATA · 7 NASA MISSIONS",
+     "size": 62,
      "at": 0.0
     }
    ]
   },
   {
-   "in": 14.85,
-   "out": 17.35,
+   "in": 13.5,
+   "out": 16.3,
+   "x": 56,
+   "y": 52,
+   "panel": true,
+   "lines": [
+    {
+     "text": "IT LEARNS FROM THE SUIT.",
+     "size": 84,
+     "at": 0.0
+    },
+    {
+     "text": "The crew's real work rate, from SUITS telemetry",
+     "size": 30,
+     "at": 0.3,
+     "body": true
+    },
+    {
+     "text": "AND RE-PLANS.",
+     "size": 64,
+     "at": 1.45,
+     "accent": true
+    }
+   ]
+  },
+  {
+   "in": 16.55,
+   "out": 18.6,
    "x": 72,
    "y": 52,
    "panel": true,
@@ -297,8 +416,8 @@
    ]
   },
   {
-   "in": 17.45,
-   "out": 18.8,
+   "in": 18.7,
+   "out": 19.95,
    "x": 72,
    "y": 52,
    "panel": true,
@@ -315,8 +434,8 @@
  ],
  "strips": [
   {
-   "in": 11.25,
-   "out": 13.55,
+   "in": 11.35,
+   "out": 13.35,
    "text": "MRO HiRISE · CTX · CRISM  |  MGS MOLA · TES  |  ODYSSEY THEMIS · GRS  |  MARS 2020 MEDA  |  MSL RAD  |  DONKI SPACE WEATHER  |  ESA HRSC"
   }
  ],
@@ -328,36 +447,41 @@
   },
   {
    "in": 4.7,
-   "out": 7.3,
+   "out": 7.1,
    "text": "MarsNav keeps a way home on every step."
   },
   {
-   "in": 7.5,
-   "out": 11.0,
-   "text": "It plans each walk on NASA's HiRISE terrain,\nsafety first."
+   "in": 7.3,
+   "out": 9.7,
+   "text": "It plans every walk, safety first."
   },
   {
-   "in": 11.2,
-   "out": 14.6,
-   "text": "It scores landing sites\nwith data from seven NASA missions."
+   "in": 9.9,
+   "out": 13.3,
+   "text": "It finds the science,\nwith data from seven NASA missions."
   },
   {
-   "in": 14.8,
-   "out": 18.75,
+   "in": 13.5,
+   "out": 16.3,
+   "text": "It learns from the suit, and re-plans."
+  },
+  {
+   "in": 16.5,
+   "out": 19.9,
    "text": "If a suit leaks,\nevery display turns the crew home."
   },
   {
-   "in": 19.0,
-   "out": 21.9,
+   "in": 20.1,
+   "out": 22.6,
    "text": "Perseverance took 85 sols for this trip."
   },
   {
-   "in": 21.9,
-   "out": 24.7,
+   "in": 22.6,
+   "out": 24.9,
    "text": "MarsNav plans it as an 84-minute walk."
   },
   {
-   "in": 24.9,
+   "in": 25.1,
    "out": 27.4,
    "text": "Forty simulated walks:\nno crew touched their reserve."
   },
@@ -377,41 +501,47 @@
   {
    "line": 2,
    "in": 4.7,
-   "out": 7.3,
+   "out": 7.1,
    "text": "MarsNav keeps a way home on every step."
   },
   {
    "line": 3,
-   "in": 7.5,
-   "out": 11.0,
-   "text": "It plans each walk on NASA's HiRISE terrain, safety first."
+   "in": 7.3,
+   "out": 9.7,
+   "text": "It plans every walk, safety first."
   },
   {
    "line": 4,
-   "in": 11.2,
-   "out": 14.6,
-   "text": "It scores landing sites with data from seven NASA missions."
+   "in": 9.9,
+   "out": 13.3,
+   "text": "It finds the science, with data from seven NASA missions."
   },
   {
    "line": 5,
-   "in": 14.8,
-   "out": 18.75,
-   "text": "If a suit leaks, every display turns the crew home."
+   "in": 13.5,
+   "out": 16.3,
+   "text": "It learns from the suit, and re-plans."
   },
   {
    "line": 6,
-   "in": 19.0,
-   "out": 24.7,
-   "text": "Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk."
+   "in": 16.5,
+   "out": 19.9,
+   "text": "If a suit leaks, every display turns the crew home."
   },
   {
    "line": 7,
-   "in": 24.9,
+   "in": 20.1,
+   "out": 24.9,
+   "text": "Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk."
+  },
+  {
+   "line": 8,
+   "in": 25.1,
    "out": 27.4,
    "text": "Forty simulated walks: no crew touched their reserve."
   },
   {
-   "line": 8,
+   "line": 9,
    "in": 27.6,
    "out": 29.4,
    "text": "MarsNav. Every step, a way home."
@@ -431,20 +561,26 @@
    "pos": "brs"
   },
   {
-   "in": 13.65,
-   "out": 14.65,
+   "in": 12.55,
+   "out": 13.35,
    "text": "CURIOSITY'S BOXWORK, MOUNT SHARP · THE CHALLENGE'S EXAMPLE",
+   "pos": "bl2"
+  },
+  {
+   "in": 13.65,
+   "out": 16.3,
+   "text": "HIDDEN TRUTH: CREW 35 % HARDER THAN PLANNED · THE SOFTWARE IS NOT TOLD",
    "pos": "bl"
   },
   {
-   "in": 15.0,
-   "out": 17.3,
-   "text": "READS NASA SUITS TELEMETRY · RUNS WITH NO INTERNET",
+   "in": 16.65,
+   "out": 18.55,
+   "text": "RUNS WITH NO INTERNET",
    "pos": "br"
   },
   {
-   "in": 19.1,
-   "out": 21.6,
+   "in": 20.1,
+   "out": 22.6,
    "text": "CHECKED AGAINST PERSEVERANCE'S OWN RECORDS",
    "pos": "br"
   }
@@ -453,7 +589,7 @@
   "tagline": "Every step, a way home.",
   "url": "github.com/Aryan221224/MarsNav",
   "event": "NASA Space Apps Challenge 2026 · Interplanetary Survival Guide: Martian Map",
-  "data": "Built on NASA data: HiRISE · CTX · MOLA · THEMIS · GRS · TES · MEDA · RAD · SUITS",
+  "data": "Built on NASA data: HiRISE · CTX · CRISM · MOLA · THEMIS · GRS · TES · MEDA · RAD · SUITS",
   "credit": "Terrain and imagery: NASA/JPL/University of Arizona, USGS · Illustrations and logo made with AI assistance · Not a NASA product"
  }
 }

@@ -146,7 +146,8 @@ def music():
     q = (P - R) / 4
     chords = [
         (0.0, at["walkback"] + 0.15, ["D2", "A2"]),
-        (at["walkback"], at["devices"] + 0.15, ["D3", "F3", "A3", "E4"]),
+        (at["walkback"], at.get("loop", at["devices"]) + 0.15, ["D3", "F3", "A3", "E4"]),
+        *([(at["loop"], at["devices"] + 0.15, ["F2", "C3", "F3", "A3"])] if "loop" in at else []),
         (at["devices"], leak_t + 0.1, ["Bb2", "D3", "F3"]),
         (leak_t, R + 0.15, ["C3", "E3", "G3"]),
         (R, R + q + 0.15, ["D3", "F3", "A3"]),
@@ -173,10 +174,11 @@ def music():
     pat2 = ["Bb3", "F4", "C5", "D5", "F5", "D5", "C5", "F4"]
     step = 0.21
     k = 0
-    x = at.get("plan_ui", at.get("globe"))
+    pat3 = ["F4", "C5", "G5", "A5", "C6", "G5", "A5", "C5"]
+    x = at.get("plan_map", at.get("plan_ui", at.get("globe")))
     while x < at["rover"] - 0.1:
         if not (leak_t - 0.05 < x < leak_t + 0.95):        # it steps aside for the warning
-            pat = pat1 if x < at["devices"] else pat2
+            pat = pat1 if x < at.get("loop", at["devices"]) else pat3 if x < at["devices"] else pat2
             mix += pluck(note(pat[k % 8]), x, gain=0.05 * (0.85 if k % 2 else 1), pan=0.5 * np.sin(k * 1.3))
         k += 1
         x += step
@@ -184,6 +186,11 @@ def music():
     for b in np.arange(at["rover"], at["proof"], 0.42):
         mix += boom(b, gain=0.05)
     mix += riser(at["proof"] - 1.6, at["proof"], gain=0.04) + boom(at["proof"], gain=0.3)
+    # the re-plan: a soft two-note chime as the new route appears
+    lp = next((s for s in S if s["id"] == "loop"), None)
+    if lp and "replan_at" in lp:
+        for nn, dt in (("A5", 0.0), ("E6", 0.09)):
+            mix += pluck(note(nn), lp["start"] + lp["replan_at"] + dt, dur=1.6, gain=0.045, pan=0.15)
     # bells on the end card
     for nn, dt in (("D5", 0.05), ("F#5", 0.25), ("A5", 0.45), ("D6", 0.7)):
         mix += pluck(note(nn), at["end"] + dt, dur=2.2, gain=0.035, pan=0.3 if nn[1] == "#" else -0.2)
