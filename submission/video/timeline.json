@@ -10,15 +10,15 @@
   {
    "id": "intro",
    "start": 0.0,
-   "end": 5.2,
+   "end": 5.0,
    "kind": "seq",
    "dir": "intro",
-   "from": 0
+   "from": 6
   },
   {
    "id": "walkback",
-   "start": 5.2,
-   "end": 7.2,
+   "start": 5.0,
+   "end": 7.0,
    "kind": "xfade",
    "a": "stills/jezero_plan_none.png",
    "b": "stills/jezero_plan_walkback.png",
@@ -43,35 +43,109 @@
    "dim": 0.38
   },
   {
-   "id": "plan_map",
-   "start": 7.2,
-   "end": 9.8,
-   "kind": "xfade",
-   "a": "stills/jezero_plan_hazard.png",
-   "b": "stills/jezero_plan_none.png",
-   "fade": [
-    0.6,
-    1.5
-   ],
+   "id": "analysis",
+   "start": 7.0,
+   "end": 10.6,
+   "kind": "ana",
+   "fade": 0.12,
    "kb": [
     [
      0,
-     260,
-     2240,
-     1260
+     330,
+     2460,
+     1384
     ],
     [
-     120,
-     360,
-     1960,
-     1102
+     150,
+     400,
+     2200,
+     1238
     ]
-   ]
+   ],
+   "layers": [
+    {
+     "src": "stills/ana_hazard.png",
+     "end": 0.6
+    },
+    {
+     "src": "stills/ana_slope.png",
+     "end": 1.0
+    },
+    {
+     "src": "stills/ana_slip.png",
+     "end": 1.4
+    },
+    {
+     "src": "stills/ana_los.png",
+     "end": 1.95
+    },
+    {
+     "src": "stills/ana_walkback.png",
+     "end": 2.4
+    },
+    {
+     "src": "stills/ana_range.png",
+     "end": 2.8
+    },
+    {
+     "src": "stills/ana_none.png",
+     "end": 9.9
+    }
+   ],
+   "title": "What MarsNav checks before every route",
+   "items": [
+    {
+     "at": 0.05,
+     "layer": 0,
+     "text": "SAFETY HAZARD",
+     "sw": "#ff4fd8"
+    },
+    {
+     "at": 0.25,
+     "layer": 0,
+     "text": "NO-GO ZONES · 8 HARD LIMITS",
+     "sw": "hatch"
+    },
+    {
+     "at": 0.6,
+     "layer": 1,
+     "text": "SLOPE AT WALKING SCALE",
+     "sw": "#8f63ff"
+    },
+    {
+     "at": 1.0,
+     "layer": 2,
+     "text": "SAND · WHEEL SLIP",
+     "sw": "#e3c8ff"
+    },
+    {
+     "at": 1.4,
+     "layer": 3,
+     "text": "RADIO SHADOW · NO TELEMETRY",
+     "sw": "#5fe0ff"
+    },
+    {
+     "at": 1.95,
+     "layer": 4,
+     "text": "WALK HOME FROM EVERY POINT",
+     "sw": "#f2f2f2"
+    },
+    {
+     "at": 2.4,
+     "layer": 5,
+     "text": "OXYGEN · WATER · BATTERY RANGE",
+     "sw": "#78d878"
+    }
+   ],
+   "final": {
+    "at": 2.85,
+    "text": "= 5 ROUTES, SAFEST FIRST"
+   }
   },
   {
    "id": "science",
-   "start": 9.8,
-   "end": 11.3,
+   "start": 10.6,
+   "end": 12.0,
    "kind": "sci",
    "bg": "/tools/guide/assets/img/g06_atlas.jpg",
    "kb": [
@@ -97,13 +171,13 @@
    ],
    "card_in": [
     0.1,
-    0.45
+    0.42
    ]
   },
   {
    "id": "layers",
-   "start": 11.3,
-   "end": 12.5,
+   "start": 12.0,
+   "end": 13.1,
    "kind": "grid",
    "cells": [
     {
@@ -140,8 +214,8 @@
   },
   {
    "id": "sharp",
-   "start": 12.5,
-   "end": 13.4,
+   "start": 13.1,
+   "end": 13.9,
    "kind": "still",
    "src": "stills/sharp_3d.png",
    "kb": [
@@ -161,8 +235,8 @@
   },
   {
    "id": "loop",
-   "start": 13.4,
-   "end": 16.4,
+   "start": 13.9,
+   "end": 16.8,
    "kind": "loop",
    "dir": "loop",
    "map": [
@@ -171,23 +245,23 @@
      3
     ],
     [
-     0.95,
+     0.9,
      26
     ],
     [
-     1.35,
+     1.3,
      68
     ],
     [
-     1.45,
+     1.4,
      71
     ],
     [
-     3.0,
+     2.9,
      101
     ]
    ],
-   "replan_at": 1.45,
+   "replan_at": 1.4,
    "kb": [
     [
      1520,
@@ -205,7 +279,7 @@
    "marks": [
     {
      "in": 0.2,
-     "out": 1.08,
+     "out": 1.03,
      "r": [
       3480,
       514,
@@ -214,8 +288,8 @@
      ]
     },
     {
-     "in": 1.12,
-     "out": 3.0,
+     "in": 1.07,
+     "out": 2.9,
      "r": [
       3480,
       616,
@@ -224,8 +298,8 @@
      ]
     },
     {
-     "in": 1.5,
-     "out": 3.0,
+     "in": 1.45,
+     "out": 2.9,
      "r": [
       2072,
       1254,
@@ -238,21 +312,21 @@
   },
   {
    "id": "devices",
-   "start": 16.4,
-   "end": 20.0,
+   "start": 16.8,
+   "end": 20.3,
    "kind": "seq",
    "dir": "devices",
-   "from": 24,
+   "from": 26,
    "capture_from": 103,
    "cuts": {
-    "rover": 42,
-    "astro": 62,
+    "rover": 43,
+    "astro": 63,
     "grid": 84
    }
   },
   {
    "id": "rover",
-   "start": 20.0,
+   "start": 20.3,
    "end": 25.0,
    "kind": "rover"
   },
@@ -271,7 +345,7 @@
  ],
  "dissolves": [
   {
-   "at": 5.2,
+   "at": 5.0,
    "len": 0.4
   },
   {
@@ -281,8 +355,8 @@
  ],
  "headlines": [
   {
-   "in": 0.45,
-   "out": 4.35,
+   "in": 0.4,
+   "out": 4.25,
    "x": 96,
    "y": 150,
    "lines": [
@@ -305,39 +379,13 @@
    ]
   },
   {
-   "in": 5.3,
-   "out": 7.15,
+   "in": 5.1,
+   "out": 6.95,
    "kind": "title"
   },
   {
-   "in": 7.35,
-   "out": 9.75,
-   "x": 72,
-   "y": 70,
-   "panel": true,
-   "lines": [
-    {
-     "text": "5 ROUTES.",
-     "size": 96,
-     "at": 0.0
-    },
-    {
-     "text": "8 HARD SAFETY LIMITS.",
-     "size": 64,
-     "at": 0.25,
-     "accent": true
-    },
-    {
-     "text": "On NASA's 1 m HiRISE terrain, the walk home checked at every step",
-     "size": 30,
-     "at": 0.55,
-     "body": true
-    }
-   ]
-  },
-  {
-   "in": 9.9,
-   "out": 11.25,
+   "in": 10.7,
+   "out": 11.95,
    "x": 56,
    "y": 52,
    "panel": true,
@@ -362,8 +410,8 @@
    ]
   },
   {
-   "in": 11.35,
-   "out": 13.35,
+   "in": 12.05,
+   "out": 13.85,
    "x": 72,
    "y": 36,
    "panel": true,
@@ -376,8 +424,8 @@
    ]
   },
   {
-   "in": 13.5,
-   "out": 16.3,
+   "in": 14.0,
+   "out": 16.7,
    "x": 56,
    "y": 52,
    "panel": true,
@@ -396,14 +444,14 @@
     {
      "text": "AND RE-PLANS.",
      "size": 64,
-     "at": 1.45,
+     "at": 1.4,
      "accent": true
     }
    ]
   },
   {
-   "in": 16.55,
-   "out": 18.6,
+   "in": 16.95,
+   "out": 18.95,
    "x": 72,
    "y": 52,
    "panel": true,
@@ -416,8 +464,8 @@
    ]
   },
   {
-   "in": 18.7,
-   "out": 19.95,
+   "in": 19.0,
+   "out": 20.25,
    "x": 72,
    "y": 52,
    "panel": true,
@@ -434,49 +482,49 @@
  ],
  "strips": [
   {
-   "in": 11.35,
-   "out": 13.35,
+   "in": 12.05,
+   "out": 13.85,
    "text": "MRO HiRISE · CTX · CRISM  |  MGS MOLA · TES  |  ODYSSEY THEMIS · GRS  |  MARS 2020 MEDA  |  MSL RAD  |  DONKI SPACE WEATHER  |  ESA HRSC"
   }
  ],
  "captions": [
   {
    "in": 0.2,
-   "out": 4.55,
+   "out": 4.45,
    "text": "On Mars there's no GPS,\nand help can be 22 minutes away."
   },
   {
-   "in": 4.7,
-   "out": 7.1,
+   "in": 4.55,
+   "out": 6.9,
    "text": "MarsNav keeps a way home on every step."
   },
   {
-   "in": 7.3,
-   "out": 9.7,
-   "text": "It plans every walk, safety first."
+   "in": 7.1,
+   "out": 10.5,
+   "text": "It maps every hazard and radio shadow,\nthen plans safe routes."
   },
   {
-   "in": 9.9,
-   "out": 13.3,
+   "in": 10.7,
+   "out": 13.8,
    "text": "It finds the science,\nwith data from seven NASA missions."
   },
   {
-   "in": 13.5,
-   "out": 16.3,
+   "in": 14.0,
+   "out": 16.7,
    "text": "It learns from the suit, and re-plans."
   },
   {
-   "in": 16.5,
-   "out": 19.9,
+   "in": 16.9,
+   "out": 20.2,
    "text": "If a suit leaks,\nevery display turns the crew home."
   },
   {
-   "in": 20.1,
-   "out": 22.6,
+   "in": 20.4,
+   "out": 22.7,
    "text": "Perseverance took 85 sols for this trip."
   },
   {
-   "in": 22.6,
+   "in": 22.7,
    "out": 24.9,
    "text": "MarsNav plans it as an 84-minute walk."
   },
@@ -495,42 +543,42 @@
   {
    "line": 1,
    "in": 0.2,
-   "out": 4.55,
+   "out": 4.45,
    "text": "On Mars there's no GPS, and help can be 22 minutes away."
   },
   {
    "line": 2,
-   "in": 4.7,
-   "out": 7.1,
+   "in": 4.55,
+   "out": 6.9,
    "text": "MarsNav keeps a way home on every step."
   },
   {
    "line": 3,
-   "in": 7.3,
-   "out": 9.7,
-   "text": "It plans every walk, safety first."
+   "in": 7.1,
+   "out": 10.5,
+   "text": "It maps every hazard and radio shadow, then plans safe routes."
   },
   {
    "line": 4,
-   "in": 9.9,
-   "out": 13.3,
+   "in": 10.7,
+   "out": 13.8,
    "text": "It finds the science, with data from seven NASA missions."
   },
   {
    "line": 5,
-   "in": 13.5,
-   "out": 16.3,
+   "in": 14.0,
+   "out": 16.7,
    "text": "It learns from the suit, and re-plans."
   },
   {
    "line": 6,
-   "in": 16.5,
-   "out": 19.9,
+   "in": 16.9,
+   "out": 20.2,
    "text": "If a suit leaks, every display turns the crew home."
   },
   {
    "line": 7,
-   "in": 20.1,
+   "in": 20.4,
    "out": 24.9,
    "text": "Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk."
   },
@@ -549,38 +597,38 @@
  ],
  "chips": [
   {
-   "in": 3.6,
-   "out": 5.15,
+   "in": 3.4,
+   "out": 4.95,
    "text": "HELMET-VISOR HUD · DRAWN BY MARSNAV",
    "pos": "br"
   },
   {
    "in": 0.3,
-   "out": 3.4,
+   "out": 3.2,
    "text": "3D ILLUSTRATION · EVERY SCREEN IS THE RUNNING APP",
    "pos": "brs"
   },
   {
-   "in": 12.55,
-   "out": 13.35,
+   "in": 13.15,
+   "out": 13.85,
    "text": "CURIOSITY'S BOXWORK, MOUNT SHARP · THE CHALLENGE'S EXAMPLE",
    "pos": "bl2"
   },
   {
-   "in": 13.65,
-   "out": 16.3,
+   "in": 14.15,
+   "out": 16.7,
    "text": "HIDDEN TRUTH: CREW 35 % HARDER THAN PLANNED · THE SOFTWARE IS NOT TOLD",
    "pos": "bl"
   },
   {
-   "in": 16.65,
-   "out": 18.55,
+   "in": 17.05,
+   "out": 18.9,
    "text": "RUNS WITH NO INTERNET",
    "pos": "br"
   },
   {
-   "in": 20.1,
-   "out": 22.6,
+   "in": 20.4,
+   "out": 22.8,
    "text": "CHECKED AGAINST PERSEVERANCE'S OWN RECORDS",
    "pos": "br"
   }

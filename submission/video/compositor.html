@@ -63,6 +63,17 @@
   .title i { margin-top: 18px; font: italic 400 64px/1 "Barlow"; color: var(--accent); text-shadow: 0 3px 18px rgba(0, 0, 0, 0.7); }
   .strip { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); padding: 12px 22px; border-radius: 8px; white-space: nowrap;
     background: rgba(6, 9, 13, 0.8); border: 1px solid rgba(120, 140, 165, 0.35); font: 600 24px/1 "BC"; letter-spacing: 0.1em; color: #e6ecf2; }
+  .ana { position: absolute; left: 56px; bottom: 40px; padding: 20px 28px 22px 24px; border-radius: 12px; background: rgba(6, 9, 13, 0.82);
+    border: 1px solid rgba(120, 140, 165, 0.38); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); }
+  .ana h3 { margin: 0 0 10px 4px; font: 600 23px/1 "BC"; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+  .ana .it { display: flex; align-items: center; gap: 16px; padding: 2px 10px; font: 700 34px/1.24 "BC"; letter-spacing: 0.04em;
+    color: #fff; white-space: nowrap; border-left: 4px solid transparent; }
+  .ana .it.on { border-left-color: var(--accent); background: rgba(232, 180, 138, 0.1); }
+  .ana .it.past { color: #9aabbd; }
+  .ana .it i { width: 23px; height: 23px; border-radius: 4px; flex: 0 0 auto; }
+  .ana .it i.hatch { background: repeating-linear-gradient(45deg, #111 0 5px, #d9d9d9 5px 10px); }
+  .ana .it em { font: normal 600 27px/1 "Barlow"; color: var(--ok); margin-left: 4px; }
+  .ana .fin { margin: 10px 0 0 14px; font: 700 44px/1 "BC"; letter-spacing: 0.04em; color: var(--accent); }
   .chip.small { padding: 8px 14px 8px 12px; font-size: 19px; background: rgba(8, 12, 18, 0.6); }
 </style>
 </head>
@@ -184,6 +195,30 @@ const SHOTS = {
       g.beginPath(); g.roundRect(x, y, w, h, 8); g.stroke(); g.restore();
     }
     return "";
+  },
+  // the analysis behind every route: the planner's own layers over the same EVA, one after another, while a checklist
+  // of what was checked builds up; it ends on the routes themselves
+  async ana(s, t, d) {
+    const r = lerpRect(s.kb[0], s.kb[1], ease(t / d));
+    const Ls = s.layers;
+    let i = Ls.length - 1;
+    for (let k = 0; k < Ls.length; k++) if (t < Ls[k].end) { i = k; break; }
+    const t0 = i ? Ls[i - 1].end : 0, fd = s.fade || 0.12;
+    const cur = await img(src(Ls[i].src));
+    if (i > 0 && t < t0 + fd) { drawCrop(await img(src(Ls[i - 1].src)), r); drawCrop(cur, r, ease((t - t0) / fd)); }
+    else drawCrop(cur, r);
+    vignette(0.3);
+    let rows = "";
+    for (const it of s.items) {
+      if (t < it.at) continue;
+      const a = easeOut(ramp(t, it.at, it.at + 0.16));
+      const on = it.layer === i, past = it.layer < i;
+      const sw = it.sw === "hatch" ? '<i class="hatch"></i>' : `<i style="background:${it.sw}"></i>`;
+      rows += `<div class="it ${on ? "on" : ""} ${past ? "past" : ""}" style="opacity:${a};transform:translateX(${lerp(-16, 0, a)}px)">${sw}${esc(it.text)}${past ? "<em>✓</em>" : ""}</div>`;
+    }
+    const f = s.final, fa = t >= f.at ? easeOut(ramp(t, f.at, f.at + 0.25)) : 0;
+    const out = 1 - ramp(t, d - 0.18, d);
+    return `<div class="ana" style="opacity:${Math.min(easeOut(ramp(t, 0, 0.15)), out)}"><h3>${esc(s.title)}</h3>${rows}${fa ? `<div class="fin" style="opacity:${fa}">${esc(f.text)}</div>` : ""}</div>`;
   },
   async grid(s, t) {
     darkBg();

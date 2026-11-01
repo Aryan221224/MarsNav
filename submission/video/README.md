@@ -8,14 +8,14 @@ Everything on screen is the running app or the repository's own validation outpu
 
 | Time | Shot | Made from |
 |---|---|---|
-| 0.0–5.2 s | Hook: a crew member and rover alone on a Mars plain; "NO GPS. Help can be 22 minutes away."; the camera pushes in to the gold visor and MarsNav's HUD | 3D illustration (`devices.html`); the HUD symbology is `hud.html?mode=visor` with its 3D view off, captured from a simulated EVA |
-| 5.2–7.2 s | Name: MARSNAV full screen over the walkback field (time to walk home from every point) | The planner's "Walkback time" layer (`capture_maps.mjs`) |
-| 7.2–9.8 s | Plan: hazards, then five named routes on HiRISE terrain; "5 routes. 8 hard safety limits." | The running planner (`capture_maps.mjs`) |
-| 9.8–11.3 s | Science: the science atlas (water-formed minerals around Jezero, the 66 screened candidates) and the boxwork objective from the Science tab; "It finds the science. 7 science goals · 66 landing sites" | Landing mode's atlas from the user guide; the objective card from the running app at 2× (`capture_science.mjs`) |
-| 11.3–13.4 s | Data and place: six NASA data layers with their missions, then Curiosity's boxwork at Mount Sharp, built as an EVA site; the instruments named on screen | User-guide captures of Landing mode; the planner's 3D view of the built Mount Sharp site |
-| 13.4–16.4 s | Closed loop: the crew secretly works 35 % harder; the learned work rate climbs ×1.00 → ×1.35 against the hidden truth, and the planner re-plans | The running planner on the virtual clock, one simulator tick per frame (`capture_loop.mjs`) |
-| 16.4–20.0 s | Fly: one EVA on the habitat workstation, the rover's dashboard, the visor and the wrist cuff; at the suit leak all four turn home | The planner and crew displays captured in lockstep (`capture_eva.mjs`), on 3D models built in `devices.html` |
-| 20.0–25.0 s | Proof: Perseverance's real 7.15 km, 85-sol route, then MarsNav's 2.92 km, 84-minute crew route | `validation/results/rover_case_study.json` over the app's 2 m HiRISE relief tiles |
+| 0.0–5.0 s | Hook: a crew member and rover alone on a Mars plain; "NO GPS. Help can be 22 minutes away."; the camera pushes in to the gold visor and MarsNav's HUD | 3D illustration (`devices.html`); the HUD symbology is `hud.html?mode=visor` with its 3D view off, captured from a simulated EVA |
+| 5.0–7.0 s | Name: MARSNAV full screen over the walkback field (time to walk home from every point) | The planner's "Walkback time" layer (`capture_maps.mjs`) |
+| 7.0–10.6 s | Route analysis: the planner's layers over the same EVA, one after another (safety hazard and no-go zones, slope, wheel slip, radio shadow, walk home, consumables range) with a checklist that builds up, then the five routes | The running planner, one still per layer (`capture_analysis.mjs`) |
+| 10.6–12.0 s | Science: the science atlas (water-formed minerals around Jezero, the 66 screened candidates) and the boxwork objective from the Science tab; "It finds the science. 7 science goals · 66 landing sites" | Landing mode's atlas from the user guide; the objective card from the running app at 2× (`capture_science.mjs`) |
+| 12.0–13.9 s | Data and place: six NASA data layers with their missions, then Curiosity's boxwork at Mount Sharp, built as an EVA site; the instruments named on screen | User-guide captures of Landing mode; the planner's 3D view of the built Mount Sharp site |
+| 13.9–16.8 s | Closed loop: the crew secretly works 35 % harder; the learned work rate climbs ×1.00 → ×1.35 against the hidden truth, and the planner re-plans | The running planner on the virtual clock, one simulator tick per frame (`capture_loop.mjs`) |
+| 16.8–20.3 s | Fly: one EVA on the habitat workstation, the rover's dashboard, the visor and the wrist cuff; at the suit leak all four turn home | The planner and crew displays captured in lockstep (`capture_eva.mjs`), on 3D models built in `devices.html` |
+| 20.3–25.0 s | Proof: Perseverance's real 7.15 km, 85-sol route, then MarsNav's 2.92 km, 84-minute crew route | `validation/results/rover_case_study.json` over the app's 2 m HiRISE relief tiles |
 | 25.0–27.5 s | Proof: 0 of 40 against 31 of 40, one dot per real paired run | `validation/results/closed_loop.json` |
 | 27.5–29.5 s | End card: logo, tagline, repository, the NASA data it is built on | Watermarked AI-generated logo; no NASA or Space Apps logos |
 
@@ -27,13 +27,13 @@ too long is sped up to fit, and a longer one is cut and reported.
 
 | Line | Slot | Words | Say |
 |---|---|---|---|
-| 1 | 0.20–4.55 s (4.35 s) | 12 | On Mars there's no GPS, and help can be 22 minutes away. |
-| 2 | 4.70–7.10 s (2.40 s) | 8 | MarsNav keeps a way home on every step. |
-| 3 | 7.30–9.70 s (2.40 s) | 6 | It plans every walk, safety first. |
-| 4 | 9.90–13.30 s (3.40 s) | 10 | It finds the science, with data from seven NASA missions. |
-| 5 | 13.50–16.30 s (2.80 s) | 7 | It learns from the suit, and re-plans. |
-| 6 | 16.50–19.90 s (3.40 s) | 10 | If a suit leaks, every display turns the crew home. |
-| 7 | 20.10–24.90 s (4.80 s) | 14 | Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk. |
+| 1 | 0.20–4.45 s (4.25 s) | 12 | On Mars there's no GPS, and help can be 22 minutes away. |
+| 2 | 4.55–6.90 s (2.35 s) | 8 | MarsNav keeps a way home on every step. |
+| 3 | 7.10–10.50 s (3.40 s) | 11 | It maps every hazard and radio shadow, then plans safe routes. |
+| 4 | 10.70–13.80 s (3.10 s) | 10 | It finds the science, with data from seven NASA missions. |
+| 5 | 14.00–16.70 s (2.70 s) | 7 | It learns from the suit, and re-plans. |
+| 6 | 16.90–20.20 s (3.30 s) | 10 | If a suit leaks, every display turns the crew home. |
+| 7 | 20.40–24.90 s (4.50 s) | 14 | Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk. |
 | 8 | 25.10–27.40 s (2.30 s) | 8 | Forty simulated walks: no crew touched their reserve. |
 | 9 | 27.60–29.40 s (1.80 s) | 6 | MarsNav. Every step, a way home. |
 
@@ -53,7 +53,7 @@ anything over 30 s. If an AI voice is used instead, say so in `docs/AI_USE.md`.
 
 ## Rebuilding the picture
 
-Needs Node 20+, Playwright with Chromium, Python 3 with numpy, scipy and Pillow, and ffmpeg. The four captures need the
+Needs Node 20+, Playwright with Chromium, Python 3 with numpy, scipy and Pillow, and ffmpeg. The five captures need the
 planet server; the rest only a static server at the repository root.
 
 ```bash
@@ -78,6 +78,10 @@ node submission/video/capture_loop.mjs http://127.0.0.1:8790/ submission/video/b
 
 ```bash
 node submission/video/capture_science.mjs http://127.0.0.1:8790/ submission/video/build/stills
+```
+
+```bash
+node submission/video/capture_analysis.mjs http://127.0.0.1:8790/ submission/video/build/stills
 ```
 
 ```bash

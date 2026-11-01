@@ -1,36 +1,37 @@
 1
-00:00:00,200 --> 00:00:04,550
+00:00:00,200 --> 00:00:04,450
 On Mars there's no GPS,
 and help can be 22 minutes away.
 
 2
-00:00:04,700 --> 00:00:07,100
+00:00:04,550 --> 00:00:06,900
 MarsNav keeps a way home on every step.
 
 3
-00:00:07,300 --> 00:00:09,700
-It plans every walk, safety first.
+00:00:07,100 --> 00:00:10,500
+It maps every hazard and radio shadow,
+then plans safe routes.
 
 4
-00:00:09,900 --> 00:00:13,300
+00:00:10,700 --> 00:00:13,800
 It finds the science,
 with data from seven NASA missions.
 
 5
-00:00:13,500 --> 00:00:16,300
+00:00:14,000 --> 00:00:16,700
 It learns from the suit, and re-plans.
 
 6
-00:00:16,500 --> 00:00:19,900
+00:00:16,900 --> 00:00:20,200
 If a suit leaks,
 every display turns the crew home.
 
 7
-00:00:20,100 --> 00:00:22,600
+00:00:20,400 --> 00:00:22,700
 Perseverance took 85 sols for this trip.
 
 8
-00:00:22,600 --> 00:00:24,900
+00:00:22,700 --> 00:00:24,900
 MarsNav plans it as an 84-minute walk.
 
 9

@@ -175,7 +175,7 @@ def music():
     step = 0.21
     k = 0
     pat3 = ["F4", "C5", "G5", "A5", "C6", "G5", "A5", "C5"]
-    x = at.get("plan_map", at.get("plan_ui", at.get("globe")))
+    x = at.get("analysis", at.get("plan_map", at.get("plan_ui", at.get("globe"))))
     while x < at["rover"] - 0.1:
         if not (leak_t - 0.05 < x < leak_t + 0.95):        # it steps aside for the warning
             pat = pat1 if x < at.get("loop", at["devices"]) else pat3 if x < at["devices"] else pat2

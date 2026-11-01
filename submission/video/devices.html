@@ -517,20 +517,32 @@ const astroParts = {};
   const LS = [0.31, 1.47, 0], LE = [0.38, 1.19, 0.2], LW = [0.04, 1.33, 0.4];
   const ldir = sub(LW, LE);
   A.add(arm(LS, LE, LW), glove(LW, ldir, [0, 1, 0.15]));
-  // the wrist cuff: a rugged tablet strapped on top of the forearm
+  // the wrist cuff: a rugged tablet on a rubber cradle that wraps the forearm, held by two straps. The screen lies
+  // flat along the forearm (its normal is square to the arm's axis), so the sleeve never pokes through it, and it is
+  // turned towards the camera side as far as the arm allows.
   const cuff = new THREE.Group();
-  const cw = 0.165, ch = 0.118, lift = 0.074;
+  const cw = 0.165, ch = 0.118;
+  const rArm = 0.064 + (0.056 - 0.064) * 0.52;                 // the forearm's radius under the cuff
+  const lift = rArm + 0.011 + 0.012;                           // the screen's centre above the forearm's axis
   cuff.add(rbox(cw + 0.024, ch + 0.024, 0.022, 0.014, M.rubber));
   cuff.add(place(rbox(cw + 0.03, 0.01, 0.026, 0.005, M.orange), { p: [0, -(ch / 2 + 0.014), 0] }));
   cuff.add(place(new THREE.Mesh(new THREE.PlaneGeometry(cw, ch), screenMat("cuff", [0, 0.687, 1, 0.313])), { p: [0, 0, 0.0115] }));
-  for (const u2 of [-0.058, 0.058]) {
-    const st = new THREE.Mesh(new THREE.TorusGeometry(0.067, 0.009, 8, 40, Math.PI * 1.3), M.dark);
-    st.rotation.set(0, Math.PI / 2, -Math.PI * 0.65); st.position.set(u2, 0, -lift);
+  // the cradle: a rubber shell round the top of the forearm, its axis along the arm (the cuff's local x)
+  const shell = new THREE.Mesh(new THREE.CylinderGeometry(rArm + 0.009, rArm + 0.009, cw + 0.01, 40, 1, true, -1.75, 3.5),
+    new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: 0.85, side: THREE.DoubleSide }));
+  shell.rotation.z = Math.PI / 2; shell.position.set(0, 0, -lift);
+  cuff.add(place(shell, {}));
+  // a riser block joins the tablet to the cradle, so nothing floats
+  cuff.add(place(rbox(cw - 0.01, ch * 0.62, lift - rArm - 0.006, 0.006, M.rubber), { p: [0, 0, -(lift - rArm) / 2 - 0.006] }));
+  for (const u2 of [-0.062, 0.062]) {
+    const st = new THREE.Mesh(new THREE.TorusGeometry(rArm + 0.013, 0.008, 8, 48), M.dark);
+    st.rotation.set(0, Math.PI / 2, 0); st.position.set(u2, 0, -lift);
     cuff.add(place(st, {}));
   }
-  const nrm = V(0, 1, 0.32).normalize();
   const along = V(...ldir).normalize();
-  const xA = along.clone().sub(nrm.clone().multiplyScalar(along.dot(nrm))).normalize(), yA = nrm.clone().cross(xA);
+  const want = V(0.3, 1, 0.7).normalize();                     // up, and towards the camera side
+  const nrm = want.clone().sub(along.clone().multiplyScalar(want.dot(along))).normalize();
+  const xA = along.clone(), yA = nrm.clone().cross(xA);
   cuff.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(xA.clone().negate(), yA.clone().negate(), nrm));
   cuff.position.copy(V(...LE).lerp(V(...LW), 0.52)).addScaledVector(nrm, lift);
   A.add(place(cuff, {}));
@@ -588,8 +600,8 @@ const SHOTS = {
     cam: [[1.3, 1.62, 1.45], [0.95, 1.5, 1.05]], look: [[-0.12, 1.0, -0.8], [-0.06, 0.99, -0.85]] },
   rover: { scene: mars, fov: 34, label: "ROVER DASHBOARD", exp: 0.95,
     cam: [[-5.4, 2.05, -3.9], [-2.05, 2.45, -1.75]], look: [[0.1, 0.85, 0.15], [0.62, 1.33, 0.0]] },
-  astro: { scene: mars, fov: 30, label: "HELMET VISOR · WRIST CUFF", exp: 0.95,
-    cam: [wpos(astro, [0.95, 1.78, 1.85]), wpos(astro, [0.72, 1.7, 1.45])], look: [wpos(astro, [0.08, 1.56, 0.15]), wpos(astro, [0.08, 1.56, 0.18])] },
+  astro: { scene: mars, fov: 32, label: "HELMET VISOR · WRIST CUFF", exp: 0.95,
+    cam: [wpos(astro, [0.95, 1.76, 1.85]), wpos(astro, [0.72, 1.68, 1.45])], look: [wpos(astro, [0.1, 1.51, 0.18]), wpos(astro, [0.12, 1.5, 0.22])] },
 };
 const GRID = [
   { scene: hab, fov: 32, label: "HABITAT CONSOLE", exp: 1.05, cam: toward(monC, monN, 1.3, 0.16), look: monC },

@@ -16,13 +16,13 @@ captions; add the narration with `submission/video/README.md`). Shot times, head
 
 | Time | On screen | Voice-over |
 |---|---|---|
-| 0.2 to 4.55 s | Crew member and rover on Mars; NO GPS. HELP CAN BE 22 MINUTES AWAY.; push in to the visor HUD | "On Mars there's no GPS, and help can be 22 minutes away." |
-| 4.7 to 7.1 s | MARSNAV full screen over the walkback field | "MarsNav keeps a way home on every step." |
-| 7.3 to 9.7 s | Hazards, then five routes on HiRISE terrain: 5 ROUTES. 8 HARD SAFETY LIMITS. | "It plans every walk, safety first." |
-| 9.9 to 13.3 s | Science atlas and the boxwork objective (7 SCIENCE GOALS · 66 LANDING SITES); six data layers (8 KINDS OF DATA · 7 NASA MISSIONS); Mount Sharp boxwork site in 3D | "It finds the science, with data from seven NASA missions." |
-| 13.5 to 16.3 s | Closed loop: learned work rate ×1.00 → ×1.35 against the hidden truth, then RE-PLANNED | "It learns from the suit, and re-plans." |
-| 16.5 to 19.9 s | Habitat workstation, rover dashboard, visor and cuff; suit leak turns all four home | "If a suit leaks, every display turns the crew home." |
-| 20.1 to 24.9 s | Perseverance's 7.15 km route vs MarsNav's 2.92 km crew route | "Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk." |
+| 0.2 to 4.45 s | Crew member and rover on Mars; NO GPS. HELP CAN BE 22 MINUTES AWAY.; push in to the visor HUD | "On Mars there's no GPS, and help can be 22 minutes away." |
+| 4.55 to 6.9 s | MARSNAV full screen over the walkback field | "MarsNav keeps a way home on every step." |
+| 7.1 to 10.5 s | The planner's analysis layers one after another (hazard and no-go zones, slope, wheel slip, radio shadow, walk home, range) with a checklist, then = 5 ROUTES, SAFEST FIRST | "It maps every hazard and radio shadow, then plans safe routes." |
+| 10.7 to 13.8 s | Science atlas and the boxwork objective (7 SCIENCE GOALS · 66 LANDING SITES); six data layers (8 KINDS OF DATA · 7 NASA MISSIONS); Mount Sharp boxwork site in 3D | "It finds the science, with data from seven NASA missions." |
+| 14.0 to 16.7 s | Closed loop: learned work rate ×1.00 → ×1.35 against the hidden truth, then RE-PLANNED | "It learns from the suit, and re-plans." |
+| 16.9 to 20.2 s | Habitat workstation, rover dashboard, visor and cuff; suit leak turns all four home | "If a suit leaks, every display turns the crew home." |
+| 20.4 to 24.9 s | Perseverance's 7.15 km route vs MarsNav's 2.92 km crew route | "Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk." |
 | 25.1 to 27.4 s | 0 / 40 vs 31 / 40 | "Forty simulated walks: no crew touched their reserve." |
 | 27.6 to 29.4 s | End card | "MarsNav. Every step, a way home." |
 
