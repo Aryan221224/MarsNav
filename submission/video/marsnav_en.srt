@@ -27,19 +27,19 @@ If a suit leaks,
 every display turns the crew home.
 
 7
-00:00:20,400 --> 00:00:22,700
-Perseverance took 85 sols for this trip.
+00:00:20,400 --> 00:00:22,400
+Perseverance took 85 sols.
 
 8
-00:00:22,700 --> 00:00:24,900
+00:00:22,400 --> 00:00:24,400
 MarsNav plans it as an 84-minute walk.
 
 9
-00:00:25,100 --> 00:00:27,400
-Forty simulated walks:
-no crew touched their reserve.
+00:00:24,600 --> 00:00:27,600
+Forty surprise walks:
+no MarsNav crew touched their reserve.
 
 10
-00:00:27,600 --> 00:00:29,400
+00:00:27,800 --> 00:00:29,400
 MarsNav. Every step, a way home.
 

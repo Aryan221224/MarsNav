@@ -74,6 +74,20 @@
   .ana .it i.hatch { background: repeating-linear-gradient(45deg, #111 0 5px, #d9d9d9 5px 10px); }
   .ana .it em { font: normal 600 27px/1 "Barlow"; color: var(--ok); margin-left: 4px; }
   .ana .fin { margin: 10px 0 0 14px; font: 700 44px/1 "BC"; letter-spacing: 0.04em; color: var(--accent); }
+  .pb { position: absolute; }
+  .pb b { display: block; font: 700 54px/1 "BC"; letter-spacing: 0.08em; }
+  .pb span { display: block; margin-top: 10px; font: 500 27px/1 "Barlow"; color: #aebccb; }
+  .pl { position: absolute; font: 600 21px/1 "BC"; letter-spacing: 0.12em; text-transform: uppercase; color: #e6ecf2; white-space: nowrap; }
+  .pn { position: absolute; display: flex; align-items: center; gap: 26px; }
+  .pn .n { font: 500 118px/1 "Plex"; letter-spacing: -0.02em; }
+  .pn .n small { font-size: 0.4em; color: var(--dim); }
+  .pn p { margin: 0; font: 500 31px/1.25 "Barlow"; color: #cfd8e2; }
+  .tile { position: absolute; box-sizing: border-box; padding: 20px 26px 22px; border-radius: 12px; background: rgba(18, 25, 34, 0.9);
+    border: 1px solid rgba(120, 140, 165, 0.3); text-align: center; }
+  .tile span { display: block; font: 600 24px/1 "BC"; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+  .tile b { display: block; margin-top: 14px; font: 500 50px/1 "Plex"; color: #fff; letter-spacing: -0.01em; }
+  .tile b s { text-decoration: none; color: #ff7a70; }
+  .tile b em { font-style: normal; color: var(--accent); }
   .chip.small { padding: 8px 14px 8px 12px; font-size: 19px; background: rgba(8, 12, 18, 0.6); }
 </style>
 </head>
@@ -124,8 +138,6 @@ function darkBg() {
 // ------------------------------------------------------------------------------------------ data for shots --
 const geo = await (await fetch(BUILD + "rover/geo.json")).json();
 const loop = await (await fetch("/validation/results/closed_loop.json")).json();
-const breachOpen = loop.runs.map((r) => !!r.open.breach), breachClosed = loop.runs.map((r) => !!r.closed.breach);
-const nOpen = breachOpen.filter(Boolean).length, nClosed = breachClosed.filter(Boolean).length;
 function cum(pts) { const c = [0]; for (let i = 1; i < pts.length; i++) c.push(c[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); return c; }
 const roverC = cum(geo.rover), crewC = cum(geo.crew);
 
@@ -290,29 +302,53 @@ const SHOTS = {
     const foot = t >= 5.0 ? `<div class="chip" style="left:56px;bottom:40px;opacity:${ramp(t, 5.0, 5.3)}"><i></i>Same start, same end · same 1 m HiRISE terrain · crew on foot</div>` : "";
     return cardA + cardB + lbl(A, geo.from.name, 18, -40, "") + lbl(Bp, geo.to.name, -18, 22, "transform:translateX(-100%)") + foot;
   },
+  // the benchmark: the same 40 simulated EVAs flown two ways. One bar per walk (the lowest oxygen, water or battery
+  // left above the emergency reserve, on the hidden truth), the walks in the same order on both sides; one number per
+  // side; three plain tiles for the detail. The bar scale is clipped at the top (walks called off early keep >90 %).
   async proof(s, t) {
     darkBg();
-    const panel = (x0, title, flags, col, tone, n, label) => {
-      const cols = 10, rows = 4, R = 17, gap = 62, gw = (cols - 1) * gap, gx = x0 + (720 - gw) / 2, gy = 330;
-      let lit = 0;
-      for (let i = 0; i < 40; i++) {
-        const r = Math.floor(i / cols), c = i % cols, x = gx + c * gap, y = gy + r * gap;
-        const at = 0.35 + 1.1 * (i / 39);
-        const on = t >= at;
-        let fill = "#2a3644";
-        if (on) fill = flags[i] ? "#ff5b4f" : col;
-        if (on && flags[i]) lit++;
-        g.beginPath(); g.arc(x, y, R, 0, 7); g.fillStyle = fill; g.fill();
+    const R = loop.runs.map((r) => ({ o: r.open.minRem, c: r.closed.minRem })).sort((a, b) => b.o - a.o);
+    const Sm = loop.summary, n = R.length;
+    const top = 318, h = 250, vMax = 0.3, vMin = -0.45, y0 = top + h * vMax / (vMax - vMin);
+    const Y = (v) => top + h * (vMax - Math.max(vMin, Math.min(vMax, v))) / (vMax - vMin);
+    const w = 720, pitch = w / n, bw = pitch * 0.62;
+    const cols = [{ x: 150, key: "o", ok: "#7d8b9c", name: "FIXED PLAN", what: "turns back only when the alarm sounds", tone: "#d3dbe4" },
+                  { x: 1050, key: "c", ok: "#45d483", name: "MARSNAV", what: "learns from the suit and re-plans early", tone: "var(--accent)" }];
+    const A = (a, b) => easeOut(ramp(t, a, b));
+    const lit = [0, 0];
+    cols.forEach((C, k) => {
+      g.save(); g.strokeStyle = "rgba(235,240,246,0.8)"; g.lineWidth = 2; g.setLineDash([10, 7]);
+      g.beginPath(); g.moveTo(C.x - 8, y0 + 0.5); g.lineTo(C.x + w + 8, y0 + 0.5); g.stroke(); g.restore();
+      for (let i = 0; i < n; i++) {
+        const at = 0.3 + 0.9 * (i / (n - 1));
+        if (t < at) continue;
+        const v = R[i][C.key], a = easeOut(ramp(t, at, at + 0.2)), yv = lerp(y0, Y(v), a), x = C.x + i * pitch + (pitch - bw) / 2;
+        g.fillStyle = v < 0 ? "#ff5b4f" : C.ok;
+        g.fillRect(x, Math.min(y0, yv), bw, Math.max(2, Math.abs(yv - y0)));
+        if (v < 0) lit[k]++;
       }
-      const shown = t >= 1.45 ? n : lit;
-      return `<div class="ph" style="left:${x0}px;top:200px;width:720px"><h2 style="color:${tone}">${esc(title)}</h2></div>
-        <div class="ph" style="left:${x0}px;top:560px;width:720px;opacity:${ramp(t, 0.3, 0.55)}"><div class="n" style="color:${shown ? "#ff7a70" : "var(--accent)"}">${shown}<small> / 40</small></div><p>${esc(label)}</p></div>`;
-    };
-    const head = `<div class="ph" style="left:0;top:92px;width:1920px"><h2 style="color:var(--dim);font-size:30px">40 paired simulated EVAs · crews and suits the plan was not told about</h2></div>`;
-    const a = panel(170, "Flying the filed plan", breachOpen, "#5c6b7c", "#c3ccd6", nOpen, "dipped into their reserve");
-    const b = panel(1030, "With MarsNav's closed loop", breachClosed, "#45d483", "var(--accent)", nClosed, "dipped into their reserve");
-    const foot = `<div class="ph" style="left:0;top:792px;width:1920px;font:500 24px/1 Plex;color:#7f91a6">Wilcoxon signed-rank p &lt; 0.001 · validation/CLOSED_LOOP.md</div>`;
-    return head + a + b + foot;
+    });
+    let html = `<div class="ph" style="left:0;top:64px;width:1920px;opacity:${A(0, 0.25)}"><h2 style="font-size:58px;letter-spacing:0.06em;color:#fff">40 Marswalks with hidden surprises</h2>
+      <p style="font-size:29px;margin-top:16px">Each crew secretly works harder, drains its battery or walks slower than planned.</p></div>`;
+    cols.forEach((C, k) => {
+      const num = t >= 1.25 ? (k ? Sm.breaches.closed : Sm.breaches.open) : lit[k];
+      html += `<div class="pb" style="left:${C.x}px;top:216px;width:${w}px;opacity:${A(0.12, 0.4)}"><b style="color:${C.tone}">${C.name}</b><span>${C.what}</span></div>`;
+      html += `<div class="pn" style="left:${C.x}px;top:612px;width:${w}px;opacity:${A(0.3, 0.55)}"><div class="n" style="color:${num ? "#ff7a70" : "var(--accent)"}">${num}<small> / 40</small></div>
+        <p>walks ate into the<br>emergency reserve</p></div>`;
+    });
+    html += `<div class="pl" style="left:${150 + w - 300}px;top:${y0 - 30}px;width:300px;text-align:right;opacity:${A(0.2, 0.45)}">EMERGENCY RESERVE</div>
+      <div class="ph" style="left:0;top:${top + h + 14}px;width:1920px;opacity:${A(0.4, 0.7)}"><p style="font-size:23px;margin:0">each bar is one walk: the lowest oxygen, water or battery left · red = below the reserve</p></div>`;
+    const pc = (v) => `${v < 0 ? "−" : "+"}${Math.abs(Math.round(100 * v))}%`;
+    const sc = Sm.safeScience;
+    const tiles = [["RETURN NOW alarms", `<s>${Sm.lateReturnWarnings.open}</s> → <em>${Sm.lateReturnWarnings.closed}</em>`],
+                   ["Closest call", `<s>${pc(Sm.minReserve.openWorst)}</s> → <em>${pc(Sm.minReserve.closedWorst)}</em>`],
+                   ["Science done safely", `<em>${(sc.closed / sc.open).toFixed(1)}×</em> more`]];
+    const tw = 470, gap = 40, tx = (1920 - 3 * tw - 2 * gap) / 2;
+    tiles.forEach(([k, v], i) => {
+      html += `<div class="tile" style="left:${tx + i * (tw + gap)}px;top:812px;width:${tw}px;opacity:${A(1.35 + 0.15 * i, 1.65 + 0.15 * i)}"><span>${esc(k)}</span><b>${v}</b></div>`;
+    });
+    html += `<div class="ph" style="left:0;top:1012px;width:1920px;font:500 20px/1 Plex;color:#66778b;opacity:${A(1.9, 2.2)}">The same 40 EVAs flown both ways · Wilcoxon signed-rank p &lt; 0.001 · validation/CLOSED_LOOP.md</div>`;
+    return html;
   },
   async end(s, t) {
     g.fillStyle = "#06090d"; g.fillRect(0, 0, W, H);

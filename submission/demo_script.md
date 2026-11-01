@@ -22,9 +22,9 @@ captions; add the narration with `submission/video/README.md`). Shot times, head
 | 10.7 to 13.8 s | Science atlas and the boxwork objective (7 SCIENCE GOALS · 66 LANDING SITES); six data layers (8 KINDS OF DATA · 7 NASA MISSIONS); Mount Sharp boxwork site in 3D | "It finds the science, with data from seven NASA missions." |
 | 14.0 to 16.7 s | Closed loop: learned work rate ×1.00 → ×1.35 against the hidden truth, then RE-PLANNED | "It learns from the suit, and re-plans." |
 | 16.9 to 20.2 s | Habitat workstation, rover dashboard, visor and cuff; suit leak turns all four home | "If a suit leaks, every display turns the crew home." |
-| 20.4 to 24.9 s | Perseverance's 7.15 km route vs MarsNav's 2.92 km crew route | "Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk." |
-| 25.1 to 27.4 s | 0 / 40 vs 31 / 40 | "Forty simulated walks: no crew touched their reserve." |
-| 27.6 to 29.4 s | End card | "MarsNav. Every step, a way home." |
+| 20.4 to 24.4 s | Perseverance's 7.15 km route vs MarsNav's 2.92 km crew route | "Perseverance took 85 sols. MarsNav plans it as an 84-minute walk." |
+| 24.6 to 27.6 s | Benchmark: 40 walks with hidden surprises, fixed plan vs MarsNav, a bar per walk against the emergency reserve (31 / 40 vs 0 / 40); tiles: alarms 31 → 0, closest call −41% → +3%, science done safely 2.2× | "Forty surprise walks: no MarsNav crew touched their reserve." |
+| 27.8 to 29.4 s | End card | "MarsNav. Every step, a way home." |
 
 ## 2-minute walkthrough
 

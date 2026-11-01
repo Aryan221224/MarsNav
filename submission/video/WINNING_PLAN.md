@@ -47,10 +47,10 @@ every award MarsNav can win. The seconds column is how much of the cut (section 
 | Award | Definition | MarsNav's case | Target | Seconds of evidence |
 |---|---|---|---|---|
 | **Best Mission Concept** | The most plausible concept and design | End to end for a crew: choose the site and the science, check the ground, plan the EVA, fly it on the suit's telemetry, re-plan, turn home on a fault, offline, on NASA's own rules (walkback, NASA-STD-3001, SUITS) | **Primary** | 15.3 |
-| **Best Use of Science** | The best and most valid use of science or the scientific method | Physical models behind every route (slope, slip, radio line of sight with Mars curvature, walk-home time); science goals that rank sites; a hidden-truth experiment; validated on Perseverance's records with a negative result; a paired statistical test | **Second** | 17.0 |
-| **Best Use of Data** | Makes space data accessible, or uses it in a unique application | 1 m HiRISE terrain read at boot scale into seven route layers; 8 kinds of data from 7 NASA missions plus ESA; Perseverance's traverse as ground truth | **Third** | 13.6 |
+| **Best Use of Science** | The best and most valid use of science or the scientific method | Physical models behind every route (slope, slip, radio line of sight with Mars curvature, walk-home time); science goals that rank sites; a hidden-truth experiment; validated on Perseverance's records with a negative result; a paired statistical test | **Second** | 17.2 |
+| **Best Use of Data** | Makes space data accessible, or uses it in a unique application | 1 m HiRISE terrain read at boot scale into seven route layers; 8 kinds of data from 7 NASA missions plus ESA; Perseverance's traverse as ground truth | **Third** | 12.9 |
 | **Best Use of Technology** | The most innovative use of technology | A closed loop that learns the crew's real rates from SUITS telemetry and re-plans; one plan on four displays; exact station selection; offline | **Fourth** (shown, not only claimed) | 11.4 |
-| Most Inspirational | Captures the judges' hearts | The first humans on Mars, a crew member alone on the plain | Supported by the opening | 10.5 |
+| Most Inspirational | Captures the judges' hearts | The first humans on Mars, a crew member alone on the plain | Supported by the opening | 10.3 |
 | Galactic Impact | Most potential to improve life on Earth or in the universe | Crew safety beyond Earth | Weak fit | – |
 | Storytelling, Global Connection, Art and Technology, Local Impact | Story, connecting people, art with code, local impact | Not MarsNav's strengths | None | – |
 
@@ -58,7 +58,7 @@ every award MarsNav can win. The seconds column is how much of the cut (section 
 
 | Pattern in every winning demo | In this cut |
 |---|---|
-| The full 29 to 30 seconds, 75 to 85 spoken words | 29.5 s, 86 words |
+| The full 29 to 30 seconds, 75 to 85 spoken words | 29.5 s, 84 words |
 | Hook in the first 4 s, product named by about 7 s | A shocking number at 0.5 s; MARSNAV full screen at 5.2 s |
 | The working product fills the middle half | 0:07 to 0:20 is the app: route analysis, science and data, the closed loop, the four crew displays |
 | One proof, with a number | Two: 85 sols vs 84 minutes, and 0 of 40 vs 31 of 40 |
@@ -95,8 +95,8 @@ gave science goals one second. Both were under-weighted:
 | # | Feature | Infl. | Creat. | Valid. | Relev. | Pres. | Score | Awards it serves | Priority | Screen time (v4) |
 |---|---|---|---|---|---|---|---|---|---|---|
 | 1 | Walk-home guarantee inside the route search (walkback field) | 3 | 3 | 3 | 3 | 3 | **15** | Mission Concept, Science | **P1** | Title (2.0 s); a layer of the analysis beat |
-| 2 | Closed loop: learns the crew's real rates from SUITS telemetry, re-plans, turns home on a fault | 3 | 3 | 3 | 3 | 2 | **14** | Technology, Mission Concept, Science | **P1** | Own beat (2.9 s), leak (1.3 s), 0 / 40 (2.5 s) |
-| 3 | Validation: Perseverance's own records, a negative result, 40 paired runs | 2 | 2 | 3 | 2 | 3 | **12** | Science, Data | **P1** | Rover proof (4.7 s), 0 / 40 (2.5 s) |
+| 2 | Closed loop: learns the crew's real rates from SUITS telemetry, re-plans, turns home on a fault | 3 | 3 | 3 | 3 | 2 | **14** | Technology, Mission Concept, Science | **P1** | Own beat (2.9 s), leak (1.3 s), benchmark (3.2 s) |
+| 3 | Validation: Perseverance's own records, a negative result, 40 paired runs | 2 | 2 | 3 | 2 | 3 | **12** | Science, Data | **P1** | Rover proof (4.2 s), benchmark (3.2 s) |
 | 4 | Crew displays: helmet-visor HUD, rover dashboard, wrist cuff, habitat console, one plan | 3 | 3 | 1 | 3 | 3 | **13** | Mission Concept, Technology, Inspirational | **P1** | Opening (5.0 s), four displays (3.5 s) |
 | 5 | Science goals: 7 objectives (MEPAG) that rank every site; the boxwork site built for EVAs | 2 | 2 | 2 | 3 | 2 | **11** | Science, Mission Concept | **P1 (raised)** | Science beat (1.4 + 0.8 s) |
 | 6 | Science atlas: 26 whole-planet layers, all 8 kinds of data the statement lists, 7 NASA missions plus ESA | 2 | 2 | 2 | 3 | 2 | **11** | Data | P2 | Atlas, data grid, instrument strip (2.5 s) |
@@ -121,8 +121,8 @@ gave science goals one second. Both were under-weighted:
 | Science goals and data | 3.3 | 11 % |
 | The closed loop | 2.9 | 10 % |
 | One plan on every display, and the fault | 3.5 | 12 % |
-| Proof (Perseverance, 40 paired runs) | 7.2 | 24 % |
-| End card | 2.0 | 7 % |
+| Proof (Perseverance, 40 paired runs) | 7.4 | 25 % |
+| End card | 1.8 | 6 % |
 
 ## 4a. The 2026 challenge statement, ask by ask
 
@@ -152,7 +152,7 @@ against Perseverance.
 
 **Tagline:** Every step, a way home.
 
-| Time | Beat | Picture (all from the running app unless marked) | Headline on screen | Narration (86 words) |
+| Time | Beat | Picture (all from the running app unless marked) | Headline on screen | Narration (84 words) |
 |---|---|---|---|---|
 | 0.0–5.0 | Hook | A crew member and rover alone on a Mars plain (3D illustration); the camera pushes in to the gold visor, where MarsNav's HUD glows | NO GPS. / HELP CAN BE 22 MINUTES AWAY. | "On Mars there's no GPS, and help can be 22 minutes away." |
 | 5.0–7.0 | Name | The walkback field: time to walk home from every point | **MARSNAV** · Every step, a way home. | "MarsNav keeps a way home on every step." |
@@ -161,11 +161,19 @@ against Perseverance.
 | 12.0–13.9 | Show: data, place | Six NASA data layers with their missions, then the boxwork site at Mount Sharp in 3D | 8 KINDS OF DATA · 7 NASA MISSIONS | (continues) |
 | 13.9–16.8 | Show: closed loop | The Execute screen: the learned work rate climbs ×1.00 → ×1.35 against the hidden truth, then "RE-PLANNED" | IT LEARNS FROM THE SUIT. AND RE-PLANS. | "It learns from the suit, and re-plans." |
 | 16.8–20.3 | Show: fly | One EVA on the habitat workstation, the rover's dashboard, the visor and the wrist cuff (3D illustration; every screen is the app); a suit leak at 19.0 s turns all four home | SUIT LEAK: EVERY DISPLAY TURNS HOME | "If a suit leaks, every display turns the crew home." |
-| 20.3–25.0 | Prove | Perseverance's real 7.15 km route, then MarsNav's 2.92 km crew route | 85 SOLS → 84 MINUTES | "Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk." |
-| 25.0–27.5 | Prove | One dot per paired simulated EVA | 0 / 40 vs 31 / 40 | "Forty simulated walks: no crew touched their reserve." |
-| 27.5–29.5 | Close | Logo, tagline, repository, the NASA data | MarsNav · Every step, a way home. | "MarsNav. Every step, a way home." |
+| 20.3–24.5 | Prove | Perseverance's real 7.15 km route, then MarsNav's 2.92 km crew route | 85 SOLS → 84 MINUTES | "Perseverance took 85 sols. MarsNav plans it as an 84-minute walk." |
+| 24.5–27.7 | Prove | The benchmark: the same 40 simulated EVAs with hidden surprises, flown on a fixed plan and with MarsNav; one bar per walk for the lowest oxygen, water or battery left, against the emergency-reserve line; three tiles: RETURN NOW alarms, closest call, science done without touching the reserve | 40 MARSWALKS WITH HIDDEN SURPRISES · 31 / 40 vs 0 / 40 walks ate into the emergency reserve · 31 → 0 alarms · −41% → +3% · 2.2× | "Forty surprise walks: no MarsNav crew touched their reserve." |
+| 27.7–29.5 | Close | Logo, tagline, repository, the NASA data | MarsNav · Every step, a way home. | "MarsNav. Every step, a way home." |
 
 **How the new beats were filmed.**
+
+- **Benchmark** (`compositor.html`, `proof`): drawn from `validation/results/closed_loop.json`, the 40 paired runs of
+  `validation/closed_loop_campaign.mjs`. The left side is the same EVA flown on the plan as filed, turning back only when
+  the caution-and-warning system calls RETURN NOW; the right side is MarsNav's closed loop. The bars are each walk's lowest
+  usable consumable on the hidden truth, sorted by the fixed plan's result and kept in the same order on both sides; seven
+  MarsNav walks that were called off early (over 90 % left, no science) are capped at the top of the scale. The card
+  keeps to one headline, two columns, one number each and three tiles; the cost in raw science (0.90 → 0.64) is in
+  `validation/CLOSED_LOOP.md`, and the tile counts only science done without touching the reserve.
 
 - **Route analysis** (`capture_analysis.mjs`): the planner's own layers for the default Jezero EVA, one screenshot of the
   map per layer at twice the screen density, each with the app's legend (for the radio shadow: "no radio line of sight

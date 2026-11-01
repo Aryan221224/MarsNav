@@ -327,18 +327,18 @@
   {
    "id": "rover",
    "start": 20.3,
-   "end": 25.0,
+   "end": 24.5,
    "kind": "rover"
   },
   {
    "id": "proof",
-   "start": 25.0,
-   "end": 27.5,
+   "start": 24.5,
+   "end": 27.7,
    "kind": "proof"
   },
   {
    "id": "end",
-   "start": 27.5,
+   "start": 27.7,
    "end": 29.5,
    "kind": "end"
   }
@@ -349,7 +349,7 @@
    "len": 0.4
   },
   {
-   "at": 27.5,
+   "at": 27.7,
    "len": 0.3
   }
  ],
@@ -520,21 +520,21 @@
   },
   {
    "in": 20.4,
-   "out": 22.7,
-   "text": "Perseverance took 85 sols for this trip."
+   "out": 22.4,
+   "text": "Perseverance took 85 sols."
   },
   {
-   "in": 22.7,
-   "out": 24.9,
+   "in": 22.4,
+   "out": 24.4,
    "text": "MarsNav plans it as an 84-minute walk."
   },
   {
-   "in": 25.1,
-   "out": 27.4,
-   "text": "Forty simulated walks:\nno crew touched their reserve."
+   "in": 24.6,
+   "out": 27.6,
+   "text": "Forty surprise walks:\nno MarsNav crew touched their reserve."
   },
   {
-   "in": 27.6,
+   "in": 27.8,
    "out": 29.4,
    "text": "MarsNav. Every step, a way home."
   }
@@ -579,18 +579,18 @@
   {
    "line": 7,
    "in": 20.4,
-   "out": 24.9,
-   "text": "Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk."
+   "out": 24.4,
+   "text": "Perseverance took 85 sols. MarsNav plans it as an 84-minute walk."
   },
   {
    "line": 8,
-   "in": 25.1,
-   "out": 27.4,
-   "text": "Forty simulated walks: no crew touched their reserve."
+   "in": 24.6,
+   "out": 27.6,
+   "text": "Forty surprise walks: no MarsNav crew touched their reserve."
   },
   {
    "line": 9,
-   "in": 27.6,
+   "in": 27.8,
    "out": 29.4,
    "text": "MarsNav. Every step, a way home."
   }
@@ -628,7 +628,7 @@
   },
   {
    "in": 20.4,
-   "out": 22.8,
+   "out": 22.6,
    "text": "CHECKED AGAINST PERSEVERANCE'S OWN RECORDS",
    "pos": "br"
   }
