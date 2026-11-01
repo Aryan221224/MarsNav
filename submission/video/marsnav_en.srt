@@ -1,42 +1,41 @@
 1
-00:00:00,150 --> 00:00:04,450
-The first crew on Mars will walk
-with no GPS, and limited air.
+00:00:00,200 --> 00:00:04,550
+On Mars there's no GPS,
+and help can be 22 minutes away.
 
 2
-00:00:04,750 --> 00:00:07,450
+00:00:04,700 --> 00:00:07,300
 MarsNav keeps a way home on every step.
 
 3
-00:00:07,700 --> 00:00:10,300
-It ranks landing sites and science targets,
+00:00:07,500 --> 00:00:11,000
+It plans each walk on NASA's HiRISE terrain,
+safety first.
 
 4
-00:00:10,300 --> 00:00:12,650
-then plans each walk on NASA terrain
-down to one metre.
+00:00:11,200 --> 00:00:14,600
+It scores landing sites
+with data from seven NASA missions.
 
 5
-00:00:12,900 --> 00:00:17,100
-From habitat to helmet,
-it reads the suit and re-plans.
+00:00:14,800 --> 00:00:18,750
+If a suit leaks,
+every display turns the crew home.
 
 6
-00:00:17,450 --> 00:00:20,400
-Perseverance took 85 sols
-to make this trip.
+00:00:19,000 --> 00:00:21,900
+Perseverance took 85 sols for this trip.
 
 7
-00:00:20,400 --> 00:00:23,750
-For a crew, MarsNav plans it
-as an 84-minute walk.
+00:00:21,900 --> 00:00:24,700
+MarsNav plans it as an 84-minute walk.
 
 8
-00:00:24,000 --> 00:00:26,950
-In 40 simulated EVAs,
+00:00:24,900 --> 00:00:27,400
+Forty simulated walks:
 no crew touched their reserve.
 
 9
-00:00:27,300 --> 00:00:29,400
+00:00:27,600 --> 00:00:29,400
 MarsNav. Every step, a way home.
 

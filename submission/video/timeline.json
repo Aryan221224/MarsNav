@@ -162,10 +162,10 @@
      1215
     ],
     [
-     1180,
-     590,
-     1420,
-     799
+     1080,
+     560,
+     1640,
+     922
     ]
    ]
   },
@@ -316,7 +316,7 @@
  "strips": [
   {
    "in": 11.25,
-   "out": 14.6,
+   "out": 13.55,
    "text": "MRO HiRISE · CTX · CRISM  |  MGS MOLA · TES  |  ODYSSEY THEMIS · GRS  |  MARS 2020 MEDA  |  MSL RAD  |  DONKI SPACE WEATHER  |  ESA HRSC"
   }
  ],

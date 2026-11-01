@@ -11,18 +11,19 @@ Two versions: a 30-second video for the project page, and a 2-minute live walkth
 ## 30-second video
 
 Built and rendered from the running app: `submission/video/MarsNav_demo_30s_music.mp4` (music and burned-in
-captions; add the narration with `submission/video/README.md`). Shot times, captions and narration cues live in
-`submission/video/timeline.json`.
+captions; add the narration with `submission/video/README.md`). Shot times, headlines, captions and narration cues live in
+`submission/video/timeline.json`; the reasoning is in `submission/video/WINNING_PLAN.md`.
 
 | Time | On screen | Voice-over |
 |---|---|---|
-| 0.0 to 4.6 s | A crew member and rover on a Mars plain; the camera pushes in to the gold visor and MarsNav's HUD | "The first crew on Mars will walk with no GPS, and limited air." |
-| 4.6 to 7.6 s | The walkback field fades in over the route; MarsNav name | "MarsNav keeps a way home on every step." |
-| 7.6 to 12.8 s | Landing mode (66 candidates), six NASA data layers at one place, Curiosity's boxwork at Mount Sharp in 3D | "It ranks landing sites and science targets, then plans each walk on NASA terrain down to one metre." |
-| 12.8 to 17.3 s | One EVA on the habitat workstation, the rover's dashboard and the crew member's visor and wrist cuff; at a suit leak all four turn home | "From habitat to helmet, it reads the suit and re-plans." |
-| 17.3 to 23.9 s | Perseverance's real 7.15 km route drawn, then MarsNav's 2.92 km crew route | "Perseverance took 85 sols to make this trip. For a crew, MarsNav plans it as an 84-minute walk." |
-| 23.9 to 27.1 s | 0 of 40 against 31 of 40, one dot per paired run | "In 40 simulated EVAs, no crew touched their reserve." |
-| 27.1 to 29.5 s | End card: logo, tagline, repository | "MarsNav. Every step, a way home." |
+| 0.2 to 4.5 s | Crew member and rover on Mars; NO GPS. HELP CAN BE 22 MINUTES AWAY.; push in to the visor HUD | "On Mars there's no GPS, and help can be 22 minutes away." |
+| 4.7 to 7.3 s | MARSNAV full screen over the walkback field | "MarsNav keeps a way home on every step." |
+| 7.5 to 11.0 s | Planner, hazards, five routes: 5 ROUTES. 8 HARD SAFETY LIMITS. | "It plans each walk on NASA's HiRISE terrain, safety first." |
+| 11.2 to 14.6 s | 66 landing sites, six data layers, Mount Sharp boxwork; the instruments named | "It scores landing sites with data from seven NASA missions." |
+| 14.8 to 18.8 s | Habitat workstation, rover dashboard, visor and cuff; suit leak turns all four home | "If a suit leaks, every display turns the crew home." |
+| 19.0 to 24.7 s | Perseverance's 7.15 km route vs MarsNav's 2.92 km crew route | "Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk." |
+| 24.9 to 27.4 s | 0 / 40 vs 31 / 40 | "Forty simulated walks: no crew touched their reserve." |
+| 27.6 to 29.4 s | End card | "MarsNav. Every step, a way home." |
 
 ## 2-minute walkthrough
 

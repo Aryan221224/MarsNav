@@ -50,6 +50,8 @@
   .hl.panel { padding: 22px 30px 24px; border-radius: 12px; background: rgba(6, 9, 13, 0.72); border: 1px solid rgba(120, 140, 165, 0.35);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); }
   .hl.panel.warn { border-color: rgba(255, 91, 79, 0.9); }
+  .hl.scrim::before { content: ""; position: absolute; left: -140px; top: -120px; width: 1100px; height: 640px; z-index: -1;
+    background: radial-gradient(ellipse at 35% 40%, rgba(10, 6, 4, 0.5), rgba(10, 6, 4, 0) 68%); }
   .hl .ln { display: block; font-family: "BC"; font-weight: 700; letter-spacing: 0.04em; line-height: 1.02; color: #fff;
     text-shadow: 0 4px 22px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.5); white-space: nowrap; }
   .hl .ln.accent { color: var(--accent); }
@@ -298,7 +300,7 @@ window.renderAt = async (t) => {
       lines += `<span class="${cls}" style="font-size:${l.size}px;opacity:${a};transform:translateY(${lerp(22, 0, a)}px)">${esc(l.text)}</span>`;
     }
     const pa = Math.min(easeOut(ramp(t, h.in, h.in + 0.25)), out);
-    html += `<div class="hl ${h.panel ? "panel" : ""} ${h.warn ? "warn" : ""}" style="left:${h.x}px;top:${h.y}px;${h.panel ? `opacity:${pa}` : ""}">${lines}</div>`;
+    html += `<div class="hl ${h.panel ? "panel" : "scrim"} ${h.warn ? "warn" : ""}" style="left:${h.x}px;top:${h.y}px;${h.panel ? `opacity:${pa}` : ""}">${lines}</div>`;
   }
   // the instruments behind the data
   for (const st of TL.strips || []) {

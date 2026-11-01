@@ -1,38 +1,38 @@
 # The 30-second demo video
 
 `MarsNav_demo_30s_music.mp4`: 29.5 s, 1920 × 1080, 30 fps, H.264 + AAC, English subtitles burned in and embedded
-(`marsnav_en.srt` for YouTube's upload). It has music and captions but no narration yet: a team member records the
+(`marsnav_en.srt` for YouTube's upload). It has music, and the story in large headlines, but no narration yet: a team member records the
 seven lines below and one command mixes them in (`MarsNav_demo_30s.mp4`).
 
 Everything on screen is the running app or the repository's own validation output. Nothing is mocked up:
 
 | Time | Shot | Made from |
 |---|---|---|
-| 0.0–4.6 s | A crew member and rover on a Mars plain; the camera pushes in to the gold visor, where MarsNav's HUD glows | 3D illustration (`devices.html`); the HUD symbology is `hud.html?mode=visor` with its 3D view switched off, captured from a simulated EVA (`capture_eva.mjs`) |
-| 4.6–7.6 s | The walkback field fades in over the route | The planner's "Walkback time" layer (`capture_maps.mjs`) |
-| 7.6–9.0 s | Landing mode, 66 candidates | `submission/screens/13_landing_mode.jpg` |
-| 9.0–11.0 s | Six NASA data layers at one place (Arcadia Planitia) | The user guide's captures of the running Landing mode |
-| 11.0–12.8 s | Curiosity's boxwork at Mount Sharp in 3D, the challenge's own example | The planner's 3D view of the built site (`capture_maps.mjs`) |
-| 12.8–17.3 s | One EVA on four displays: the habitat workstation, the crew rover's dashboard, the visor and wrist cuff of a suited crew member; at the suit leak all four turn home in a 2×2 grid | The planner, visor, rover dashboard and wrist cuff captured in lockstep, shown on 3D models built in `devices.html` (habitat module, rover, astronaut) |
-| 17.3–23.9 s | Perseverance's 7.15 km, 85-sol trip against MarsNav's 2.92 km, 84-minute crew walk | `validation/results/rover_case_study.json` over the app's 2 m HiRISE relief tiles (`prep_rover_map.py`) |
-| 23.9–27.1 s | 0 of 40 against 31 of 40: one dot per real paired run | `validation/results/closed_loop.json` |
-| 27.1–29.5 s | End card | Watermarked AI-generated logo; no NASA or Space Apps logos |
+| 0.0–5.2 s | Hook: a crew member and rover alone on a Mars plain; "NO GPS. Help can be 22 minutes away."; the camera pushes in to the gold visor and MarsNav's HUD | 3D illustration (`devices.html`); the HUD symbology is `hud.html?mode=visor` with its 3D view off, captured from a simulated EVA |
+| 5.2–7.4 s | Name: MARSNAV full screen over the walkback field (time to walk home from every point) | The planner's "Walkback time" layer (`capture_maps.mjs`) |
+| 7.4–11.1 s | Plan: the planner, then hazards and five named routes on HiRISE terrain; "5 routes. 8 hard safety limits." | The running planner (`capture_maps.mjs`) |
+| 11.1–14.7 s | Land and data: 66 candidate sites, six NASA data layers at one place, Curiosity's boxwork at Mount Sharp; the instruments named on screen | Landing mode captures from the user guide; the planner's 3D view of the built Mount Sharp site |
+| 14.7–18.9 s | Fly: one EVA on the habitat workstation, the rover's dashboard, the visor and the wrist cuff; at the suit leak all four turn home | The planner and crew displays captured in lockstep (`capture_eva.mjs`), on 3D models built in `devices.html` |
+| 18.9–24.8 s | Proof: Perseverance's real 7.15 km, 85-sol route, then MarsNav's 2.92 km, 84-minute crew route | `validation/results/rover_case_study.json` over the app's 2 m HiRISE relief tiles |
+| 24.8–27.5 s | Proof: 0 of 40 against 31 of 40, one dot per real paired run | `validation/results/closed_loop.json` |
+| 27.5–29.5 s | End card: logo, tagline, repository, the NASA data it is built on | Watermarked AI-generated logo; no NASA or Space Apps logos |
 
 ## Narration
 
-Record each line as its own file, `vo/line1.m4a` … `vo/line7.m4a` (any format ffmpeg reads). A phone in a quiet room,
+Record each line as its own file, `vo/line1.m4a` … `vo/line8.m4a` (any format ffmpeg reads). A phone in a quiet room,
 about 20 cm away, is enough. Read at a calm, confident pace, and keep each take inside its slot: a take up to 12 %
 too long is sped up to fit, and a longer one is cut and reported.
 
 | Line | Slot | Words | Say |
 |---|---|---|---|
-| 1 | 0.15–4.45 s (4.3 s) | 13 | The first crew on Mars will walk with no GPS, and limited air. |
-| 2 | 4.75–7.45 s (2.7 s) | 8 | MarsNav keeps a way home on every step. |
-| 3 | 7.70–12.65 s (4.95 s) | 17 | It ranks landing sites and science targets, then plans each walk on NASA terrain down to one metre. |
-| 4 | 12.90–17.10 s (4.2 s) | 10 | From habitat to helmet, it reads the suit and re-plans. |
-| 5 | 17.45–23.75 s (6.3 s) | 19 | Perseverance took 85 sols to make this trip. For a crew, MarsNav plans it as an 84-minute walk. |
-| 6 | 24.00–26.95 s (2.95 s) | 9 | In 40 simulated EVAs, no crew touched their reserve. |
-| 7 | 27.30–29.40 s (2.1 s) | 6 | MarsNav. Every step, a way home. |
+| 1 | 0.20–4.55 s (4.35 s) | 12 | On Mars there's no GPS, and help can be 22 minutes away. |
+| 2 | 4.70–7.30 s (2.60 s) | 8 | MarsNav keeps a way home on every step. |
+| 3 | 7.50–11.00 s (3.50 s) | 10 | It plans each walk on NASA's HiRISE terrain, safety first. |
+| 4 | 11.20–14.60 s (3.40 s) | 10 | It scores landing sites with data from seven NASA missions. |
+| 5 | 14.80–18.75 s (3.95 s) | 10 | If a suit leaks, every display turns the crew home. |
+| 6 | 19.00–24.70 s (5.70 s) | 14 | Perseverance took 85 sols for this trip. MarsNav plans it as an 84-minute walk. |
+| 7 | 24.90–27.40 s (2.50 s) | 8 | Forty simulated walks: no crew touched their reserve. |
+| 8 | 27.60–29.40 s (1.80 s) | 6 | MarsNav. Every step, a way home. |
 
 Say "Séítah" as *say-EE-tah*, "sols" as *soles*, "EVAs" as *E-V-As*. The subtitles are this exact text, so read it word
 for word. To rehearse, play `MarsNav_demo_30s_music.mp4` and read each caption as it appears.
