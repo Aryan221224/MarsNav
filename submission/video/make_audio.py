@@ -137,19 +137,25 @@ def music():
     S = TL["shots"]
     at = {s["id"]: s["start"] for s in S}
     mix = np.zeros((N, 2))
-    # chords: (start, end, notes)
+    # the leak, as it appears on screen (the devices shot shows captured frame capture_from + from + k)
+    dev = next(s for s in S if s["id"] == "devices")
+    cap = json.load(open(os.path.join(HERE, "build", "eva", "capture.json")))
+    leak_t = dev["start"] + (cap["leakFrame"] - dev["capture_from"] - dev.get("from", 0)) / cap["fps"]
+    # chords follow the shots: (start, end, notes)
+    R, P, E = at["rover"], at["proof"], at["end"]
+    q = (P - R) / 4
     chords = [
-        (0.0, 4.75, ["D2", "A2"]),
-        (4.6, 12.95, ["D3", "F3", "A3", "E4"]),
-        (12.8, 15.9, ["Bb2", "D3", "F3"]),
-        (15.8, 17.45, ["C3", "E3", "G3"]),
-        (17.3, 18.95, ["D3", "F3", "A3"]),
-        (18.95, 20.6, ["Bb2", "D3", "F3"]),
-        (20.6, 22.25, ["F2", "A2", "C3", "F3"]),
-        (22.25, 24.05, ["C3", "E3", "G3"]),
-        (23.9, 25.55, ["Bb2", "D3", "F3", "D4"]),
-        (25.5, 27.25, ["C3", "E3", "G3", "E4"]),
-        (27.1, DUR, ["D2", "D3", "F#3", "A3", "E4"]),
+        (0.0, at["walkback"] + 0.15, ["D2", "A2"]),
+        (at["walkback"], at["devices"] + 0.15, ["D3", "F3", "A3", "E4"]),
+        (at["devices"], leak_t + 0.1, ["Bb2", "D3", "F3"]),
+        (leak_t, R + 0.15, ["C3", "E3", "G3"]),
+        (R, R + q + 0.15, ["D3", "F3", "A3"]),
+        (R + q, R + 2 * q + 0.15, ["Bb2", "D3", "F3"]),
+        (R + 2 * q, R + 3 * q + 0.15, ["F2", "A2", "C3", "F3"]),
+        (R + 3 * q, P + 0.15, ["C3", "E3", "G3"]),
+        (P, P + (E - P) / 2 + 0.15, ["Bb2", "D3", "F3", "D4"]),
+        (P + (E - P) / 2, E + 0.15, ["C3", "E3", "G3", "E4"]),
+        (E, DUR, ["D2", "D3", "F#3", "A3", "E4"]),
     ]
     for a, b, notes in chords:
         bright = 0.42 if a < 4 else 0.5 if a < 27 else 0.55
@@ -157,8 +163,8 @@ def music():
             mix += pad_voice(note(nn), a, b, fade=0.5 if a > 0 else 0.05, bright=bright) * 0.06
     # the opening: a sub drone and a slow heartbeat under the first line
     mix += pad_voice(note("D1"), 0.0, 4.9, fade=0.05, bright=0.2) * 0.12
-    for k in range(4):
-        mix += boom(0.35 + 1.12 * k, gain=0.10)
+    for k in range(5):
+        mix += boom(0.35 + 1.0 * k, gain=0.10)
     # the reveal of the name, and the end card
     mix += riser(at["walkback"] - 0.9, at["walkback"], gain=0.05) + boom(at["walkback"], gain=0.55)
     mix += riser(at["end"] - 1.0, at["end"], gain=0.05) + boom(at["end"], gain=0.45)
@@ -167,9 +173,9 @@ def music():
     pat2 = ["Bb3", "F4", "C5", "D5", "F5", "D5", "C5", "F4"]
     step = 0.21
     k = 0
-    x = at["globe"]
+    x = at.get("plan_ui", at.get("globe"))
     while x < at["rover"] - 0.1:
-        if not (14.25 < x < 15.2):                         # it steps aside for the warning
+        if not (leak_t - 0.05 < x < leak_t + 0.95):        # it steps aside for the warning
             pat = pat1 if x < at["devices"] else pat2
             mix += pluck(note(pat[k % 8]), x, gain=0.05 * (0.85 if k % 2 else 1), pan=0.5 * np.sin(k * 1.3))
         k += 1
@@ -187,9 +193,6 @@ def music():
     mix = np.stack([highpass(mix[:, c], 32) for c in range(2)], 1)
     mix -= 0.33 * np.stack([lowpass(mix[:, c], 140) for c in range(2)], 1)
     # the warning tone itself stays dry and clear, like the app's
-    dev = next(s for s in S if s["id"] == "devices")
-    cap = json.load(open(os.path.join(HERE, "build", "eva", "capture.json")))
-    leak_t = dev["start"] + (cap["leakFrame"] - dev["capture_from"]) / cap["fps"]
     mix += warning_tone(leak_t, gain=0.09)
     # fade out at the very end
     mix *= smoothstep((DUR - t) / 0.6)[:, None]

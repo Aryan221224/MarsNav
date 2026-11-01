@@ -46,6 +46,22 @@
   .ph .n small { font-size: 0.42em; color: var(--dim); }
   .ph p { margin: 12px 0 0; font: 500 30px/1.2 "Barlow"; color: var(--dim); }
   .endc { position: absolute; inset: 0; text-align: center; }
+  .hl { position: absolute; }
+  .hl.panel { padding: 22px 30px 24px; border-radius: 12px; background: rgba(6, 9, 13, 0.72); border: 1px solid rgba(120, 140, 165, 0.35);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); }
+  .hl.panel.warn { border-color: rgba(255, 91, 79, 0.9); }
+  .hl .ln { display: block; font-family: "BC"; font-weight: 700; letter-spacing: 0.04em; line-height: 1.02; color: #fff;
+    text-shadow: 0 4px 22px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.5); white-space: nowrap; }
+  .hl .ln.accent { color: var(--accent); }
+  .hl .ln.warn { color: #ff7a70; }
+  .hl .ln.body { font-family: "Barlow"; font-weight: 500; letter-spacing: 0.01em; color: #d9e1ea; margin-top: 10px; }
+  .title { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .title img { width: 150px; height: 150px; margin-bottom: 14px; }
+  .title b { font: 700 210px/0.95 "BC"; letter-spacing: 0.16em; padding-left: 0.16em; color: #fff; text-shadow: 0 6px 40px rgba(0, 0, 0, 0.6); }
+  .title i { margin-top: 18px; font: italic 400 64px/1 "Barlow"; color: var(--accent); text-shadow: 0 3px 18px rgba(0, 0, 0, 0.7); }
+  .strip { position: absolute; left: 50%; bottom: 34px; transform: translateX(-50%); padding: 12px 22px; border-radius: 8px; white-space: nowrap;
+    background: rgba(6, 9, 13, 0.8); border: 1px solid rgba(120, 140, 165, 0.35); font: 600 24px/1 "BC"; letter-spacing: 0.1em; color: #e6ecf2; }
+  .chip.small { padding: 8px 14px 8px 12px; font-size: 19px; background: rgba(8, 12, 18, 0.6); }
 </style>
 </head>
 <body>
@@ -53,6 +69,7 @@
 <div id="ov"></div>
 <script type="module">
 const TL = await (await fetch("timeline.json")).json();
+const CAPTIONS = new URLSearchParams(location.search).get("captions") === "1";
 const FPS = TL.fps, W = 1920, H = 1080;
 const BUILD = "/submission/video/build/";
 const src = (p) => (p.startsWith("/") ? p : BUILD + p);
@@ -113,6 +130,7 @@ const SHOTS = {
     const r = lerpRect(s.kb[0], s.kb[1], ease(t / d));
     drawCrop(a, r);
     drawCrop(b, r, ease(ramp(t, s.fade[0], s.fade[1])));
+    if (s.dim) { g.fillStyle = `rgba(4,6,9,${s.dim})`; g.fillRect(0, 0, W, H); }
     vignette(0.35);
     return "";
   },
@@ -145,7 +163,8 @@ const SHOTS = {
     }
     return html;
   },
-  async rover(s, t, d) {
+  async rover(s, t0, d) {
+    const t = t0 * 6.6 / d;                                  // the animation was timed for a 6.6 s shot
     const base = await img(BUILD + "rover/base.jpg");
     const [bw, bh] = geo.size;
     const z = lerp(1.0, 1.06, ease(t / d));
@@ -188,7 +207,7 @@ const SHOTS = {
     const cardB = t >= 3.15 ? `<div class="card mn" style="left:56px;top:206px;opacity:${ramp(t, 3.15, 3.5)}"><div class="k">MarsNav · suited crew · walk home kept</div>
       <div class="v">${fc >= 1 ? `${N.crew_km.toFixed(2)} km · ${Math.round(N.crew_min)} min` : `${mins} min`}</div></div>` : "";
     const lbl = (p, txt, dx, dy, align) => `<div class="pin" style="left:${p[0]}px;top:${p[1]}px"><span style="left:${dx}px;top:${dy}px;${align}">${esc(txt)}</span></div>`;
-    const foot = t >= 5.0 ? `<div class="chip" style="left:56px;bottom:40px;opacity:${ramp(t, 5.0, 5.3)}"><i></i>Same start, same end · same 1 m HiRISE terrain</div>` : "";
+    const foot = t >= 5.0 ? `<div class="chip" style="left:56px;bottom:40px;opacity:${ramp(t, 5.0, 5.3)}"><i></i>Same start, same end · same 1 m HiRISE terrain · crew on foot</div>` : "";
     return cardA + cardB + lbl(A, geo.from.name, 18, -40, "") + lbl(Bp, geo.to.name, -18, 22, "transform:translateX(-100%)") + foot;
   },
   async proof(s, t) {
@@ -227,6 +246,7 @@ const SHOTS = {
       <div class="abs" style="left:0;width:1920px;top:528px;font:italic 400 54px/1 Barlow;color:var(--accent);opacity:${a(0.35, 0.7)}">${esc(E.tagline)}</div>
       <div class="abs" style="left:0;width:1920px;top:624px;font:500 34px/1 Plex;color:var(--ink);opacity:${a(0.5, 0.85)}">${esc(E.url)}</div>
       <div class="abs" style="left:0;width:1920px;top:684px;font:600 26px/1 BC;letter-spacing:0.1em;color:var(--dim);opacity:${a(0.6, 0.95)}">${esc(E.event.toUpperCase())}</div>
+      <div class="abs" style="left:0;width:1920px;top:744px;font:600 26px/1 BC;letter-spacing:0.1em;color:var(--accent);opacity:${a(0.7, 1.05)}">${esc((E.data || "").toUpperCase())}</div>
       <div class="abs" style="left:0;width:1920px;top:1038px;font:500 19px/1 Barlow;color:#6f8093;opacity:${a(0.6, 0.95)}">${esc(E.credit)}</div>
     </div>`;
   },
@@ -260,21 +280,41 @@ window.renderAt = async (t) => {
   } else {
     html += await SHOTS[s.kind](s, t - s.start, s.end - s.start);
   }
-  // brand lockup
-  const B = TL.brand;
-  if (t >= B.in && t < B.out) {
-    const a = Math.min(ramp(t, B.in, B.in + 0.35), 1 - ramp(t, B.out - 0.2, B.out));
-    html += `<div class="brand" style="opacity:${a}"><img src="/app/logo-192.png" alt=""><b>MARSNAV</b></div>`;
+  // headlines: the story in large type, readable on a phone
+  for (const h of TL.headlines || []) {
+    if (t < h.in || t >= h.out) continue;
+    const out = 1 - ramp(t, h.out - 0.22, h.out);
+    if (h.kind === "title") {
+      const a = Math.min(easeOut(ramp(t, h.in, h.in + 0.45)), out);
+      const ti = easeOut(ramp(t, h.in + 0.35, h.in + 0.8));
+      html += `<div class="title" style="opacity:${a}"><img src="/app/logo-512.png" alt="" style="transform:scale(${lerp(0.85, 1, a)})">
+        <b style="transform:scale(${lerp(1.06, 1, a)})">MARSNAV</b><i style="opacity:${ti};transform:translateY(${lerp(14, 0, ti)}px)">Every step, a way home.</i></div>`;
+      continue;
+    }
+    let lines = "";
+    for (const l of h.lines) {
+      const a = Math.min(easeOut(ramp(t, h.in + l.at, h.in + l.at + 0.28)), out);
+      const cls = ["ln", l.accent ? "accent" : "", l.warn ? "warn" : "", l.body ? "body" : ""].join(" ");
+      lines += `<span class="${cls}" style="font-size:${l.size}px;opacity:${a};transform:translateY(${lerp(22, 0, a)}px)">${esc(l.text)}</span>`;
+    }
+    const pa = Math.min(easeOut(ramp(t, h.in, h.in + 0.25)), out);
+    html += `<div class="hl ${h.panel ? "panel" : ""} ${h.warn ? "warn" : ""}" style="left:${h.x}px;top:${h.y}px;${h.panel ? `opacity:${pa}` : ""}">${lines}</div>`;
+  }
+  // the instruments behind the data
+  for (const st of TL.strips || []) {
+    if (t < st.in || t >= st.out) continue;
+    const a = Math.min(ramp(t, st.in, st.in + 0.25), 1 - ramp(t, st.out - 0.2, st.out));
+    html += `<div class="strip" style="opacity:${a}">${esc(st.text)}</div>`;
   }
   // chips
   for (const c of TL.chips) {
     if (t < c.in || t >= c.out) continue;
     const a = Math.min(ramp(t, c.in, c.in + 0.22), 1 - ramp(t, c.out - 0.15, c.out));
-    const pos = c.pos === "bl" ? "left:56px;bottom:40px" : c.pos === "visor" ? "left:24px;top:300px" : "left:56px;top:52px";
-    html += `<div class="chip ${c.tone || ""}" style="${pos};opacity:${a};transform:translateY(${lerp(8, 0, easeOut(a))}px)"><i></i>${esc(c.text)}</div>`;
+    const pos = { bl: "left:56px;bottom:40px", br: "right:56px;bottom:40px", brs: "right:40px;bottom:32px", tl: "left:56px;top:52px" }[c.pos] || "left:56px;top:52px";
+    html += `<div class="chip ${c.tone || ""} ${c.pos === "brs" ? "small" : ""}" style="${pos};opacity:${a};transform:translateY(${lerp(8, 0, easeOut(a))}px)"><i></i>${esc(c.text)}</div>`;
   }
-  // captions (the narration, burned in)
-  const cap = TL.captions.find((c) => t >= c.in && t < c.out);
+  // subtitles of the narration: only in the narrated cut (the music cut tells the story in the headlines)
+  const cap = CAPTIONS && TL.captions.find((c) => t >= c.in && t < c.out);
   if (cap) {
     const a = Math.min(ramp(t, cap.in, cap.in + 0.12), 1 - ramp(t, cap.out - 0.1, cap.out));
     html += `<div class="cap" style="opacity:${a}">${esc(cap.text).replace(/\n/g, "<br>")}</div>`;
@@ -284,7 +324,7 @@ window.renderAt = async (t) => {
   return true;
 };
 await document.fonts.ready;
-for (const f of ["600 25px BC", "600 44px Barlow", "500 54px Plex", "700 128px BC", "italic 400 54px Barlow", "500 30px Barlow"]) await document.fonts.load(f);
+for (const f of ["600 25px BC", "600 44px Barlow", "500 54px Plex", "700 128px BC", "italic 400 54px Barlow", "500 30px Barlow", "700 150px BC", "italic 400 64px Barlow"]) await document.fonts.load(f);
 window.ready = true;
 </script>
 </body>

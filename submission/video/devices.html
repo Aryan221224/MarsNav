@@ -632,7 +632,7 @@ window.renderIntro = async (k) => {
   marsLights.sun.position.set(...INTRO.sun); marsLights.sun.intensity = 3.6; marsLights.alarm.intensity = 0;
   marsLights.dust.visible = true; marsLights.dust.position.set(0.004 * k, 0.0015 * k, -0.003 * k);
   astroParts.caution.color.setHex(0x3a1210);
-  const u = k / Math.max(1, count - 1), t = 0.5 - 0.5 * Math.cos(Math.PI * u);      // gentle ease in and out
+  const u = k / Math.max(1, count - 1), t = 0.5 - 0.5 * Math.cos(Math.PI * Math.pow(u, 1.4));   // a slow start on the wide view, then in to the visor
   const cam = INTRO.path.getPoint(t).toArray();
   const L = INTRO.look, look = t < 0.5 ? lerp3(L[0], L[1], t * 2) : lerp3(L[1], L[2], (t - 0.5) * 2);
   renderer.setClearColor(0x000000); renderer.setScissor(0, 0, W, H); renderer.setViewport(0, 0, W, H); renderer.clear();

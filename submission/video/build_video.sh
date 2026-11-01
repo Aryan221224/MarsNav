@@ -10,11 +10,12 @@ BASE="http://127.0.0.1:$PORT/"
 node submission/video/render_devices.mjs "$BASE" submission/video/build/intro --intro
 node submission/video/render_devices.mjs "$BASE" submission/video/build/devices
 python3 submission/video/prep_rover_map.py . submission/video/build/rover
-node submission/video/render_video.mjs "$BASE" submission/video/build/frames
 if [[ "${1:-}" == "--vo" ]]; then
+  CAPTIONS=1 node submission/video/render_video.mjs "$BASE" submission/video/build/frames_vo
   python3 submission/video/make_audio.py --vo submission/video/vo
   python3 submission/video/assemble.py --vo
 else
+  node submission/video/render_video.mjs "$BASE" submission/video/build/frames
   python3 submission/video/make_audio.py
   python3 submission/video/assemble.py
 fi

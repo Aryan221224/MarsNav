@@ -20,7 +20,9 @@ const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
 const errs = [];
 page.on("pageerror", (e) => errs.push(e.message));
 page.on("console", (m) => { if (m.type() === "error") errs.push(m.text()); });
-await page.goto(new URL("submission/video/compositor.html", BASE).href, { waitUntil: "load" });
+// CAPTIONS=1 burns in the narration subtitles (the narrated cut); the music cut tells the story in the headlines
+const CAPTIONS = process.env.CAPTIONS === "1";
+await page.goto(new URL(`submission/video/compositor.html${CAPTIONS ? "?captions=1" : ""}`, BASE).href, { waitUntil: "load" });
 await page.waitForFunction(() => window.ready === true, null, { timeout: 60000 });
 
 const N = Math.round(TL.duration * TL.fps);
@@ -38,7 +40,7 @@ await browser.close();
 
 if (!ONLY.length) {
   // picture only: 1920x1080, 30 fps, H.264 High, yuv420p (plays everywhere, YouTube's recommended settings)
-  const out = path.join(path.dirname(OUT), "picture.mp4");
+  const out = path.join(path.dirname(OUT), CAPTIONS ? "picture_vo.mp4" : "picture.mp4");
   execFileSync("ffmpeg", ["-y", "-hide_banner", "-loglevel", "error", "-framerate", String(TL.fps), "-i", path.join(OUT, "%04d.jpg"),
     "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-profile:v", "high", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out], { stdio: "inherit" });
   console.log("wrote", out);

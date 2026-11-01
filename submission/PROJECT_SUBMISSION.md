@@ -10,7 +10,7 @@ MarsNav
 
 ## High-Level Project Summary
 
-The first astronauts on Mars will walk with no GPS, 4 to 24 light-minutes from help, carrying a fixed supply of oxygen, water and battery across ground that has already trapped a rover. MarsNav is crew mission software, built to run on whatever computer the mission carries (a habitat station, a rover or a suit display), and it answers the two questions every crew will ask: **where do we land and live, and which way do we walk, and can we always get home?**
+The first astronauts on Mars will walk with no GPS, 3 to 22 light-minutes from help, carrying a fixed supply of oxygen, water and battery across ground that has already trapped a rover. MarsNav is crew mission software, built to run on whatever computer the mission carries (a habitat station, a rover or a suit display), and it answers the two questions every crew will ask: **where do we land and live, and which way do we walk, and can we always get home?**
 
 Landing mode screens 66 candidate sites anywhere on Mars against NASA's human landing-site criteria, on live NASA and USGS data, and turns the chosen site into a full EVA site. The EVA planner reads the ground the way a boot meets it, from 1 m HiRISE elevation models, applies hard safety limits before it optimises anything, and plans five named routes on which every step keeps a walk home. During the EVA it reads suit telemetry in NASA's SUITS format, learns how hard the crew is really working, and re-plans before the margin runs out.
 

@@ -86,7 +86,7 @@ chapter("Why MarsNav", "the problem and the idea",
         "which way to walk from it, every day, with a fixed supply of air and no one on Earth fast enough to help. "
         "MarsNav is built for both.")
 H2("The operating problem")
-bullets(["<b>Light delay.</b> A radio signal takes 4 to 24 minutes each way. Mission control can advise, but the crew "
+bullets(["<b>Light delay.</b> A radio signal takes 3 to 22 minutes each way. Mission control can advise, but the crew "
          "must decide on the spot.",
          "<b>No GPS.</b> Position comes from dead reckoning, the sun, landmarks and a beacon at the habitat, so every "
          "position has an error that grows with distance.",

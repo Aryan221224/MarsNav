@@ -26,7 +26,7 @@ captions; add the narration with `submission/video/README.md`). Shot times, capt
 
 ## 2-minute walkthrough
 
-1. **Problem (15 s).** Light delay 4 to 24 minutes, EVAs of 2 to 8 hours, no GPS, and Spirit trapped in soft soil that looked firm. A Mars crew needs a map that knows where they can always get home from.
+1. **Problem (15 s).** Light delay 3 to 22 minutes, EVAs of 2 to 8 hours, no GPS, and Spirit trapped in soft soil that looked firm. A Mars crew needs a map that knows where they can always get home from.
 2. **Landing and real data (15 s).** Switch to **Landing** in the top bar: the whole planet, 66 candidate sites screened against NASA's 2015 human landing-site criteria; open Arcadia Planitia AP-1 and press Assess for the full dossier, then back to the **EVA planner**. Top bar: live Mars clock (sol, LMST, Ls, sun). The provenance panel lists HiRISE 1 m and CTX 20 m DTMs, MEDA weather, and the rover traverse. The site selector shows the second, CTX-only site.
 3. **Plan (25 s).**
    - Layers: Safety hazard, Sand bedforms (Séítah ripples), Walkback time contours, EVA range.

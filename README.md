@@ -19,7 +19,7 @@
 
 ![The MarsNav EVA planner: five named routes at Jezero crater on HiRISE terrain, with the walk-home margin on the timeline](docs/img/planner.jpg)
 
-A Mars crew will ask two questions before every Marswalk: **where do we land and live**, and **which way do we go, and can we always get home?** There is no GPS on Mars, help is 4 to 24 light-minutes away, suit oxygen, water and battery are finite, and Spirit was lost in soil that looked firm from orbit.
+A Mars crew will ask two questions before every Marswalk: **where do we land and live**, and **which way do we go, and can we always get home?** There is no GPS on Mars, help is 3 to 22 light-minutes away, suit oxygen, water and battery are finite, and Spirit was lost in soil that looked firm from orbit.
 
 MarsNav answers both questions with one safety logic, from choosing the landing site to the last step of each EVA:
 

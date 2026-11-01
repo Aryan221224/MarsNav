@@ -75,7 +75,7 @@ Verification codes: **T** = automated test, **V** = validation on real data, **D
 | M8 | Suit evaporative cooling needs ≤ 7 to 8 Torr | R-03, R-06 | Site pressure envelope check at setup | T |
 | M9 | Radiation dose per EVA | R-02, R-26 | Dose on route cards and the cue card at the RAD average | I |
 | M10 | No GPS: position uncertainty drives the plan | R-08, R-21 | σ field in vetoes, drift and re-fix, navigation-aid scenarios | T |
-| M11 | Execute must work offline (4 to 24 min light time) | R-01, R-17 | Static app, engine in a worker, offline service worker; live Earth–Mars light time in the top bar | T, D |
+| M11 | Execute must work offline (3 to 22 min light time) | R-01, R-17 | Static app, engine in a worker, offline service worker; live Earth–Mars light time in the top bar | T, D |
 | M17 | Show where a plan fails, not just that it fails | R-06 (walkback geometry) | Point-of-no-return diagnosis with the limiting resource, drawn on the map and in 3D | T, D |
 | M12 | Paper fallback | R-14, R-17 (Artemis practice) | Printable cue card | T |
 | M13 | Defensible weights with a consistency check and sensitivity | R-27, R-28 | AHP editor with a live consistency ratio; 40-run sensitivity analysis in the validation | T, V |

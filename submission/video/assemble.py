@@ -38,7 +38,7 @@ def main():
     args = ap.parse_args()
     srt = os.path.join(HERE, "marsnav_en.srt")
     write_srt(srt)
-    pic = os.path.join(HERE, "build", "picture.mp4")
+    pic = os.path.join(HERE, "build", "picture_vo.mp4" if args.vo else "picture.mp4")
     aud = os.path.join(HERE, "build", "audio_mix.wav" if args.vo else "audio_music.wav")
     out = os.path.join(HERE, "MarsNav_demo_30s.mp4" if args.vo else "MarsNav_demo_30s_music.mp4")
     subprocess.run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-i", pic, "-i", aud, "-i", srt,

@@ -4,7 +4,7 @@ How a Mars surface crew would use MarsNav across one sol, and why it is built th
 
 ## The operating problem
 
-A Mars crew is 4 to 24 light-minutes from Earth, so mission control cannot steer an EVA in real time. Each EVA lasts 2 to 8 hours. NASA's walkback rule says that when a rover carries the crew, they must still be able to walk home if it fails. Suit oxygen, cooling water and battery set hard ceilings. Terrain on Mars has already stopped rovers: Spirit was trapped in soft soil that looked firm, and Opportunity was stuck for six weeks in a ripple. Mars has no GPS, so every route is only as safe as the position estimate that follows it (research docs 03, 08, 26).
+A Mars crew is 3 to 22 light-minutes from Earth, so mission control cannot steer an EVA in real time. Each EVA lasts 2 to 8 hours. NASA's walkback rule says that when a rover carries the crew, they must still be able to walk home if it fails. Suit oxygen, cooling water and battery set hard ceilings. Terrain on Mars has already stopped rovers: Spirit was trapped in soft soil that looked firm, and Opportunity was stuck for six weeks in a ripple. Mars has no GPS, so every route is only as safe as the position estimate that follows it (research docs 03, 08, 26).
 
 MarsNav therefore does three things that an Earth map app does not. It checks hard limits before it optimises anything. It keeps a walk-home plan alive at every step. And it runs with no network.
 
