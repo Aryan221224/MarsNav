@@ -85,7 +85,7 @@ On a site the card adds the planner's own terrain model at that cell and the rov
 | Against NASA's TSS2027 telemetry server | Detected a battery and CO₂ drain beyond its 8× estimator limit (O₂ about 4×) and turned the EVA home within about 2 minutes |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-118 automated tests pass (65 engine and closed-loop, 53 pipeline, downloader, science-atlas and place), and the local server passes an end-to-end self-test under load, including a first run on an empty computer.
+125 automated tests pass (65 engine and closed-loop, 60 pipeline, downloader, map-streaming, science-atlas and place), and the local server passes an end-to-end self-test under load, including a first run on an empty computer.
 
 ### Use-case evidence: the same trip as Perseverance
 

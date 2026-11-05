@@ -286,7 +286,7 @@ def _download(url: str, dest: Path, progress, expected, timeout, resume, cancel,
 def _mark(ok: bool, err=None):
     """Record the outcome of a request. A success proves the internet is up. A failure proves only that one server did not
     answer (swim.psi.edu or the USGS map service can be down while NASA and USGS data servers are fine), so it does not
-    declare the app offline: it makes the next online() check probe the USGS STAC server again instead."""
+    declare the app offline: it makes the next online() check probe the map servers again instead."""
     with _lock:
         if ok:
             _state["online"] = True
@@ -298,6 +298,46 @@ def _mark(ok: bool, err=None):
 
 
 _probe_lock = threading.Lock()
+
+# The servers the map streams from. The internet counts as up when any one of them answers at all (an HTTP error status
+# is still an answer): one server that is down or hangs up ("Remote end closed connection without response") must not
+# switch the whole app to offline and black out the globe.
+PROBE_URLS = (
+    "https://trek.nasa.gov/tiles/Mars/EQ/Mars_Viking_MDIM21_ClrMosaic_global_232m/1.0.0//default/default028mm/0/0/0.jpg",
+    "https://astro.arcgis.com/arcgis/rest/services/OnMars/CTX1/MapServer?f=json",
+    "https://stac.astrogeology.usgs.gov/api/",
+)
+
+
+def _probe_one(url: str, timeout: float = 6) -> tuple[bool, str | None]:
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": UA})
+        with urllib.request.urlopen(req, timeout=timeout, context=_ctx) as r:
+            r.read(512)
+        return True, None
+    except urllib.error.HTTPError:
+        return True, None                     # the server answered: the network is there
+    except Exception as e:  # noqa: BLE001
+        return False, f"{_host(url)}: {type(e).__name__}: {e}"[:200]
+
+
+def _probe() -> bool:
+    """Probe every server at once; True as soon as one answers (worst case one timeout, not one per server)."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    errors = []
+    ex = ThreadPoolExecutor(max_workers=len(PROBE_URLS), thread_name_prefix="net-probe")
+    try:
+        futs = [ex.submit(_probe_one, u) for u in PROBE_URLS]
+        for f in as_completed(futs):
+            ok, err = f.result()
+            if ok:
+                return True
+            errors.append(err)
+    finally:
+        ex.shutdown(wait=False, cancel_futures=True)
+    with _lock:
+        _state["last_error"] = " | ".join(e for e in errors if e)[:300]
+    return False
 
 
 def online(max_age: float = 120) -> bool:
@@ -315,14 +355,7 @@ def online(max_age: float = 120) -> bool:
     if not _probe_lock.acquire(blocking=False):
         return bool(last) if last is not None else True
     try:
-        req = urllib.request.Request("https://stac.astrogeology.usgs.gov/api/", headers={"User-Agent": UA})
-        with urllib.request.urlopen(req, timeout=8, context=_ctx) as r:
-            r.read(1024)
-        ok = True
-    except Exception as e:  # noqa: BLE001
-        ok = False
-        with _lock:
-            _state["last_error"] = f"{type(e).__name__}: {e}"[:300]
+        ok = _probe()
     finally:
         _probe_lock.release()
     with _lock:

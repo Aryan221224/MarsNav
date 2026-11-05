@@ -2,7 +2,7 @@
 
 Written 1 November 2026 (fifth version: the whole project reassessed, with the route analysis added), from the official Judging and Awards Guide, the
 Space Apps participant terms, the team's analysis of the 2025 Global Winners' demos, the 2026 challenge statement
-(`docs/12_challenge_2026_update.md`) and the project as it stands (v2.1, 118 tests passing). The 2026 Project Submission Guide is published on 13 November:
+(`docs/12_challenge_2026_update.md`) and the project as it stands (v2.1, 125 tests passing). The 2026 Project Submission Guide is published on 13 November:
 re-check the demo rules against it before uploading.
 
 ## 1. How the video is judged
@@ -110,7 +110,7 @@ gave science goals one second. Both were under-weighted:
 | 14 | Space weather (DONKI), point-of-view rover photos | 1 | 1 | 1 | 3 | 1 | **7** | Relevance | P4 | Instrument strip; photos on the cuff |
 | 15 | Mission catalogue: 31 missions, past and future | 1 | 1 | 1 | 3 | 1 | **7** | Data | P4 | In the repository and the guide |
 | 16 | 3D eye-height walk, drive window | 1 | 1 | 1 | 2 | 3 | **8** | Presentation | P4 | Replaced by the opening |
-| 17 | 118 tests, byte-identical rebuild, CI-built Windows app | 1 | 1 | 3 | 1 | 0 | **6** | Validity | P4 | In the repository, not the video |
+| 17 | 125 tests, byte-identical rebuild, CI-built Windows app | 1 | 1 | 3 | 1 | 0 | **6** | Validity | P4 | In the repository, not the video |
 
 **Screen time by pillar (29.5 s).**
 

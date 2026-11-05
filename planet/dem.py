@@ -19,6 +19,7 @@ BLEND_CITE = ("Fergason, R.L., Hare, T.M., Laura, J. 2018, HRSC and MOLA Blended
 SOURCES = {
     "megdr16": {"name": "MOLA MEGDR 16 ppd", "res_m": 3705, "cite": megdr.CITATION},
     "megdr128": {"name": "MOLA MEGDR 128 ppd", "res_m": 463, "cite": megdr.CITATION},
+    "pending": {"name": "smooth stand-in (whole-planet elevation still downloading)", "res_m": 3705, "cite": ""},
     "blend200": {"name": "MOLA-HRSC blended DEM 200 m", "res_m": 200, "cite": BLEND_CITE},
     "ctx": {"name": "CTX stereo DTM 20 m", "res_m": 20, "cite": catalog.CITATION["ctx"]},
     "hirise": {"name": "HiRISE stereo DTM 1 m", "res_m": 1, "cite": catalog.CITATION["hirise"]},
@@ -102,8 +103,17 @@ def build(z: int, y: int, x: int, detail: bool = True) -> tuple[np.ndarray, dict
             fb = megdr.sample128(LON, LAT, allow_download=False)
             src = "megdr128" if len(missing) < len(need) else "megdr16"
         else:
-            fb = megdr.sample16(LON, LAT)
+            fb = megdr.sample16(LON, LAT, wait=False)
             src = "megdr16"
+        if fb is None:
+            # the 33 MB whole-planet grid is still downloading (first run): a smooth stand-in at the datum for now, marked
+            # provisional so the globe asks again and the relief appears by itself when the file is here
+            fb = np.zeros_like(LON, dtype=np.float32)
+            provisional = True
+            src = "pending"
+        elif not np.isfinite(fb).all():
+            fb = np.where(np.isfinite(fb), fb, 0.0).astype(np.float32)    # (same, where no 463 m file covers the tile yet)
+            provisional = True
         if base is None:
             base = fb
             used.append([src, 1.0])

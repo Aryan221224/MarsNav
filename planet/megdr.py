@@ -78,10 +78,15 @@ def _bilinear(arr, info, lon, lat, wrap: bool):
     return (a * (1 - fc) + b * fc) * (1 - fr) + (c * (1 - fc) + d * fc) * fr
 
 
-def sample16(lon, lat, progress=None) -> np.ndarray:
+def sample16(lon, lat, progress=None, wait: bool = True) -> np.ndarray | None:
+    """3.7 km MOLA. With wait=False and the 33 MB file not yet on this computer, the download starts in the background
+    and None comes back at once: a map tile must never sit behind a 33 MB download."""
     lon = np.asarray(lon, np.float64)
     lat = np.asarray(lat, np.float64)
-    arr = ensure(G16, progress)
+    if not wait and G16["key"] not in _maps and not have(G16):
+        fetch_async(G16)
+        return None
+    arr = ensure(G16, progress or _progress_of(G16))
     return _bilinear(arr, G16, lon, lat, wrap=True).astype(np.float32)
 
 
@@ -111,12 +116,31 @@ def sample128(lon, lat, allow_download: bool = True, progress=None) -> np.ndarra
         out[m] = _bilinear(arr, t, lo[m], lat[m], wrap=False)
     bad = ~np.isfinite(out)
     if bad.any():
-        out[bad] = sample16(lon[bad], lat[bad])
+        fb = sample16(lon[bad], lat[bad], wait=allow_download)
+        if fb is not None:
+            out[bad] = fb
     return out
 
 
+# bytes received so far for each file being downloaded: the map's loading bar shows the first-run 33 MB download
+PROGRESS: dict = {}
+
+
+def _progress_of(info: dict):
+    def cb(done, total=None):
+        PROGRESS[info["key"]] = (int(done or 0), int(total or info["bytes"]))
+    return cb
+
+
 def status() -> dict:
-    return {"global16": have(G16), "tiles128": sum(have(t) for t in T128), "tiles128_total": len(T128), "downloading": sorted(_fetching)}
+    with _lock:
+        fetching = sorted(_fetching)
+    dl = {}
+    for k in fetching:
+        d, t = PROGRESS.get(k, (0, next((i["bytes"] for i in [G16, *T128] if i["key"] == k), 0)))
+        dl[k] = {"done": d, "total": t}
+    return {"global16": have(G16), "tiles128": sum(have(t) for t in T128), "tiles128_total": len(T128), "downloading": fetching,
+            "progress": dl, "global16_key": G16["key"]}
 
 
 def tiles_for(w: float, s: float, e: float, n: float) -> list:
@@ -136,6 +160,17 @@ def tiles_for(w: float, s: float, e: float, n: float) -> list:
 _fetching: set = set()
 
 
+def ensure_tracked(info: dict) -> np.memmap:
+    """ensure(), listed as downloading (with its progress) in status() while it runs."""
+    with _lock:
+        _fetching.add(info["key"])
+    try:
+        return ensure(info, _progress_of(info))
+    finally:
+        with _lock:
+            _fetching.discard(info["key"])
+
+
 def fetch_async(info: dict) -> None:
     """Download one 128 ppd quadrant (130 MB) in the background, once."""
     with _lock:
@@ -145,7 +180,7 @@ def fetch_async(info: dict) -> None:
 
     def run():
         try:
-            ensure(info)
+            ensure(info, _progress_of(info))
         except Exception:  # noqa: BLE001 - offline: try again next time a tile needs it
             pass
         finally:

@@ -120,10 +120,17 @@ if not exist "MarsNav_runtime" (
     exit /b 1
 )
 
+rem a desktop shortcut, so the program is easy to find (the build folder holds many files)
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut([Environment]::GetFolderPath('Desktop')+'\MarsNav.lnk'); $s.TargetPath='%cd%\MarsNav.exe'; $s.WorkingDirectory='%cd%'; $s.IconLocation='%cd%\MarsNav.exe,0'; $s.Save()" >nul 2>nul
+
 echo.
 echo ============================================================
 echo   Build complete: MarsNav.exe  (+ MarsNav_runtime\)
 echo ============================================================
+echo.
+echo   The program is here:  %cd%\MarsNav.exe
+echo   and on your Desktop as the "MarsNav" shortcut.
+echo   (In File Explorer, sort by Name or Type if you do not see it among the folders.)
 echo.
 echo Launching it now as a quick check: the MarsNav window should open.
 echo To check the server end to end under load, run selftest.bat.

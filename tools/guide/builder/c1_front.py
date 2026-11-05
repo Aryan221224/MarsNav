@@ -48,7 +48,8 @@ story.append(Rule(CW, RUST, 2.2, space=8))
 callout("For judges: the two-minute path",
         None, "green",
         ["Download <b>MarsNav-Windows.zip</b> from <font name='Plex'>github.com/Aryan221224/MarsNav/releases/latest</font>, "
-         "unzip it and double-click <b>MarsNav.exe</b> (Chapter 2).",
+         "unzip it and double-click <b>MarsNav.exe</b>. From the source folder instead: double-click <b>build_exe.bat</b> once, "
+         "then <b>MarsNav.exe</b> (Chapter 2).",
          "Click <b>Tour</b> in the top bar: a guided, seven-step walkthrough of the EVA planner (Chapter 12).",
          "Click <b>Landing mode</b> and click anywhere on Mars: every data layer at that point appears (Chapter 5). Then pick "
          "<b>Arcadia Planitia AP-1</b> and press <b>Assess landing site</b> (Chapter 4).",
@@ -150,6 +151,19 @@ numbered(["Download <b>MarsNav-Windows.zip</b> from the latest release, "
 figrow([("sp5", (10, 66, 1790, 1020), "Start-up screen"), ("m_land", None, "Landing mode, a few seconds later")],
        "MarsNav starting on a fresh PC: the logo start-up screen while the local map engine starts, then the app in its own "
        "window, with its own icon in the title bar and taskbar.")
+H2("Run it from the source folder")
+P("If you have the project folder (the source code, for example from the repository or a zip of it) rather than the "
+  "release zip, build the program once, then run it:")
+numbered(["Install Python 3.10 or later from <font name='Plex'>python.org</font> and tick <b>“Add python.exe to PATH”</b>.",
+          "Open the <b>MarsNav</b> folder and double-click <b>build_exe.bat</b>. It needs an internet connection and takes "
+          "about ten minutes the first time; leave the black window open until it says <b>Build complete</b>.",
+          "Double-click <b>MarsNav.exe</b>. It is in the same folder, next to <font name='Plex'>build_exe.bat</font> (sort the "
+          "folder by Name or Type if it is hidden among the folders), and on your Desktop as the <b>MarsNav</b> shortcut. "
+          "From now on, open MarsNav.exe directly: there is no need to build again."])
+callout("The first time you open Landing mode", "The globe streams NASA imagery and elevation as you look at Mars, and a "
+        "<b>Loading map</b> bar at the bottom shows how many tiles have arrived. On the very first run the whole-Mars "
+        "elevation map (33 MB) downloads once; the globe shows the imagery straight away and the relief appears when the "
+        "download finishes. Everything is kept on this computer, so the next visit is much faster.", "green")
 H2("What is in the folder")
 table([["Item", "What it is"],
        ["MarsNav.exe", "The program. Double-click to run."],

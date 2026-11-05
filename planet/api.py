@@ -80,7 +80,7 @@ def _warmup():
 
     def go(log=print):
         log("downloading the MOLA 16 ppd whole-planet elevation (33 MB, once)")
-        megdr.ensure(megdr.G16, progress=lambda d, t: None)
+        megdr.ensure_tracked(megdr.G16)
         log("MOLA base ready")
         names.load()
         log(f"IAU names: {names.status()}")

@@ -1791,6 +1791,8 @@ async function refreshStatus() {
   try {
     const s = await api("/api/planet/status");
     S.online = s.online;
+    const g16 = s.megdr?.global16_key, prog = s.megdr?.progress || {};
+    S.demDownload = !s.megdr?.global16 && g16 && prog[g16] ? prog[g16] : null;
     $("offline").hidden = true;
     const pill = $("netPill");
     const mars = !!s.local?.offline;
@@ -2012,6 +2014,33 @@ $("swxRefresh").onclick = async () => {
   } catch (e) { $("swxJob").textContent = e.message; }
 };
 
+// ------------------------------------------------------------------------------------------------- loading bar
+// "Loading map": a batch starts when tiles begin streaming and ends when none are left; the bar is the share of the
+// batch's tiles that have arrived. Under it, the first-run download of the whole-Mars elevation grid (33 MB, once).
+const ML = { start: 0, base: 0, idleAt: 0, shown: false };
+function updateMapLoad(now) {
+  const box = $("mapLoad");
+  if (!box) return;
+  const pending = loading + queue.size;
+  const dl = S.demDownload;                         // {done, total} while the 33 MB elevation grid downloads
+  if (pending > 0 || dl) {
+    if (!ML.shown) { ML.shown = true; ML.base = loadedTotal; ML.start = now; }
+    ML.idleAt = 0;
+    const got = loadedTotal - ML.base, frac = pending ? got / (got + pending) : 1;
+    $("mapLoadTxt").textContent = S.online === false ? "offline: data saved on this computer"
+      : pending ? `streaming NASA imagery · ${got} of ${got + pending} tiles` : "elevation";
+    $("mapLoadPct").textContent = `${Math.round(100 * frac)} %`;
+    $("mapLoadBar").style.width = `${Math.max(3, 100 * frac)}%`;
+    const d = $("mapLoadDem");
+    if (dl) { d.hidden = false; d.textContent = `First run: downloading the whole-Mars elevation map, ${(dl.done / 1e6).toFixed(1)} of ${(dl.total / 1e6).toFixed(0)} MB (once; relief appears when it is done)`; }
+    else d.hidden = true;
+    box.hidden = false; box.classList.remove("done");
+  } else if (ML.shown) {
+    if (!ML.idleAt) { ML.idleAt = now; $("mapLoadBar").style.width = "100%"; $("mapLoadPct").textContent = "100 %"; $("mapLoadTxt").textContent = "map ready"; }
+    else if (now - ML.idleAt > 700) { box.classList.add("done"); if (now - ML.idleAt > 1100) { box.hidden = true; ML.shown = false; } }
+  }
+}
+
 // ------------------------------------------------------------------------------------------------- loop
 let lastHash = 0, lastScale = 0, lastStat = { drawn: 0, wanted: 0 };
 function frame(now) {
@@ -2029,6 +2058,7 @@ function frame(now) {
     const alt = camera.position.length() - R;
     $("hudAlt").textContent = `alt ${fmtKm(alt)} · z${currentZoom()}`;
     $("hudLoad").textContent = loading || lastStat.wanted ? `streaming ${loading + queue.size} tiles` : `${loadedTotal} tiles`;
+    updateMapLoad(now);
   }
   if (dirty && now - lastHash > 500) { saveHash(); lastHash = now; dirty = false; clearTimeout(covT); covT = setTimeout(loadCoverage, 800); }
 }

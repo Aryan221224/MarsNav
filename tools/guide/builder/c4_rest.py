@@ -45,7 +45,7 @@ table([["Layer", "Built with"],
         "the science atlas, missions and objectives, space weather, and the lookup of every layer at a point."],
        ["Data pipeline", "Python with numpy, scipy, rasterio / GDAL and Pillow (pipeline/): download with SHA-256 checks, "
         "terrain statistics, hazard layers, imagery, weather fit."],
-       ["Verification", "Node's test runner (65 engine and closed-loop tests), pytest (53 pipeline, downloader, science-atlas and place tests), "
+       ["Verification", "Node's test runner (65 engine and closed-loop tests), pytest (60 pipeline, downloader, map-streaming, science-atlas and place tests), "
         "validation scripts against Perseverance data, an end-to-end server self-test, and on every change a Windows build that is "
         "started and checked before it is published (GitHub Actions)."]],
       [1.45 * inch, CW - 1.45 * inch])
@@ -135,7 +135,7 @@ small("Each EVA is flown twice with the same random numbers and a hidden truth d
 H2("Automated tests")
 table([["Suite", "Command", "Result"],
        ["Engine and closed loop (Node 20+)", "node --test tests/*.test.mjs", "65 of 65 pass (29 Oct 2026)"],
-       ["Pipeline, downloader, science atlas, place", "python -m pytest tests -q", "53 of 53 pass (29 Oct 2026)"],
+       ["Pipeline, downloader, map streaming, science atlas, place", "python -m pytest tests -q", "60 of 60 pass (5 Nov 2026)"],
        ["Validation vs Perseverance", "node validation/validate.mjs", "results above (26 Oct 2026), about 30 s; needs the raw NASA inputs in data_cache"],
        ["Closed-loop campaign", "node validation/closed_loop_campaign.mjs", "0 / 40 vs 31 / 40; reproduced exactly on 29 Oct 2026"],
        ["Same trips as the rover", "node validation/rover_case_study.mjs", "results above (26 Oct 2026), about 15 s"],

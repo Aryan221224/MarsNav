@@ -67,6 +67,10 @@ It is a portable Windows desktop app: one folder, one double-click, nothing to i
 2. Unzip it anywhere you can save files (Desktop, Documents, `D:\`, a USB stick) and double-click **`MarsNav.exe`**.
 3. The first time on a new PC, Windows may say "Windows protected your PC" because the program is not code-signed: click **More info**, then **Run anyway**.
 
+**From the source folder** (this repository, or a zip of it): install Python 3.10+ (tick "Add python.exe to PATH"), double-click **`build_exe.bat`** once and wait for "Build complete" (about ten minutes the first time), then double-click **`MarsNav.exe`**. It is in the same folder and on your Desktop as the "MarsNav" shortcut. After that, open `MarsNav.exe` directly.
+
+The first time you open Landing mode the globe streams NASA imagery and elevation; a **Loading map** bar shows the tiles arriving, and the whole-Mars elevation map (33 MB) downloads once in the background. Everything is cached on this computer, so later visits are fast.
+
 No Python, no installer and no admin rights are needed. The window uses Microsoft Edge WebView2, which is part of Windows 10 and 11. For a two-minute tour, press **Tour** in the top bar; the [user guide](MarsNav_User_Guide.pdf) walks through every feature with screenshots.
 
 **Any OS, EVA planner only:** `python3 -m http.server 8765 --directory app`, then open `http://localhost:8765`.
@@ -87,7 +91,7 @@ Every result is reported, including the one that did not go our way. Figures re-
 | Same trip as the rover | Séítah to the delta front: Perseverance drove 7.1 km over 85 sols; MarsNav planned 3.07 km in under a second (a suited crew: 2.92 km, 1.4 h). Over 45 real drives its routes cross 47 % less mapped sand and 55 % less rocky ground than the rover did, and its speed model reproduces the rover's measured 79.7 m/h (79 m/h) |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-118 automated tests pass: 65 engine and closed-loop tests (Node) and 53 pipeline, downloader, science-atlas and place tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
+125 automated tests pass: 65 engine and closed-loop tests (Node) and 60 pipeline, downloader, map-streaming, science-atlas and place tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
 
 ## How it works
 
@@ -126,7 +130,7 @@ python tools\smoke_exe.py dist\MarsNav\MarsNav.exe   :: start the built program,
 
 ```sh
 node --test tests/*.test.mjs          # 65 engine and closed-loop tests (Node 20+)
-python -m pytest tests -q             # 53 pipeline, downloader, science-atlas and place tests (pip install -r requirements.txt)
+python -m pytest tests -q             # 60 pipeline, downloader, map-streaming, science-atlas and place tests (pip install -r requirements.txt)
 node validation/validate.mjs          # validation against Perseverance data (about 30 s)
 node validation/rover_case_study.mjs  # same trips as Perseverance, MarsNav vs the rover (about 15 s)
 node validation/closed_loop_campaign.mjs   # 40 paired closed-loop EVAs (about 70 s)
