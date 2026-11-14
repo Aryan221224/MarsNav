@@ -1,7 +1,9 @@
 # MarsNav web demo: publishes the browser app (app/) on GitHub Pages, so anyone can open the EVA planner, the visor HUD
-# and the rover drive window from a link, with nothing to install. Landing mode needs the Python server (it streams and
-# processes NASA / USGS data for any place on Mars); on the web copy it says so and links the Windows download.
-# One-time set-up on GitHub, if this workflow reports that Pages is not enabled: Settings > Pages > Source: GitHub Actions.
+# and the rover drive window from a link, with nothing to install: https://aryan221224.github.io/MarsNav/
+# Landing mode needs the Python server (it streams and processes NASA / USGS data for any place on Mars); on the web
+# copy it says so and links the Windows download.
+# How it publishes: Pages serves the gh-pages branch. On every push to main that touches app/, this job writes app/
+# (plus .nojekyll, so files are served as they are) as a new commit on gh-pages; GitHub's own Pages build then deploys it.
 name: Web demo (GitHub Pages)
 
 on:
@@ -11,32 +13,34 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Publish app/ to GitHub Pages
+  publish:
+    name: Publish app/ to the gh-pages branch
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
         with:
-          enablement: true
+          fetch-depth: 0
       - name: Check the planner's files are all present
         # every module the planner imports must be in app/ (the web copy has no server to fall back on)
         run: node tools/check_web_demo_files.mjs
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: app
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Write app/ to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          EMPTY=$(git hash-object -w /dev/null)
+          TREE=$( (git ls-tree HEAD:app; printf '100644 blob %s\t.nojekyll\n' "$EMPTY") | git mktree )
+          PARENT=$(git rev-parse -q --verify origin/gh-pages || true)
+          if [ -n "$PARENT" ] && [ "$(git rev-parse "$PARENT^{tree}")" = "$TREE" ]; then
+            echo "gh-pages already holds this app/: nothing to publish"; exit 0
+          fi
+          C=$(git commit-tree "$TREE" ${PARENT:+-p "$PARENT"} -m "Web demo: app/ from main ${GITHUB_SHA::7}")
+          git push origin "$C:refs/heads/gh-pages"
+          echo "published $C (app/ from ${GITHUB_SHA::7}) to gh-pages"
