@@ -92,7 +92,10 @@ export class AlertManager {
         if (a.acked) this.active.delete(id);
         else a.cleared = true;
       } else if (a.cleared) {
+        // the condition is back while the crew has not yet acknowledged it: on the list again as active, logged again,
+        // no new tone (the alert never left the list)
         a.cleared = false;
+        this.log.push({ t, event: "raised", id, level: a.level, text: a.text });
       }
     }
     return raised;

@@ -184,6 +184,14 @@ test("Caution & warning: walkback limit is a WARNING, low margin a CAUTION, sort
   assert.equal(evaluateRules({ margins: { o2: 0.5, co2: 0.5, water: 0.5, batt: 0.5, time: 3600 } }).length, 0);
 });
 
+test("a latched alert that clears and returns is logged each time it is raised", () => {
+  const M = new AlertManager();
+  const a = { id: "los", level: 1, text: "NO RADIO LINE OF SIGHT", action: "x" };
+  M.update([a], 0); M.update([], 1); M.update([a], 2); M.update([], 3);
+  assert.deepEqual(M.log.map((e) => e.event), ["raised", "cleared", "raised", "cleared"]);
+  assert.equal(M.update([a], 4).length, 0, "no new tone while it is still unacknowledged");
+});
+
 test("Alert manager latches: a warning that clears unseen stays until acknowledged; new warnings unsilence", () => {
   const M = new AlertManager();
   M.update(evaluateRules({ sunsetMinLeft: 20 }), 0);
