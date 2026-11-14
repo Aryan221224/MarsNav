@@ -199,12 +199,12 @@ function overlay(name, opts = {}) {
   } else if (name === "hazard") {
     vOf = (i) => pg.haz[i];
     for (let i = 0; i < g.n; i++) if (!pg.veto[i]) put(i, ramp(PAL.haz, Math.min(1, pg.haz[i] / 0.5)));
-    legend = { kind: "ramp", pal: "haz", lo: "0", hi: "0.5+", text: "Composite safety hazard (factor tree, static leaves)" };
+    legend = { kind: "ramp", pal: "haz", lo: "0", hi: "0.5+", text: "Safety hazard: slope, rocks and steps, soft sand and cliff edges combined" };
   } else if (name === "slope") {
     const a = T.f32("slopeW");
     vOf = (i) => a[i];
     for (let i = 0; i < g.n; i++) put(i, ramp(PAL.seq, Math.min(1, a[i] / 25)));
-    legend = { kind: "ramp", pal: "seq", lo: "0 deg", hi: "25 deg", text: "Walking-scale slope, 90th percentile per 10 m cell" };
+    legend = { kind: "ramp", pal: "seq", lo: "0°", hi: "25°", text: "Walking-scale slope, 90th percentile per 10 m cell" };
   } else if (name === "sand") {
     const a = T.f32("sand");
     vOf = (i) => a[i];
@@ -277,7 +277,7 @@ function overlay(name, opts = {}) {
   // provenance badge on every layer (what kind of number the crew is looking at)
   const hi = S.T.site.hires_dtms?.length ? "HiRISE 1 m DTMs + CTX 20 m" : "CTX 20 m DEM";
   const PROV = {
-    veto: ["DERIVED", `${hi}; limits from NASA and study values`], hazard: ["DERIVED", `${hi}; AHP team weights [ASSUME]`],
+    veto: ["DERIVED", `${hi}; limits from NASA and study values`], hazard: ["DERIVED", `${hi}; team priority weights [ASSUME]`],
     slope: ["DERIVED", S.T.site.hires_dtms?.length ? "HiRISE 1 m DTMs; CTX-calibrated where no 1 m" : "CTX 20 m, calibrated at Jezero"],
     sand: ["DERIVED", S.T.site.hires_dtms?.length ? "HiRISE 1 m DTM bedform detector" : "prior only: no 1 m data"],
     slip: ["MODELED", "slip distribution from bedforms and slope"], shade: ["MODELED", "horizon maps + Mars24 sun"],

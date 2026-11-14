@@ -99,7 +99,7 @@
             </select></label>
         </div>
         <label class="row" id="rescueRow" hidden style="gap:6px"><input type="checkbox" id="rescue"> <span>Rescue rover on standby (dual-rover operations): replaces the walk-home rule with a rescue-drive rule</span></label>
-        <p class="note" id="setupNote"></p>
+        <dl class="setupdl" id="setupNote"></dl>
         <details id="hwBox">
           <summary class="lbl" style="cursor:pointer">Suit and rover state (pre-EVA checkout)</summary>
           <div class="row" style="margin-top:6px">
@@ -177,9 +177,11 @@
       </section>
 
       <section class="section">
-        <h2>Priorities (AHP)</h2>
-        <div id="ahpBox"></div>
-        <p class="note help">Pairwise judgements on Saaty's 1-9 scale. The weights are recomputed live with the consistency ratio; judgements with CR above 0.10 are flagged. Defaults are the team's documented judgements, not NASA values.</p>
+        <details class="fold" id="ahpGroup">
+          <summary><h2>Advanced: route priorities</h2></summary>
+          <p class="note help">How much each concern counts when routes are compared. Defaults are the team's documented judgements, not NASA values. Each slider is a pairwise judgement on Saaty's 1-9 scale (the Analytic Hierarchy Process); the weights are recomputed live, and judgements that contradict each other (consistency ratio above 0.10) are flagged.</p>
+          <div id="ahpBox"></div>
+        </details>
       </section>
 
       <section class="section">
@@ -245,7 +247,7 @@
         </div>
       </section>
       <section class="section">
-        <details class="simgroup" id="simGroup" open>
+        <details class="fold" id="simGroup" open>
           <summary><h2>Simulator and training</h2></summary>
           <p class="note" id="simGroupNote" hidden></p>
           <div class="row" id="simOpts">
@@ -432,12 +434,14 @@
     </div>
     <div id="reviewRight" hidden>
       <section class="section">
-        <h2>Validation on real data</h2>
-        <div id="validation" class="note">Loading validation results&hellip;</div>
+        <h2>After-action: planned versus flown</h2>
+        <div id="aar" class="note">Run an EVA in Execute mode to see planned versus flown.</div>
       </section>
       <section class="section">
-        <h2>After-action</h2>
-        <div id="aar" class="note">Run an EVA in Execute mode to see planned versus flown.</div>
+        <details class="fold" id="valGroup">
+          <summary><h2>Validation on real data</h2></summary>
+          <div id="validation" class="note">Loading validation results&hellip;</div>
+        </details>
       </section>
       <section class="section">
         <h2>Data provenance</h2>

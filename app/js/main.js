@@ -246,14 +246,16 @@ async function runSetup() {
   const ctx = s.ctx;
   $("rescueRow").hidden = state.cfg.profile !== "rover";
   $("hwRoverRow").hidden = state.cfg.profile !== "rover";
-  $("setupNote").innerHTML = `Habitat: ${state.base.name}. Depart ${ctx.sol >= 0 ? `${ctx.clockName} sol ${ctx.sol}` : ""} LMST ${fmtHours(ctx.lmst).slice(0, 5)}
-    (UTC ${new Date(state.cfg.departMs).toISOString().slice(0, 16).replace("T", " ")}), Ls ${ctx.Ls.toFixed(0)}°, sun ${ctx.sun.elevation.toFixed(0)}°.
-    Time budget <span class="num">${fmtDuration(s.timeEndS)}</span> (max EVA or sunset minus 30 min).
-    <br>Suit cooling: site pressure ${(s.pNow.pa / 100).toFixed(2)} hPa (${s.pNow.torr.toFixed(1)} Torr) now, at most
-    ${(s.pEnv.pMaxPa / 100).toFixed(2)} hPa over a Mars year in this area; limit ${(s.pEnv.limitPa / 100).toFixed(1)} hPa (7.5 Torr):
-    <span class="${s.pEnv.coolingOK ? "ok" : "bad"}">${s.pEnv.coolingOK ? "OK" : "EXCEEDED - evaporative cooling not assured"}</span>.
-    <br>Dust optical depth <span class="num">${s.tau.toFixed(2)}</span>${s.dust?.mode && s.dust.mode !== "fixed"
-      ? ` (${s.dust.mode === "clim90" ? "dusty year, 90th percentile" : "typical year"} at Ls ${s.dust.Ls.toFixed(0)}°, 13 Mars years of the Mars Climate Database dust record)` : " (fixed)"}.`;
+  // the set-up at a glance: one labelled row per fact, the verdict before the detail
+  $("setupNote").innerHTML = `<dt>Habitat</dt><dd>${state.base.name}</dd>
+    <dt>Departure</dt><dd>${ctx.sol >= 0 ? `${ctx.clockName} sol ${ctx.sol}, ` : ""}LMST ${fmtHours(ctx.lmst).slice(0, 5)}
+      <span class="sub">· UTC ${new Date(state.cfg.departMs).toISOString().slice(0, 16).replace("T", " ")} · Ls ${ctx.Ls.toFixed(0)}° · sun ${ctx.sun.elevation.toFixed(0)}°</span></dd>
+    <dt>Time budget</dt><dd><span class="num">${fmtDuration(s.timeEndS)}</span> <span class="sub">(max EVA or sunset minus 30 min)</span></dd>
+    <dt>Suit cooling</dt><dd><span class="${s.pEnv.coolingOK ? "ok" : "bad"}">${s.pEnv.coolingOK ? "OK" : "EXCEEDED - evaporative cooling not assured"}</span>
+      <span class="sub">· site pressure ${(s.pNow.pa / 100).toFixed(2)} hPa (${s.pNow.torr.toFixed(1)} Torr) now, at most
+      ${(s.pEnv.pMaxPa / 100).toFixed(2)} hPa over a Mars year here; limit ${(s.pEnv.limitPa / 100).toFixed(1)} hPa (7.5 Torr)</span></dd>
+    <dt>Atmosphere</dt><dd>Dust optical depth <span class="num">${s.tau.toFixed(2)}</span>${s.dust?.mode && s.dust.mode !== "fixed"
+      ? ` <span class="sub">(${s.dust.mode === "clim90" ? "dusty year, 90th percentile" : "typical year"} at Ls ${s.dust.Ls.toFixed(0)}°, 13 Mars years of the Mars Climate Database dust record)</span>` : " (fixed)"}</dd>`;
   const veto = await call("overlay", { name: "veto" });
   state.map.setVeto(veto);
   await refreshOverlay();
@@ -553,12 +555,15 @@ function updateAHP() {
   const r = ahp(l1Matrix());
   state.l1 = Object.fromEntries(L1_IDS.map((k, i) => [k, r.weights[i]]));
   $("ahpOut").innerHTML = L1_IDS.map((k, i) => `<div><span class="k">${L1_NAMES[k]}</span><span class="v">${(100 * r.weights[i]).toFixed(1)}%</span></div>`).join("");
-  $("ahpCR").innerHTML = `CR ${r.CR.toFixed(3)} ${r.consistent ? '<span class="pill n">consistent</span>' : '<span class="pill c">revise: CR &gt; 0.10</span>'}`;
+  // plain verdict on screen, the consistency ratio itself in the tooltip
+  const crTip = `Consistency ratio ${r.CR.toFixed(3)} (${r.consistent ? "at most" : "above"} 0.10)`;
+  $("ahpCR").innerHTML = r.consistent ? `<span class="pill n" title="${crTip}">Judgements consistent</span>`
+    : `<span class="pill c" title="${crTip}">Judgements contradict each other: revise</span>`;
 }
 
 // ------------------------------------------------------------------------------------------------------ plan --
 const ROUTE_INFO = {
-  balanced: ["Balanced", "Team AHP weights: safety and margins first, then time"],
+  balanced: ["Balanced", "Team priorities: safety and margins first, then time"],
   safest: ["Safest", "Safety 60 %, recoverability 20 %: lowest hazard exposure"],
   fastest: ["Fastest", "Least time among feasible routes (Earth-style)"],
   economy: ["Lowest consumption", "Least oxygen, water and power used"],
@@ -1526,10 +1531,13 @@ const TOUR = [
   { t: "Walk it before you walk it", sel: "#view3d", x: "The 3D view walks the planned route at eye height on the real terrain, with the crater rim on the skyline and the walk-home margin at every step.",
     go: async () => { await open3D(); document.querySelector("[data-v3=helmet]").click(); state.v3?.setFly(0.3); update3DInfo(); } },
   { t: "Flying the EVA", sel: "#hud", x: "Execute reads suit telemetry (NASA's SUITS format; simulated here, live through the bridge), learns how hard the crew is really working, and re-plans from where they are. Watch a suit leak: a WARNING sounds and the plan turns into the walk-home route by itself.",
-    go: async () => { $("view3d").hidden = true; state.v3?.play(false); setMode("exec"); await wait(300); $("simSpeed").value = "600"; runSim(true); await wait(3500);
+    go: async () => { $("view3d").hidden = true; state.v3?.play(false);
+      // the tour demonstrates on the built-in simulator, never on a live suit or the drive window
+      if ($("telSrc").value !== "sim") { $("telSrc").value = "sim"; $("telSrc").dispatchEvent(new Event("change")); }
+      setMode("exec"); await wait(300); $("simSpeed").value = "600"; runSim(true); await wait(3500);
       onSnap(await call("simInject", { kind: "leak" })); } },
   { t: "Checked against Perseverance", sel: "#validation", x: "Review compares plan and flight, prints the paper cue card, and shows the validation against the rover's own records, including the result that did not come out in our favour.",
-    go: async () => { runSim(false); setMode("review"); } },
+    go: async () => { runSim(false); setMode("review"); $("valGroup").open = true; } },
 ];
 let tourK = -1;
 let TOUR_STEPS = TOUR;           // the tour, or a story (plannerx.js) shown in the same box
