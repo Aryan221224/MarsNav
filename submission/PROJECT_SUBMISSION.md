@@ -44,7 +44,7 @@ A Marswalk is a closed-loop survival problem. The crew cannot call Earth for hel
 
 **Science atlas and objectives: what to study, and where.** Twenty-six more whole-planet layers, grouped by the kind of measurement the challenge lists: spectral (4,572 aqueous-mineral sites, 1,648 CRISM and OMEGA hydrous detections, 642 chloride deposits, TES plagioclase, pyroxene and sheet silicates), chemical (Mars Odyssey GRS iron, chlorine, potassium, thorium, silicon), thermal and surface (albedo, dust cover), topographic (MOLA roughness), geophysical (MRO GMM-3 gravity), atmospheric and radiation (air pressure, cosmic-ray dose scaled from Curiosity's RAD by the air overhead, sunlight), water and ice (glaciers, gullies, fans, valley networks) and present-day activity (recurring slope lineae, new and icy impacts). The dossier lists what is within 100 km and flags candidate Special Regions. Seven science objectives, after the MEPAG goals, turn on their layers with one press and rank every candidate site by the evidence near it. For ancient life they rank Columbus crater, Jezero, Mawrth Vallis and Nili Fossae first. A catalogue of 31 missions (Viking to ESCAPADE, MMX, Rosalind Franklin and Tianwen-3, with MAVEN's loss and Mars Sample Return's cancellation) says what each one gives the map and the crew.
 
-**Space weather.** NASA's DONKI gives CME arrivals forecast at Mars, solar particle events and flares, with the Sun-Earth-Mars angle and an EVA advisory (quiet, watch, storm), cached for Mars mode. Route dose now follows the altitude of every step.
+**Space weather.** NASA's DONKI gives CME arrivals forecast at Mars, solar particle events and flares, with the Sun-Earth-Mars angle and an EVA advisory (quiet, watch, storm), cached for Mars mode. Route dose now follows the altitude of every step and the terrain around it: hills and walls that hide part of the sky cut the cosmic-ray dose (modelled with Curiosity RAD's measured angular spread and checked against RAD by the Murray Buttes), a map layer shows where the cover is, and in a solar particle event the warning gives the walk home first and says what the terrain can and cannot do.
 
 **Crew displays.** The same EVA, live, on a helmet-visor HUD (heading tape, steering cue, walk-home margin, consumables, alerts; it can also overlay the first-person drive window), a rover dashboard (speed, slope ahead, power, route map) and a wrist cuff (the next stop with the rover's own photograph of it, the procedure checklist, acknowledge, pin and a two-step return). Every station at Jezero and Mount Sharp has the rover's raw Navcam and Mastcam frames from that spot: what the crew will see when they arrive.
 
@@ -107,7 +107,7 @@ Across all 45 validation drives, MarsNav's routes cross 47 % less mapped sand, 5
 
 | The challenge asks for | MarsNav |
 |---|---|
-| A layered, integrated view of a location or route | Eleven terrain layers and four overlays at 10 m with routes, uncertainty and a timeline profile; the whole planet with six base maps and six science overlays |
+| A layered, integrated view of a location or route | Twelve terrain layers (including radiation shielding) and four overlays at 10 m with routes, uncertainty and a timeline profile; the whole planet with six base maps and six science overlays |
 | Data from multiple NASA science missions | MRO, MGS, Mars Odyssey, Mars 2020, MSL, Viking, Apollo, plus ESA's Mars Express (below) |
 | Details of routes and destinations | Turn-by-turn guidance legs, station procedures, target provenance, the cue card, GeoJSON |
 | Updates on current conditions | Live Mars clock, sun and shade along the route, dust, radio line of sight, position error, live suit telemetry with learned rates |
@@ -115,7 +115,7 @@ Across all 45 validation drives, MarsNav's routes cross 47 % less mapped sand, 5
 | Plan and carry out a successful Marswalk | Plan, Execute and Review, with a 3D rehearsal and a first-person drive window |
 | New and exciting science along the way | Perseverance's real sample sites (Rochette, Séítah, Amalik, Cheyava Falls) and Curiosity's boxwork drill sites, a science-value optimiser, seven science objectives that rank every site, and catalogued minerals, ice and activity within 100 km |
 | At least three kinds of data | Optical, thermal, spectral, topographic, geophysical, atmospheric, radiation and chemical layers for the whole planet |
-| Space weather and radiation | NASA DONKI CME arrivals at Mars, particle events and flares with an EVA advisory; dose by altitude on every route |
+| Space weather and radiation | NASA DONKI CME arrivals at Mars, particle events and flares with an EVA advisory; dose by altitude and terrain shielding on every route |
 | Habitat display, tablet or helmet HUD | Habitat console, helmet-visor HUD, rover dashboard and wrist cuff, all live |
 | Point-of-view images | The rover's own photographs from each station |
 | The boxwork example at Mount Sharp | A full EVA site with Curiosity's track and drill sites |
