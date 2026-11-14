@@ -504,10 +504,13 @@ export function initPlannerExtras(X) {
         go: async () => { X.setMode("plan"); } },
     ] },
   ];
-  $("btnStories").addEventListener("click", () => {
+  // one Guide button (same place as in Landing mode): the quick tour first, then the stories on real data
+  $("btnGuide").addEventListener("click", () => {
     const list = STORIES.filter((s) => !s.jezero || state.site.id === "jezero");
-    X.openModal("Stories", `<p class="note">Guided walkthroughs on real data. Each one sets the planner up and explains what is on screen.</p><div class="stories">${list.map((s) =>
-      `<button class="btn story" data-story="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.sub)}</span></button>`).join("")}</div>`, list.map((s) => s.title).join("\n"), "stories.txt", "text/plain");
+    X.openModal("Guide", `<p class="note">New here? Start with the quick tour. The stories are guided walkthroughs on real data: each one sets the planner up and explains what is on screen.</p>
+      <div class="stories"><button class="btn story first" data-guide="tour"><b>Quick tour</b><span>The whole chain, plan to review, in ${X.tourSteps()} steps (about two minutes)</span></button>
+      ${list.map((s) => `<button class="btn story" data-story="${s.id}"><b>${esc(s.title)}</b><span>${esc(s.sub)}</span></button>`).join("")}</div>`);
+    document.querySelector("[data-guide=tour]").addEventListener("click", () => { $("modal").hidden = true; X.startTour(); });
     document.querySelectorAll("[data-story]").forEach((b) => b.addEventListener("click", () => {
       $("modal").hidden = true;
       X.startStory(STORIES.find((s) => s.id === b.dataset.story).steps);

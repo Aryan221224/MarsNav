@@ -55,6 +55,9 @@ h3.lbl { color: var(--accent); font-size: 13px; margin: 14px 0 6px; }
 .btn.ghost { background: transparent; }
 .btn.icon { width: 32px; padding: 5px 0; text-transform: none; letter-spacing: 0; font-family: var(--font-ui); font-size: 14px; }
 .btn.small { padding: 2px 8px; font-size: 12px; }
+/* top bar: Guide and ? sized like the planner's Guide button (same place, same look in both apps) */
+.tops .btn.guide { height: 28px; padding: 0 10px; font-size: 12.5px; }
+.tops .btn.icon { height: 28px; width: 28px; padding: 0; }
 
 /* ---------------------------------------------------------------- layout */
 main { flex: 1 1 auto; display: flex; min-height: 0; position: relative; }

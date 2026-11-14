@@ -53,7 +53,8 @@ const busy = (on, text = "Computing…") => {
 // the planner extras (plannerx.js) work through this context; they add their own hooks to it
 const X = { state, call, $, runSetup: () => runSetup(), runPlan: () => runPlan(), refreshOverlay: (o) => refreshOverlay(o), setMode: (m) => setMode(m),
   openModal: (...a) => openModal(...a), addStation: (t) => addStation(t), addPointStation: (lo, la) => addPointStation(lo, la), renderStations: () => renderStations(),
-  selectRoute: (n) => selectRoute(n), busy: (on, t) => busy(on, t), startStory: (steps) => startStory(steps) };
+  selectRoute: (n) => selectRoute(n), busy: (on, t) => busy(on, t), startStory: (steps) => startStory(steps),
+  startTour: () => startStory(TOUR), tourSteps: () => TOUR.length };
 
 // ------------------------------------------------------------------------------------------------------ boot --
 // site selection: data/sites.json lists every built site; "#<site id>" in the address picks one
@@ -826,7 +827,6 @@ function bindUI() {
   $("btn3d").addEventListener("click", open3D);
   $("btnDrive").addEventListener("click", openDriveWindow);
   $("btnDrive2").addEventListener("click", openDriveWindow);
-  $("btnTour").addEventListener("click", () => { TOUR_STEPS = TOUR; tourShow(0); });
   state.setLayersOpen = initLayerPanel();
   initSectionHelp();
   $("telSrc").addEventListener("change", () => { if (!$("execLeft").hidden) setPhasePill("exec"); });
@@ -1704,7 +1704,8 @@ function openModal(title, bodyHTML, text, filename, mime) {
     try { await navigator.clipboard.writeText(text); $("modalCopy").textContent = "Copied"; } catch { $("modalCopy").textContent = "Copy blocked"; }
     setTimeout(() => ($("modalCopy").textContent = "Copy"), 1500);
   };
-  $("modalSave").hidden = IN_FRAME; // embedded viewers block page-started downloads: Copy is the path there
+  $("modalCopy").hidden = text == null;                // a chooser (the guide) has nothing to copy or save
+  $("modalSave").hidden = IN_FRAME || text == null;    // embedded viewers block page-started downloads: Copy is the path there
   $("modalSave").onclick = () => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([text], { type: mime }));

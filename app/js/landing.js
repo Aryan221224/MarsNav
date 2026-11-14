@@ -612,7 +612,7 @@ window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") { $("help").hidden = true; $("localModal").hidden = true; $("searchRes").hidden = true; if (document.activeElement?.blur) document.activeElement.blur(); return; }
   if (e.target.closest("input, select, textarea")) return;
   if (e.key === "/") { e.preventDefault(); $("searchIn").focus(); return; }
-  if (e.key === "?") { $("help").hidden = false; return; }
+  if (e.key === "?") { showHelp(); return; }
   if (e.key === "a" || e.key === "A") { if (S.focus) assess(); return; }
   if (e.key === "l" || e.key === "L") { $("layers").classList.toggle("collapsed"); return; }
   if (e.key === "m" || e.key === "M") { measureToggle(); return; }
@@ -725,7 +725,15 @@ function showTab(name) {
   for (const p of document.querySelectorAll(".tabpane")) p.hidden = p.dataset.pane !== name;
 }
 for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => showTab(b.dataset.tab);
-$("btnHelp").onclick = () => { $("help").hidden = false; };
+// the help dialog also hosts the Guide chooser: put the help page back before showing help
+function restoreHelp() {
+  const m = $("help");
+  if (!m.dataset.orig) return;
+  m.querySelector(".mbox").innerHTML = m.dataset.orig;
+  $("helpClose").onclick = () => { m.hidden = true; };
+}
+function showHelp() { restoreHelp(); $("help").hidden = false; }
+$("btnHelp").onclick = showHelp;
 $("helpClose").onclick = () => { $("help").hidden = true; };
 $("help").addEventListener("click", (e) => { if (e.target === $("help")) $("help").hidden = true; });
 $("layersToggle").onclick = () => {
@@ -2550,17 +2558,20 @@ function storyShow(k) {
 $("storyNext").addEventListener("click", () => storyShow(STORY.k + 1));
 $("storyBack").addEventListener("click", () => storyShow(STORY.k - 1));
 $("storyEnd").addEventListener("click", () => storyShow(-1));
-$("storiesPill").addEventListener("click", () => {
+// one Guide button (same place as in the planner): the stories on real data, and the help page
+$("btnGuide").addEventListener("click", () => {
   const m = $("help");
   const box = m.querySelector(".mbox");
   if (!m.dataset.orig) m.dataset.orig = box.innerHTML;
-  box.innerHTML = `<h2>Stories</h2><p class="hint">Guided walkthroughs on real data. Each step sets the globe up and explains what is on screen.</p>
-    <div class="stories">${LSTORIES.map((s) => `<button class="btn story" data-ls="${s.id}"><b>${esc(s.title)}</b><span>${s.steps.length} steps</span></button>`).join("")}</div>
+  box.innerHTML = `<h2>Guide</h2><p class="hint">Guided stories on real data: each step sets the globe up and explains what is on screen.
+    The quick tour of the EVA planner is under Guide in the EVA planner.</p>
+    <div class="stories">${LSTORIES.map((s) => `<button class="btn story" data-ls="${s.id}"><b>${esc(s.title)}</b><span>${s.steps.length} steps</span></button>`).join("")}
+    <button class="btn story" data-guide="help"><b>Help and keyboard shortcuts</b><span>What each part of the screen does (also ?)</span></button></div>
     <div class="row"><button class="btn" id="storiesClose">Close</button></div>`;
   m.hidden = false;
-  const restore = () => { box.innerHTML = m.dataset.orig; $("helpClose").onclick = () => { m.hidden = true; }; };
-  $("storiesClose").onclick = () => { m.hidden = true; restore(); };
-  for (const b of box.querySelectorAll("[data-ls]")) b.onclick = () => { m.hidden = true; restore(); STORY.steps = LSTORIES.find((s) => s.id === b.dataset.ls).steps; storyShow(0); };
+  $("storiesClose").onclick = () => { m.hidden = true; restoreHelp(); };
+  box.querySelector("[data-guide=help]").onclick = showHelp;
+  for (const b of box.querySelectorAll("[data-ls]")) b.onclick = () => { m.hidden = true; restoreHelp(); STORY.steps = LSTORIES.find((s) => s.id === b.dataset.ls).steps; storyShow(0); };
 });
 window.MMLandingX = { S, PLAY, LSTORIES, storyShow, measureAdd, areaStats, seasonChanged, compareChanged, loadMarciIndex, marciNearest, dateOfMyLs };
 
