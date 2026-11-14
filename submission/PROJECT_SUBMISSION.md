@@ -25,7 +25,7 @@ Download for Windows: `https://github.com/Aryan221224/MarsNav/releases/latest` (
 
 ## Link to Project Demo
 
-*(to add: the YouTube link to `submission/video/MarsNav_demo_30s.mp4`, the 30-second video with English subtitles; source and rebuild steps in `submission/video/`)*
+*(to add: the public link to `submission/video/MarsNav_demo_30s_music.mp4`, the 30-second video, uploaded to YouTube as Public or Unlisted with the English subtitles `submission/video/marsnav_en.srt`; anyone must be able to watch it without signing in. Source and rebuild steps are in `submission/video/`.)*
 
 ## Detailed Project Description
 
