@@ -1928,7 +1928,12 @@ async function refreshStatus() {
     }
   } catch {
     $("offline").hidden = false;
-    $("netPill").textContent = "SERVER NOT RUNNING"; $("netPill").className = "pill bad";
+    // a copy served from the web (the GitHub Pages demo) has no MarsNav server behind it: say so and point to the
+    // planner, the download and the video instead of asking for MarsNav.exe
+    const hosted = !/^(localhost|127\.|\[::1\]|0\.0\.0\.0)/.test(location.hostname) && location.protocol === "https:";
+    $("offlineLocal").hidden = hosted; $("offlineHosted").hidden = !hosted;
+    if (hosted) $("offline").querySelector("h2").textContent = "Landing mode runs in the desktop app";
+    $("netPill").textContent = hosted ? "WEB DEMO" : "SERVER NOT RUNNING"; $("netPill").className = hosted ? "pill" : "pill bad";
   }
 }
 

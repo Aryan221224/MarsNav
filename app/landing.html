@@ -260,7 +260,14 @@
     </div>
     <div id="offline" hidden>
       <h2>Landing mode needs the MarsNav server</h2>
-      <p>Start <b>MarsNav.exe</b> and open this page from the address it shows (http://127.0.0.1:8765/landing.html). The server streams, caches and processes the NASA / USGS data.</p>
+      <p id="offlineLocal">Start <b>MarsNav.exe</b> and open this page from the address it shows (http://127.0.0.1:8765/landing.html). The server streams, caches and processes the NASA / USGS data.</p>
+      <div id="offlineHosted" hidden>
+        <p>This is the <b>web demo</b>. The EVA planner, the visor HUD and the rover drive window run here in your browser, on the same real terrain as the desktop app.</p>
+        <p>Landing mode streams and processes NASA / USGS data for any place on Mars, so it runs in the desktop app (Windows, or any computer with Python).</p>
+        <p class="offline-links"><a class="btn accent" href="index.html">Open the EVA planner</a>
+          <a class="btn" href="https://github.com/Aryan221224/MarsNav/releases/latest" target="_blank" rel="noopener">Download for Windows</a>
+          <a class="btn" href="https://youtu.be/n4fgprexx3E" target="_blank" rel="noopener">Watch the 30 s demo</a></p>
+      </div>
     </div>
   </div>
 

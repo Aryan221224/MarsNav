@@ -182,6 +182,8 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 #banner .grow { min-width: 0; }
 #offline { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; background: #0b0f14ee; z-index: 10; }
 #offline p { max-width: 560px; color: var(--text-dim); }
+#offline .offline-links { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 18px; }
+#offline .offline-links a { text-decoration: none; }
 
 /* ---------------------------------------------------------------- dossier */
 .empty { padding: 22px 20px; }
