@@ -1,6 +1,6 @@
 # Use of AI in MarsNav
 
-NASA Space Apps asks every team to disclose its use of AI. This file is that disclosure for the repository.
+NASA Space Apps asks every team to disclose its use of AI (the 2026 guide calls it Super Intelligence, SI) and to mark SI-assisted code and data in descriptive text and metadata. This file is that disclosure for the repository; the commit history carries an AI co-author line as metadata.
 
 ## How we used AI
 
@@ -11,7 +11,7 @@ We used AI tools the way a modern engineering team does: to move faster, while e
 | Source code (`engine/`, `planet/`, `pipeline/`, `launcher/`, `app/`) | An AI coding assistant (Anthropic's Claude) helped write, refactor and debug code | Designed the system, chose methods and data, set the safety rules, reviewed and tested every change |
 | Tests and validation (`tests/`, `validation/`) | Helped write test and validation code | Chose what to test against (Perseverance's records, NASA's TSS2027 server) and checked the results |
 | Documents (`README.md`, `docs/`, `submission/`, the user guide) | Helped draft and edit text from our results | Checked every statement against the code and data |
-| Demo video (`submission/video/`) | The AI assistant wrote the capture, 3D device-model, compositing and audio scripts and assembled the cut | Wrote and approved the script and every claim in it; the footage is the running app, the numbers come from `validation/results/`, and the music is synthesised by `make_audio.py` (no samples and no AI audio). The narration is recorded by a team member |
+| Demo video (`submission/video/`) | The AI assistant wrote the capture, 3D device-model, compositing and audio scripts and assembled the cut | Wrote and approved the script and every claim in it; the footage is the running app, the numbers come from `validation/results/`, and the music is synthesised by `make_audio.py` (no samples and no AI audio). The video has no narration: the story is in on-screen headlines with English subtitles |
 | Logo (`app/logo-*.png`, `app/icon-256.png`, `app/favicon-64.png`) | Created with an AI image generator | Chose the design; every logo image carries a visible "AI-generated" watermark (the 64 px favicon and the Windows program icon are too small to carry it) |
 
 All source files in this repository should be treated as AI-assisted.

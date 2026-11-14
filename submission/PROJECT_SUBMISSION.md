@@ -1,6 +1,6 @@
 # MarsNav: Space Apps 2026 project submission
 
-The text for every field of the NASA Space Apps 2026 project form, ready to paste. Challenge: *Interplanetary Survival Guide: Martian Map*. The demo (30-second video or 7-slide deck) is prepared separately.
+The text for every field of the NASA Space Apps 2026 project form, ready to paste. Challenge: *Interplanetary Survival Guide: Martian Map*. Fields are in the order of the 2026 Project Submission Guide (13 November 2026). The demo is the 29.5-second video with English subtitles (the limit is 30 seconds).
 
 ---
 
@@ -18,14 +18,14 @@ A whole-Mars science atlas (minerals, chemistry, gravity, ice, present-day activ
 
 It is checked against Perseverance's own records, including a result that did not go our way. In 40 paired simulated EVAs it kept every crew out of their reserve (0 of 40, against 31 of 40 flying the filed plan). It runs fully offline, as it must on Mars.
 
+## Link to Project Demo
+
+*(to add: the public link to `submission/video/MarsNav_demo_30s_music.mp4`, the 30-second video, uploaded to YouTube as Public or Unlisted with the English subtitles `submission/video/marsnav_en.srt`; anyone must be able to watch it without signing in. Source and rebuild steps are in `submission/video/`.)*
+
 ## Link to Final Project
 
 `https://github.com/Aryan221224/MarsNav` (repository: source, README, 86-page user guide, validation reports)
 Download for Windows: `https://github.com/Aryan221224/MarsNav/releases/latest` (`MarsNav-Windows.zip`, unzip and double-click `MarsNav.exe`; nothing to install)
-
-## Link to Project Demo
-
-*(to add: the public link to `submission/video/MarsNav_demo_30s_music.mp4`, the 30-second video, uploaded to YouTube as Public or Unlisted with the English subtitles `submission/video/marsnav_en.srt`; anyone must be able to watch it without signing in. Source and rebuild steps are in `submission/video/`.)*
 
 ## Detailed Project Description
 
@@ -143,6 +143,17 @@ Rock-abundance maps from HiRISE imagery, two-crew and rover-pair operations, the
 
 Python (numpy, scipy, rasterio / GDAL, Pillow, pywebview, pythonnet, PyInstaller), JavaScript (ES modules, Web Workers, three.js), HTML and CSS, Node.js test runner, pytest. No special hardware: today it runs on any Windows 10 or 11 computer and the EVA planner runs in any modern browser; the same engine is built to run on habitat, rover and suit computers.
 
+## Use of Super Intelligence (SI)
+
+Yes. (The guide calls these tools Super Intelligence, SI; this answer is collected for data purposes and is not shown to the judges. The SI indicators judges can see are listed at the end.) We used AI tools the way a modern engineering team does: to move faster, while every design decision, method, result and claim stayed with the team.
+
+- **Software development.** We used an AI coding assistant (Anthropic's Claude) to help write, refactor, test and debug code to our design. The team designed the system, chose the methods and data, set the safety rules, and reviewed and tested every change. The repository acknowledges the AI-assisted code in `docs/AI_USE.md`, linked from the README.
+- **Documentation.** The assistant helped draft and edit the README, the technical documents, the user guide and this submission from our results; we checked every statement against the code and data.
+- **Logo.** The MarsNav logo was created with an AI image generator and carries a visible "AI-generated" watermark.
+- **Demo video.** The AI assistant scripted the captures of the running app, the 3D device models and the edit; the music is synthesised by our own script (no samples, no AI audio); the video has no narration (the story is told in on-screen headlines, with English subtitles), and its end card states that the illustrations and logo were made with AI assistance.
+- **Not AI-generated.** All data is real NASA, ESA and USGS mission data, downloaded from its source with recorded checksums. Every number in this submission comes from running our code on that data and can be reproduced with the scripts in `validation/`. Screenshots are captures of the running app. No AI-generated content uses NASA branding.
+- **Where the SI indicators are.** Code and data: `docs/AI_USE.md` (linked from the README) and the AI co-author line in the commit history. Images: the AI-generated logo carries a visible "AI-generated" watermark. Video: the end card says the illustrations and logo were made with AI assistance.
+
 ## NASA Data
 
 | Data | Mission / source | How MarsNav uses it |
@@ -174,7 +185,7 @@ Python (numpy, scipy, rasterio / GDAL, Pillow, pywebview, pythonnet, PyInstaller
 
 Every file is downloaded from its canonical source with a recorded size and SHA-256 (`pipeline/sources.json`); `docs/04_data_and_provenance.md` lists each one.
 
-## Space Agency Partner & Other Data
+## Space Agency Partner Data and Other References
 
 **Space agency partner data**
 - **ESA Mars Express HRSC** (with DLR and Freie Universität Berlin): the HRSC-MOLA blended elevation model at 200 m (Fergason et al. 2018, USGS) is the best global elevation in Landing mode and the 11 GB core of Local mode.
@@ -190,19 +201,9 @@ Every file is downloaded from its canonical source with a recorded size and SHA-
 **Software and assets** (all open source, used under their licences)
 - three.js (MIT), numpy, scipy, rasterio and GDAL, Pillow, pywebview, pythonnet, PyInstaller, Microsoft Edge WebView2 runtime.
 - Fonts: Barlow, Barlow Condensed and IBM Plex Mono (SIL Open Font License).
-- Screenshots, diagrams and the user guide were made by the team for this project; the logo was made with an AI image generator (see Use of AI).
+- Screenshots, diagrams and the user guide were made by the team for this project; the logo was made with an AI image generator (see Use of Super Intelligence).
 
 No code was copied from other projects; three ideas seen in other public entries were re-implemented independently and are credited in `submission/comparison.md`.
-
-## Use of AI
-
-We used AI tools the way a modern engineering team does: to move faster, while every design decision, method, result and claim stayed with the team.
-
-- **Software development.** We used an AI coding assistant (Anthropic's Claude) to help write, refactor, test and debug code to our design. The team designed the system, chose the methods and data, set the safety rules, and reviewed and tested every change. The repository acknowledges the AI-assisted code in `docs/AI_USE.md`, linked from the README.
-- **Documentation.** The assistant helped draft and edit the README, the technical documents, the user guide and this submission from our results; we checked every statement against the code and data.
-- **Logo.** The MarsNav logo was created with an AI image generator and carries a visible "AI-generated" watermark.
-- **Demo video.** The AI assistant scripted the captures of the running app, the 3D device models and the edit; the music is synthesised by our own script (no samples, no AI audio), and the narration is a team member's voice.
-- **Not AI-generated.** All data is real NASA, ESA and USGS mission data, downloaded from its source with recorded checksums. Every number in this submission comes from running our code on that data and can be reproduced with the scripts in `validation/`. Screenshots are captures of the running app. No AI-generated content uses NASA branding.
 
 ## Images for the project page
 

@@ -1,8 +1,8 @@
 # Judging criteria map
 
-The five Space Apps judging criteria, and the evidence in this project for each. Criteria are from the official Judging & Awards Guide: Influence, Creativity, Validity, Relevance, Presentation.
+The five Space Apps judging criteria, and the evidence in this project for each. Criteria are from the official Judging & Awards Guide: Impact, Creativity, Validity, Relevance, Presentation.
 
-## Influence: how much can this project matter?
+## Impact: how much can this project matter?
 
 - It addresses the problem NASA will face before the first crewed EVA on Mars: planning and flying a Marswalk with no GPS, a 3 to 22 minute light delay, finite suit consumables and terrain that has already trapped rovers.
 - It is site-agnostic. Landing mode screens 66 candidate sites anywhere on Mars against NASA's human landing-site criteria and turns the chosen one into a full EVA site; any site with a DEM becomes plannable (docs/07).
