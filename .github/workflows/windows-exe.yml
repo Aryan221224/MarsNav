@@ -114,6 +114,7 @@ jobs:
           1. Download **MarsNav-Windows.zip** below (${SIZE} MB).
           2. Unzip it anywhere you can save files: Desktop, Documents, D:\\, a USB stick. Keep the whole MarsNav folder together.
           3. Double-click **MarsNav.exe**. Nothing to install: no Python, no admin rights.
+          4. To rebuild it yourself (optional), double-click **Build_MarsNav.exe** in the same folder (needs Python 3.10+).
 
           The first time on a new PC, Windows may say "Windows protected your PC" because the program is not code-signed: click **More info**, then **Run anyway**.
           The window uses Microsoft Edge WebView2, part of Windows 10 and 11. The Jezero EVA planner works offline at once; Landing mode downloads NASA / USGS data the first time it looks at a place (Data > Local mode downloads it all in advance, then Mars mode runs with no internet).

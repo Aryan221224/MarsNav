@@ -39,11 +39,11 @@ KEEP TOGETHER
   save files (Desktop, Documents, D:\\, a USB drive) - not in C:\\Program Files.
 
 WHAT TO TRY FIRST
-  * Tour (top bar): a two-minute guided walkthrough of the EVA planner.
+  * Guide (top bar) > Quick tour: a two-minute guided walkthrough of the EVA planner.
   * Landing mode: click anywhere on Mars - every data layer at that point appears
     (ground, ice, minerals, air, where water boils, radiation, gravity, science, missions).
   * Science tab: pick a science objective (for example the boxwork of Mount Sharp) and rank every site.
-  * EVA planner, Execute, Run, then HUD: the helmet visor, rover dashboard and wrist cuff follow the EVA.
+  * EVA planner, Execute, Run, then Crew displays: the helmet visor, rover dashboard and wrist cuff follow the EVA.
   The user guide explains every screen.
 
 INTERNET AND OFFLINE (MARS) USE
@@ -56,6 +56,11 @@ INTERNET AND OFFLINE (MARS) USE
 WHERE THINGS ARE
   data_cache\\     everything the app downloads or builds (maps, tiles, Local mode data, logs)
   MarsNav_User_Guide.pdf   the user guide (also Help > User guide)
+
+TO REBUILD MarsNav.exe (optional)
+  Double-click  Build_MarsNav.exe  (it runs build_exe.bat). It needs Python 3.10+ from python.org
+  ("Add python.exe to PATH" ticked) and an internet connection, takes about ten minutes the first
+  time, and replaces MarsNav.exe and MarsNav_runtime in this folder. Close MarsNav first.
 
 NEWER VERSIONS
   https://github.com/Aryan221224/MarsNav/releases/latest
@@ -105,6 +110,14 @@ def main() -> int:
         n += _copytree(root / d, out / d)
     for f in ("MarsNav_User_Guide.pdf", "LICENSE"):
         if (root / f).exists():
+            shutil.copy2(root / f, out / f)
+            n += 1
+    # what a rebuild needs, so Build_MarsNav.exe works in the published folder too (the app's own source, app/ planet/
+    # pipeline/, is already here)
+    n += _copytree(root / "launcher", out / "launcher")
+    for f in ("Build_MarsNav.exe", "build_exe.bat", "requirements.txt", "tools/build_windows.py"):
+        if (root / f).exists():
+            (out / f).parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(root / f, out / f)
             n += 1
     (out / "START HERE.txt").write_text(START_HERE.format(version=version).replace("\n", "\r\n"), encoding="utf-8")
