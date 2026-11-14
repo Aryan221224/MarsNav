@@ -115,6 +115,27 @@ Each item: what changes, where, and how it is checked. File paths are where the 
 16. **Set-up summary readable at a glance.** The planner's set-up note (a dense paragraph: habitat, departure, time
     budget, suit cooling, dust) becomes a short labelled list with the same facts.
 
+### E. Landing mode, in depth (added at the owner's request: "see and fix everything UI related in the landing mode")
+
+From a second capture of every Landing-mode state (search, a point picked on the globe, the hub form, the layer panel
+with the atlas open, traverse, Data, Local mode, space weather, measuring, stories, 1366 / 1600 / 1920 px):
+
+18. **Every dialog closes the same way.** Escape closes the space-weather digest and the stories list the way it already
+    closes help and Local mode (today Escape leaves the space-weather dialog open), and focus returns to the button that
+    opened it.
+19. **Search answers at once.** Candidate and hub matches appear as soon as the user types; IAU place names from the
+    server are added when they arrive, with a "searching place names" line meanwhile. Today nothing shows until the
+    server answers.
+20. **Messages never cover the banner.** Toasts ("… is not installed yet") appear in their own place instead of on top of
+    the science banner at the top centre.
+21. **The hub form appears where it was asked for.** "Set as hub…" opens its form directly under the dossier's action
+    buttons (today it opens far down the dossier, after the weather section) and puts the cursor in the name field.
+22. **A long dossier can be navigated.** A row of section links at the top of the dossier (criteria, landing, water,
+    environment, relay, weather, all data) jumps to each part.
+23. **Narrow screens keep their labels.** At 1366 px the search placeholder and the lander menu are cut off; use shorter
+    wording where space is short.
+24. **Plain names for actions.** The dossier's "HUD" button is "Crew displays", as in the planner.
+
 ### D. Documentation follows the screens
 
 17. Where a change alters what the user guide shows (Execute panel groups, Review order, gauges, top bars, guide button),
