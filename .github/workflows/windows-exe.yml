@@ -98,7 +98,12 @@ jobs:
   release:
     name: Publish the download
     needs: [tests, build]
-    if: github.event_name != 'pull_request'
+    # only main and version tags publish: a development branch pushed at the same moment would race main for the
+    # same release tag (one run deletes the release while the other is uploading to it)
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    concurrency:
+      group: windows-release
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
