@@ -44,8 +44,7 @@ h3.lbl { color: var(--accent); font-size: 13px; margin: 14px 0 6px; }
 .seg button + button { border-left: 1px solid var(--line-2); }
 .seg button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
 .tops { display: flex; gap: 8px; align-items: center; margin-left: auto; flex: 0 0 auto; }
-.pill { font-family: var(--font-data); font-size: 12px; padding: 2px 8px; border: 1px solid var(--line-2); border-radius: 3px; color: var(--text-dim); white-space: nowrap; letter-spacing: .02em; }
-.pill.ok { color: var(--go); border-color: #3ee07e66; } .pill.warn { color: var(--caution); border-color: #ffc62966; } .pill.bad { color: var(--nogo); border-color: #ff747066; }
+/* status markers (.pill): see theme.css, shared by every page */
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 12px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: 4px; cursor: pointer; text-decoration: none; color: var(--text); white-space: nowrap;
   font-family: var(--font-label); font-weight: 600; font-size: 13.5px; letter-spacing: .08em; text-transform: uppercase; }

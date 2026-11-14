@@ -41,3 +41,21 @@ input[type="checkbox"], input[type="radio"], input[type="range"], progress { acc
 .infob { margin-left: 6px; width: 17px; height: 17px; border-radius: 50%; border: 1px solid #3a4a5e; background: none; color: #8d9aab; cursor: pointer;
   font: 600 11px/15px "Barlow", sans-serif; text-transform: none; letter-spacing: 0; padding: 0; vertical-align: 1px; }
 .infob:hover, .section.show-help .infob { border-color: #d8a57a; color: #d8a57a; }
+
+/* ------------------------------------------------------------------ status markers (annunciators): one shape, font and colour meaning on every page
+   nominal green, caution amber, warning red, advisory cyan, off grey. A marker that also opens something (space weather, Local mode)
+   keeps the same look and shows it can be pressed on hover. Caution-and-warning counters light up filled, as annunciators do. */
+.pill { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 24px; box-sizing: border-box; padding: 0 9px;
+  border-radius: 3px; border: 1px solid #34445a; background: transparent; color: #b8c2ce; font-family: "Barlow Condensed", "Barlow", sans-serif;
+  font-weight: 600; font-size: 12.5px; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; line-height: 1; }
+button.pill { cursor: pointer; }
+button.pill:hover { border-color: #d8a57a; color: #f2f5f8; }
+.pill.ok, .pill.live { color: #3ee07e; border-color: rgba(62, 224, 126, 0.55); }
+.pill.warn { color: #ffc629; border-color: rgba(255, 198, 41, 0.6); }
+.pill.bad { color: #ff7470; border-color: rgba(255, 116, 112, 0.6); }
+.pill.sim, .pill.adv { color: #3ccbff; border-color: rgba(60, 203, 255, 0.5); }
+.pill.w { background: #ff7470; color: #0b0f14; border-color: #ff7470; }
+.pill.c { background: #ffc629; color: #0b0f14; border-color: #ffc629; }
+.pill.a { background: #3ccbff; color: #0b0f14; border-color: #3ccbff; }
+.pill.n { background: #3ee07e; color: #0b0f14; border-color: #3ee07e; }
+.pill.off { opacity: 0.45; }
