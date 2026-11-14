@@ -268,7 +268,8 @@ function rover(n) {
       ? gauge2("Rover battery", rb, null) + `<div class="hint">${((s.cap.rbatt - (s.res?.rbatt ?? 0)) / 1000).toFixed(1)} kWh left of ${(s.cap.rbatt / 1000).toFixed(1)}</div>`
       : `<div class="hint">${vehicle ? "No rover battery in this telemetry." : "On foot: no rover on this EVA (switch the crew mode to rover in the planner)."}</div>`;
     $("rCrew").innerHTML = RES.map(([k, name]) => gauge2(name, s.remaining[k], Math.max(0, s.remaining[k] - s.margins[k]), s.margins[k])).join("");
-    $("rAlerts").innerHTML = (s.alerts || []).length ? s.alerts.map((a) => `<div class="al l${a.level}${a.acked ? " acked" : ""}">${esc(a.text)}<br><small>${esc(a.action)}</small></div>`).join("")
+    // a latched alert whose condition has gone is shown as cleared (as in the planner), never as active
+    $("rAlerts").innerHTML = (s.alerts || []).length ? s.alerts.map((a) => `<div class="al l${a.level}${a.acked ? " acked" : ""}${a.cleared ? " cleared" : ""}">${esc(a.text)}${a.cleared ? ' <span class="clr">CLEARED</span>' : ""}<br><small>${a.cleared ? "Condition no longer present - acknowledge to remove" : esc(a.action)}</small></div>`).join("")
       : `<div class="hint">No active alerts.</div>`;
   }
   const cv = $("rMap");

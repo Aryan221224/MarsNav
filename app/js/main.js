@@ -1454,10 +1454,11 @@ function onSnap(s) {
   document.querySelector(".mapwrap").style.setProperty("--hud-h", `${$("hud").offsetHeight}px`);
   // gauges
   $("gauges").innerHTML = GAUGES.map(([k, name]) => {
-    const used = 1 - s.remaining[k];
-    const need = used + (1 - s.margins[k] - used);
+    // the same rule as the crew displays: the bar is what is left, the tick is what the walk home needs from here
+    const left = Math.max(0, Math.min(1, s.remaining[k]));
+    const need = Math.max(0, s.remaining[k] - s.margins[k]);
     const col = s.margins[k] < 0 ? "var(--warning)" : s.margins[k] < 0.2 ? "var(--caution)" : "var(--nominal)";
-    return `<div class="gauge"><span>${name}</span><div class="track"><div class="fill" style="width:${Math.min(100, 100 * used)}%;background:${col}"></div>
+    return `<div class="gauge"><span>${name}</span><div class="track"><div class="fill" style="width:${(100 * left).toFixed(1)}%;background:${col}"></div>
       <div class="ret" style="left:${Math.min(99.5, 100 * need)}%"></div></div><span class="num">${(100 * s.remaining[k]).toFixed(0)}%</span></div>`;
   }).join("");
   // station procedure: current and completed steps visible

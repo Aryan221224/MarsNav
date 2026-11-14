@@ -119,6 +119,8 @@ body.placeonly .rzoom { display: none; }
 .ralerts .al { border-left: 4px solid var(--advisory); padding: 3px 7px; background: #0b0f14; }
 .ralerts .al.l3 { border-color: var(--warning); } .ralerts .al.l2 { border-color: var(--caution); }
 .ralerts .al.acked { opacity: .55; }
+.ralerts .al.cleared { opacity: .6; border-left-style: dashed; }
+.ralerts .al .clr { font-size: 10.5px; letter-spacing: .08em; padding: 0 4px; border: 1px solid var(--line-2); border-radius: 2px; color: var(--text-dim); margin-left: 4px; }
 #rBottom { height: 64px; margin-top: 10px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 10px; }
 #rBottom > div { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; display: flex; flex-direction: column; justify-content: center; }
 #rBottom .v { font-family: var(--font-data); font-size: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
