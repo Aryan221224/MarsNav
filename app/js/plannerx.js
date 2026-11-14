@@ -14,10 +14,10 @@ import { hhmm } from "../engine/relay.js";
 
 const SOL_MS = 88775244;
 const MARS_HOUR_MS = SOL_MS / 24;
-const RANGE = { hazard: [0, 0.5, ""], slope: [0, 25, "°"], sand: [0, 1, ""], slip: [0, 0.7, ""], sigma: [10, 60, " m"], walkback: [0, 180, " min"] };
+const RANGE = { shield: [0, 15, " %"], hazard: [0, 0.5, ""], slope: [0, 25, "°"], sand: [0, 1, ""], slip: [0, 0.7, ""], sigma: [10, 60, " m"], walkback: [0, 180, " min"] };
 const LAYER_NAME = { none: "Imagery only", hazard: "Safety hazard", slope: "Slope (walking scale)", sand: "Sand bedforms", slip: "Wheel-slip risk",
   shade: "Shadows at time", walkback: "Walkback time", range: "EVA range", los: "Radio line of sight", sigma: "Position error",
-  confidence: "Data confidence", landing: "Landing safety", science: "Science value" };
+  confidence: "Data confidence", landing: "Landing safety", science: "Science value", shield: "Radiation shielding" };
 const esc = (x) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const frames2 = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));

@@ -55,10 +55,17 @@ export function gcrDoseRate(elevM, phiMV = SOLAR_MODULATION_MV) {
   return { uGyDay, mSvDay: (uGyDay * RAD_Q) / 1000, pressurePa: p, extrapolated: p < 600 || p > 1100 };
 }
 
-/** Dose along a planned route: each step at the dose rate of its own elevation (pts carry t in s and elev in m). */
-export function routeDoseMSv(pts, phiMV = SOLAR_MODULATION_MV) {
+/**
+ * Dose along a planned route: each step at the dose rate of its own elevation (pts carry t in s and elev in m),
+ * times the terrain's shielding factor there (pts[k].shield, engine/shielding.js; 1 = open flat ground).
+ * opts.shielding = false gives the same route under an open sky.
+ */
+export function routeDoseMSv(pts, phiMV = SOLAR_MODULATION_MV, { shielding = true } = {}) {
   if (!pts?.length || pts.some((p) => !Number.isFinite(p.elev))) return null;
   let d = 0;
-  for (let k = 0; k + 1 < pts.length; k++) d += (gcrDoseRate(pts[k].elev, phiMV).mSvDay * Math.max(0, pts[k + 1].t - pts[k].t)) / 86400;
+  for (let k = 0; k + 1 < pts.length; k++) {
+    const f = shielding && Number.isFinite(pts[k].shield) ? pts[k].shield : 1;
+    d += (gcrDoseRate(pts[k].elev, phiMV).mSvDay * f * Math.max(0, pts[k + 1].t - pts[k].t)) / 86400;
+  }
   return d;
 }

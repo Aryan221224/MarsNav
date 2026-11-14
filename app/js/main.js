@@ -12,6 +12,8 @@ import { TASK_PRESETS } from "../engine/task.js";
 import { initPlannerExtras } from "./plannerx.js";
 
 const $ = (id) => document.getElementById(id);
+const fmtPct = (x) => `${x > 0 ? "+" : x < 0 ? "−" : "±"}${Math.abs(100 * x).toFixed(Math.abs(x) < 0.1 ? 1 : 0)} %`;
+const compassPt = (deg) => ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 const DATA_ROOT = new URL("../data/", import.meta.url).href;
 let DATA = DATA_ROOT;
 const IN_FRAME = (() => { try { return window.top !== window.self; } catch { return true; } })();
@@ -664,7 +666,7 @@ function renderCards() {
           <div><span class="k">Rover battery</span><span class="v">${(r.res.rbatt ?? 0).toFixed(0)} Wh</span></div>` : `<div><span class="k">Sand</span><span class="v">${(100 * (r.sandFrac ?? 0)).toFixed(0)} %</span></div>`}
         </div>
         ${r.wheelLeft != null && r.wheelLeft < 0.2 ? `<div class="dq">Wheels at ${(100 * Math.max(0, r.wheelLeft)).toFixed(0)} % life after this drive: inspect or avoid rocky ground</div>` : ""}
-        <div class="note">Radiation ≈ ${r.doseMSv.toFixed(2)} mSv from cosmic rays at this altitude (Curiosity RAD, scaled by the air overhead)${state.swx?.level === "storm" ? '; <span class="bad">a solar particle event in progress would add to it</span>' : ""}.</div>`;
+        <div class="note">Radiation ≈ ${r.doseMSv.toFixed(2)} mSv from cosmic rays at this altitude (Curiosity RAD, scaled by the air overhead${r.doseOpenMSv > 0 && Math.abs(r.doseMSv / r.doseOpenMSv - 1) >= 0.0005 ? `; terrain shielding ${fmtPct(r.doseMSv / r.doseOpenMSv - 1)}` : ""})${state.swx?.level === "storm" ? '; <span class="bad">a solar particle event in progress would add to it</span>' : ""}.</div>`;
     }
     el.addEventListener("click", () => r?.ok && selectRoute(name));
     el.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && r?.ok && selectRoute(name));
@@ -722,7 +724,8 @@ function wireMap() {
           `${la.toFixed(5)}°N ${lo.toFixed(5)}°E  elev ${c.elevation.toFixed(0)} m  ${c.terrain}\n` +
           `slope ${c.slopeW.toFixed(1)}° (walking p90)  step ${c.step.toFixed(2)} m  sand ${c.sand.toFixed(2)}  slip risk ${c.slipRisk.toFixed(2)}\n` +
           `cliff ${c.cliffDist >= 1020 ? ">1 km" : c.cliffDist.toFixed(0) + " m"}  pos error ±${(2 * c.sigma).toFixed(0)} m  radio ${c.los ? "LOS" : "NO LOS"}  walk home ${Number.isFinite(c.walkbackS) ? fmtDuration(c.walkbackS).slice(0, 5) : "--"}\n` +
-          (c.veto ? `NO-GO: ${c.veto}` : `hazard index ${c.hazard.toFixed(2)}  data: ${c.confidence > 0.5 ? "HiRISE 1 m" : "CTX 20 m only"}`);
+          (c.veto ? `NO-GO: ${c.veto}` : `hazard index ${c.hazard.toFixed(2)}  data: ${c.confidence > 0.5 ? "HiRISE 1 m" : "CTX 20 m only"}`) +
+          (c.shield ? `\nsky blocked ${(100 * c.shield.blocked).toFixed(0)} %  cosmic-ray dose ${fmtPct(c.shield.factor - 1)} vs RAD average (terrain shielding)` : "");
       }
     }
     busyHover = false;
@@ -1098,6 +1101,10 @@ function siteCellHtml(c) {
     ["Radio to habitat", c.los ? '<span class="pv-ok">line of sight</span>' : '<span class="pv-warn">no line of sight: relay or rover needed</span>'],
     ["Walk home", Number.isFinite(c.walkbackS) ? fmtDuration(c.walkbackS).slice(0, 5) : '<span class="pv-na">plan an EVA to compute</span>'],
     ["Elevation data", c.confidence > 0.5 ? "HiRISE 1 m (metre-scale hazards measured)" : "CTX 20 m (hazards under ~40 m not seen)"],
+    c.shield ? ["Radiation cover", `${fmtPct(c.shield.factor - 1)} cosmic-ray dose vs the RAD average (${(100 * c.shield.blocked).toFixed(0)} % of the sky hidden by terrain)` +
+      (c.shield.cover && c.shield.cover.cutPct >= 3 && c.shield.cover.distM > 0
+        ? `<br><span class="pv-na">best cover within 600 m: ${Math.round(c.shield.cover.distM)} m ${compassPt(c.shield.cover.bearingDeg)}, ${fmtPct(c.shield.cover.best - 1)}; terrain is not a solar-storm shelter</span>`
+        : '<br><span class="pv-na">no better cover within 600 m; terrain is not a solar-storm shelter</span>')] : null,
   ].filter(Boolean);
   return `<section class="pv-sec" data-pv="cell"><h3>This site's terrain <small>the planner's model of this cell</small></h3><div class="pv-kv">${rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join("")}</div></section>`;
 }

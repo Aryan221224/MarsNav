@@ -18,6 +18,7 @@ import { WHEEL_DAMAGE } from "./physio.js";
 import { namedWeightSets } from "./ahp.js";
 import { G_MARS, xyToLonLat } from "./geo.js";
 import { evaDoseMSv, routeDoseMSv } from "./sitecheck.js";
+import { shieldAt } from "./shielding.js";
 
 const RES_KEYS = ["o2", "co2", "water", "batt", "rbatt"];
 const zeroRes = () => ({ o2: 0, co2: 0, water: 0, batt: 0, rbatt: 0 });
@@ -321,7 +322,7 @@ export class Planner {
       if (worst < minMargin) { minMargin = worst; minMarginAt = pts.length; }
       pts.push({ i, lon, lat, x, y, elev: pg.elev[i], t, dist, grade: e ? e.grade : 0, haz: e ? e.haz : pg.haz[i],
         shade: e ? e.shade : 0, sunEl: e ? e.sunEl : env.sun(this.departMs + t * 1000).elevation, sigma, los: pg.los[i],
-        res: { ...res }, back: back.time, margins, veto: pg.veto[i], terr: pg.terr[i] });
+        res: { ...res }, back: back.time, margins, veto: pg.veto[i], terr: pg.terr[i], shield: shieldAt(m.T, pg.hzIdx[i]) });
     };
     push(cells[0], null, 0);
     for (let k = 0; k + 1 < cells.length; k++) {
@@ -412,7 +413,9 @@ export class Planner {
       shadeFrac: legs.reduce((a, l) => a + l.ev.shadeFrac * l.ev.dist, 0) / Math.max(1, legs.reduce((a, l) => a + l.ev.dist, 0)),
       losFrac: legs.reduce((a, l) => a + l.ev.losFrac * l.ev.dist, 0) / Math.max(1, legs.reduce((a, l) => a + l.ev.dist, 0)),
       sunsetMs: this.sunsetMs, timeEndS: this.timeEndS,
+      // cosmic-ray dose at each step's altitude, with the terrain's shielding there (doseOpenMSv: same route, open sky)
       doseMSv: routeDoseMSv(all) ?? evaDoseMSv(state.t),
+      doseOpenMSv: routeDoseMSv(all, undefined, { shielding: false }) ?? evaDoseMSv(state.t),
       seamCells: legs.reduce((a, l) => a + (l.ev.seamCells || 0), 0),
       // rocky ground: slower, costlier and riskier for boots and wheels alike; wheels also wear (share of life used)
       rockyFrac: legs.reduce((a, l) => a + (l.ev.rockyM || 0), 0) / Math.max(1, legs.reduce((a, l) => a + l.ev.dist, 0)),

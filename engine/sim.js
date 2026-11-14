@@ -20,6 +20,7 @@ import { Estimator, HR_CAL, slipFieldFrom, slipFeatures } from "./estimator.js";
 import { tssFrameFromSim, parseTSS } from "./telemetry.js";
 import { replanFrom } from "./replan.js";
 import { stationWork } from "./task.js";
+import { bestCover } from "./shielding.js";
 
 function rng(seed) {
   let s = seed >>> 0 || 1;
@@ -512,6 +513,12 @@ export class EvaSim {
     }
   }
 
+  /** Best natural cover within 600 m of a position (outside no-go ground), for the solar-particle-event alert. */
+  _cover(xy) {
+    const m = this.m, g = m.fine.grid;
+    return bestCover(m.T, xy[0], xy[1], { radiusM: 600, vetoAt: (x, y) => { const j = g.idxOfXY(x, y); return j < 0 || m.fine.veto[j] > 0; } });
+  }
+
   snapshot() {
     const m = this.m, P = this.P, g = this.g, i = this.cur;
     const cap = P.cap;
@@ -539,6 +546,8 @@ export class EvaSim {
       vetoHere: veto ? VETO_NAMES[veto] : null, sunsetMinLeft: (P.sunsetMs - ms) / 60000,
       losLostMin: los || this.losLostSince == null ? 0 : (this.t - this.losLostSince) / 60, slopeAhead,
       cold: shade && m.env.envTempK(ms, 1) < 200, spe: !!this.faults.spe, faults: this.faults,
+      // solar particle event: the walk home and what the terrain within reach could do (engine/shielding.js)
+      speShelter: this.faults.spe ? { homeMin: back.time / 60, cover: this._cover(est) } : null,
       drain: this.cal?.sd ? Object.fromEntries(["met", "water", "batt", "co2"].filter((k) => (this.cal.sd[k] ?? 1) < 0.2).map((k) => [k, this.cal[k]])) : null,
     };
     const seg = this.route[this.k];

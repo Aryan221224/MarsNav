@@ -19,6 +19,7 @@ import { LANDERS, LIMITS, landingSafetyMap, simulateLanding, ellipseChecks, opti
 import { DustClimatology } from "../engine/dust.js";
 import { lonlatToXY as toXY } from "../engine/geo.js";
 import { relayCoverage, RELAY_ORBITERS } from "../engine/relay.js";
+import { shieldGrid, shieldAt, bestCover, RAD_SURROUNDINGS_FACTOR } from "../engine/shielding.js";
 
 const S = { T: null, env: null, clim: null, models: new Map(), planner: null, plan: null, sim: null, cfg: null };
 let DATA = new URL("../data/", import.meta.url);
@@ -114,7 +115,7 @@ function slimRoute(r) {
   if (!r?.ok) return r ? { ok: false, reason: r.reason, from: r.from, to: r.to, failedLeg: r.failedLeg } : null;
   const pts = r.pts.map((p) => ({ lon: p.lon, lat: p.lat, x: p.x, y: p.y, i: p.i, elev: p.elev, t: p.t, dist: p.dist, grade: p.grade,
     haz: p.haz, shade: p.shade, sunEl: p.sunEl, sigma: p.sigma, los: p.los, res: p.res, back: p.back, margins: p.margins,
-    work: p.work || 0 }));
+    work: p.work || 0, shield: p.shield }));
   // station budget: what the stated task at the end of each leg costs, and the walkback margin left after it
   const workOf = (l) => {
     const P = l.ev.pts, a = P[P.length - 2], b = P[P.length - 1];
@@ -127,7 +128,7 @@ function slimRoute(r) {
     guidance: guidanceLegs(l.ev.pts).map((g) => ({ heading: g.heading, dist: g.dist, dt: g.dt, climb: g.climb, work: g.work,
       lon: g.to.lon, lat: g.to.lat })) }));
   return { ok: true, feasible: r.feasible, t: r.t, dist: r.dist, res: r.res, X: r.X, minMargin: r.minMargin, maxSlope: r.maxSlope,
-    maxHaz: r.maxHaz, shadeFrac: r.shadeFrac, losFrac: r.losFrac, overlap: r.overlap, doseMSv: r.doseMSv, seamCells: r.seamCells, lowConfFrac: r.lowConfFrac, rockyFrac: r.rockyFrac, sandFrac: r.sandFrac,
+    maxHaz: r.maxHaz, shadeFrac: r.shadeFrac, losFrac: r.losFrac, overlap: r.overlap, doseMSv: r.doseMSv, doseOpenMSv: r.doseOpenMSv, seamCells: r.seamCells, lowConfFrac: r.lowConfFrac, rockyFrac: r.rockyFrac, sandFrac: r.sandFrac,
     wheelLife: r.wheelLife, wheelLeft: r.wheelLeft, pts, legs, timeEndS: r.timeEndS, sequence: r.sequence, startAt: r.startAt, endAt: r.endAt,
     sunsetMs: r.sunsetMs };
 }
@@ -177,7 +178,7 @@ function ramp(pal, v) {
 }
 
 // value range of the numeric layers (for the "show only above" slider): [low, high, unit]
-const RANGE = { hazard: [0, 0.5, ""], slope: [0, 25, "°"], sand: [0, 1, ""], slip: [0, 0.7, ""], sigma: [10, 60, " m"], walkback: [0, 180, " min"] };
+const RANGE = { shield: [0, 15, " %"], hazard: [0, 0.5, ""], slope: [0, 25, "°"], sand: [0, 1, ""], slip: [0, 0.7, ""], sigma: [10, 60, " m"], walkback: [0, 180, " min"] };
 
 function overlay(name, opts = {}) {
   const m = modelFor(S.cfg), pg = m.fine, g = pg.grid, T = S.T;
@@ -270,6 +271,15 @@ function overlay(name, opts = {}) {
       put(i, v === 1 ? [62, 224, 126, 70] : v === 2 ? [255, 198, 41, 70] : [255, 116, 112, 95]);
     }
     legend = { kind: "text", text: `Lander-scale safety: green safe (slope <= ${LIMITS.slope25m} deg, rocks <= ${LIMITS.rockM} m, from 1 m DTMs), amber looks safe but unverified (no 1 m data), red unsafe` };
+  } else if (name === "shield") {
+    // cosmic-ray dose cut by the terrain around each 40 m cell, relative to RAD's measured average (engine/shielding.js)
+    const sg = shieldGrid(T), F = sg.factor;
+    vOf = (i) => 100 * (1 - F[pg.hzIdx[i]] / RAD_SURROUNDINGS_FACTOR);
+    for (let i = 0; i < g.n; i++) {
+      const cut = 1 - F[pg.hzIdx[i]] / RAD_SURROUNDINGS_FACTOR;
+      if (cut > 0.005 && !pg.veto[i]) put(i, ramp(PAL.seq, Math.min(1, cut / 0.15)));
+    }
+    legend = { kind: "ramp", pal: "seq", lo: "0 %", hi: "15 %+", text: "Terrain radiation shielding: cosmic-ray dose cut by the hills and walls around each spot, vs the RAD average. Not a solar-storm shelter" };
   } else if (name === "science") {
     for (let i = 0; i < g.n; i++) if (pg.sci[i] > 0.05) put(i, [216, 165, 122, Math.round(pg.sci[i] * 160)]);
     legend = { kind: "text", text: "Science value around the named targets (team priority ranking)" };
@@ -285,6 +295,7 @@ function overlay(name, opts = {}) {
     los: ["MODELED", "10 m mast, Mars curvature"], sigma: ["MODELED", "dead-reckoning drift [ASSUME 2 %]"],
     confidence: ["OBSERVED", "HiRISE 1 m DTM coverage"], science: ["CURATED", "rover sample sites and team ranking"],
     landing: ["DERIVED", "MSL engineering constraints on the site DTMs"],
+    shield: ["MODELED", "40 m horizons, RAD angular spread and albedo; checked at Murray Buttes"],
   };
   if (legend && PROV[name]) legend.prov = PROV[name];
   if (legend && RANGE[name]) {
@@ -419,7 +430,11 @@ function cell(lon, lat) {
     const cg = f.pg.grid, fr = f.pg.factor, [r, c] = g.rc(i);
     back = f.time[Math.min(cg.height - 1, Math.floor(r / fr)) * cg.width + Math.min(cg.width - 1, Math.floor(c / fr))];
   }
-  return { ...ex, walkbackS: back, los: m.fine.los[i] };
+  // terrain radiation shielding here, and the best natural cover within 600 m (outside no-go ground)
+  const hz = m.fine.hzIdx[i], [cx, cy] = g.cellXY(...g.rc(i));
+  const shield = S.T.raw.horizon ? { factor: shieldAt(S.T, hz), blocked: shieldGrid(S.T).blocked[hz],
+    cover: bestCover(S.T, cx, cy, { radiusM: 600, vetoAt: (x, y) => { const j = g.idxOfXY(x, y); return j < 0 || m.fine.veto[j] > 0; } }) } : null;
+  return { ...ex, walkbackS: back, los: m.fine.los[i], shield };
 }
 
 function simSnap(s) {

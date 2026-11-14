@@ -12,6 +12,24 @@ export const LEVEL_NAME = { 3: "WARNING", 2: "CAUTION", 1: "ADVISORY" };
  *           remaining: {o2,co2,water,batt} (fraction of usable left), sigma (m), crossTrack (m), offRoute, vetoHere,
  *           sunsetMinLeft, losLostMin, slopeAhead (deg), cold (bool), spe (bool), faults: {...} }
  */
+/**
+ * What to do in a solar particle event. The habitat (or a pressurised rover) is the shelter; terrain is not: solar
+ * protons come mostly from overhead, so even good cover cuts their dose less than the cosmic-ray figure shown.
+ * sh = { homeMin, cover: bestCover() result } (engine/shielding.js); missing parts are left out of the text.
+ */
+export function speAction(sh) {
+  const home = sh && Number.isFinite(sh.homeMin) ? ` (${Math.round(sh.homeMin)} min, walkback route loaded)` : " (walkback route loaded)";
+  let txt = `Return to habitat now${home}`;
+  const c = sh?.cover;
+  if (c && c.cutPct >= 10 && c.distM > 0) {
+    const dir = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(c.bearingDeg / 45) % 8];
+    txt += `. Only if the habitat cannot be reached: terrain cover ${Math.round(c.walkMin)} min ${dir} cuts cosmic-ray dose ~${Math.round(c.cutPct)} %, less for solar protons`;
+  } else if (c) {
+    txt += `. No natural cover within reach: terrain here cuts the dose by ${Math.max(0, Math.round(c.cutPct))} % at most`;
+  }
+  return txt;
+}
+
 export function evaluateRules(s) {
   const out = [];
   const add = (id, level, text, action) => out.push({ id, level, text, action });
@@ -19,7 +37,7 @@ export function evaluateRules(s) {
   const worst = Math.min(m.o2 ?? 1, m.co2 ?? 1, m.water ?? 1, m.batt ?? 1);
   const worstName = ["o2", "co2", "water", "batt"].reduce((a, k) => ((m[k] ?? 1) < (m[a] ?? 1) ? k : a), "o2");
   const NAMES = { o2: "OXYGEN", co2: "CO2 SCRUBBER", water: "COOLING WATER", batt: "SUIT BATTERY" };
-  if (s.spe) add("spe", LEVEL.WARNING, "SOLAR PARTICLE EVENT - TAKE SHELTER", "Return to habitat now (walkback route loaded)");
+  if (s.spe) add("spe", LEVEL.WARNING, "SOLAR PARTICLE EVENT - TAKE SHELTER", speAction(s.speShelter));
   if (worst <= 0 || (m.time ?? 1e9) <= 0) {
     add("pnr", LEVEL.WARNING, `RETURN NOW - ${worst <= 0 ? NAMES[worstName] : "TIME"} AT WALKBACK LIMIT`, "Follow the return route");
   } else if (worst < 0.1 || (m.time ?? 1e9) < 900) {
