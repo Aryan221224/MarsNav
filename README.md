@@ -11,6 +11,7 @@
 </p>
 
 <p align="center">
+  <a href="https://youtu.be/n4fgprexx3E"><b>Demo video (30 s)</b></a> ·
   <a href="MarsNav_User_Guide.pdf"><b>User guide (PDF, 86 pages)</b></a> ·
   <a href="#run-it">Run it</a> ·
   <a href="#checked-against-perseverance">Validation</a> ·

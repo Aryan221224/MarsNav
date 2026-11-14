@@ -20,7 +20,7 @@ It is checked against Perseverance's own records, including a result that did no
 
 ## Link to Project Demo
 
-*(to add: the public link to `submission/video/MarsNav_demo_30s_music.mp4`, the 30-second video, uploaded to YouTube as Public or Unlisted with the English subtitles `submission/video/marsnav_en.srt`; anyone must be able to watch it without signing in. Source and rebuild steps are in `submission/video/`.)*
+https://youtu.be/n4fgprexx3E (the 29.5-second demo video, English on-screen text and subtitles; plays without signing in)
 
 ## Link to Final Project
 
