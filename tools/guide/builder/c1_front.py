@@ -48,7 +48,7 @@ story.append(Rule(CW, RUST, 2.2, space=8))
 callout("For judges: the two-minute path",
         None, "green",
         ["Download <b>MarsNav-Windows.zip</b> from <font name='Plex'>github.com/Aryan221224/MarsNav/releases/latest</font>, "
-         "unzip it and double-click <b>MarsNav.exe</b>. From the source folder instead: double-click <b>build_exe.bat</b> once, "
+         "unzip it and double-click <b>MarsNav.exe</b>. From the source folder instead: double-click <b>Build_MarsNav.exe</b> once, "
          "then <b>MarsNav.exe</b> (Chapter 2).",
          "Click <b>Guide</b> in the top bar and choose <b>Quick tour</b>: a guided, seven-step walkthrough of the EVA planner (Chapter 12).",
          "Click <b>Landing mode</b> and click anywhere on Mars: every data layer at that point appears (Chapter 5). Then pick "
@@ -155,9 +155,9 @@ H2("Run it from the source folder")
 P("If you have the project folder (the source code, for example from the repository or a zip of it) rather than the "
   "release zip, build the program once, then run it:")
 numbered(["Install Python 3.10 or later from <font name='Plex'>python.org</font> and tick <b>“Add python.exe to PATH”</b>.",
-          "Open the <b>MarsNav</b> folder and double-click <b>build_exe.bat</b>. It needs an internet connection and takes "
+          "Open the <b>MarsNav</b> folder and double-click <b>Build_MarsNav.exe</b> (or <b>build_exe.bat</b>, which it runs). It needs an internet connection and takes "
           "about ten minutes the first time; leave the black window open until it says <b>Build complete</b>.",
-          "Double-click <b>MarsNav.exe</b>. It is in the same folder, next to <font name='Plex'>build_exe.bat</font> (sort the "
+          "Double-click <b>MarsNav.exe</b>. It is in the same folder, next to <font name='Plex'>Build_MarsNav.exe</font> (sort the "
           "folder by Name or Type if it is hidden among the folders), and on your Desktop as the <b>MarsNav</b> shortcut. "
           "From now on, open MarsNav.exe directly: there is no need to build again."])
 callout("The first time you open Landing mode", "The globe streams NASA imagery and elevation as you look at Mars, and a "

@@ -191,7 +191,7 @@ chapter("Building from source", "for developers and reviewers",
         "rebuild the science data or reproduce the results.")
 H2("Build the desktop app")
 P("On Windows with Python 3.10 or later (tick “Add python.exe to PATH”) and an internet connection, double-click "
-  "<b>build_exe.bat</b> in the project folder. It:")
+  "<b>Build_MarsNav.exe</b> (or <b>build_exe.bat</b>, which it runs) in the project folder. It:")
 numbered(["creates a private build environment in <font name='Plex'>.buildvenv</font> (your own Python is not touched);",
           "installs numpy, scipy, rasterio, Pillow, pywebview, pythonnet and PyInstaller from <font name='Plex'>requirements.txt</font>;",
           "compiles <font name='Plex'>launcher/martian_map.py</font> and <font name='Plex'>launcher/desktop.py</font> into "
@@ -319,7 +319,7 @@ table([["Path", "Contents"],
        ["docs/", "Concept of operations, architecture, algorithms, data provenance, verification, requirements traceability, "
         "deployment and new sites, limitations, the closed loop and hardware interface, station tasks, station selection."],
        ["submission/", "Judging-criteria map, demo script, comparison with other approaches, screenshots."],
-       ["build_exe.bat, selftest.bat", "Build the app; test the server end to end."],
+       ["Build_MarsNav.exe, build_exe.bat, selftest.bat", "Build the app (the .exe runs the .bat); test the server end to end."],
        ["data_cache/", "Created at run time: downloads, tiles, science layers, Local mode packs, built sites, reports, logs. Not part of the repository."]],
       [1.85 * inch, CW - 1.85 * inch], mono_first=True)
 

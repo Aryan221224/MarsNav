@@ -68,7 +68,7 @@ It is a portable Windows desktop app: one folder, one double-click, nothing to i
 2. Unzip it anywhere you can save files (Desktop, Documents, `D:\`, a USB stick) and double-click **`MarsNav.exe`**.
 3. The first time on a new PC, Windows may say "Windows protected your PC" because the program is not code-signed: click **More info**, then **Run anyway**.
 
-**From the source folder** (this repository, or a zip of it): install Python 3.10+ (tick "Add python.exe to PATH"), double-click **`build_exe.bat`** once and wait for "Build complete" (about ten minutes the first time), then double-click **`MarsNav.exe`**. It is in the same folder and on your Desktop as the "MarsNav" shortcut. After that, open `MarsNav.exe` directly.
+**From the source folder** (this repository, or a zip of it): install Python 3.10+ (tick "Add python.exe to PATH"), double-click **`Build_MarsNav.exe`** (or `build_exe.bat`, which it runs) once and wait for "Build complete" (about ten minutes the first time), then double-click **`MarsNav.exe`**. It is in the same folder and on your Desktop as the "MarsNav" shortcut. After that, open `MarsNav.exe` directly.
 
 The first time you open Landing mode the globe streams NASA imagery and elevation; a **Loading map** bar shows the tiles arriving, and the whole-Mars elevation map (33 MB) downloads once in the background. Everything is cached on this computer, so later visits are fast.
 
@@ -124,6 +124,7 @@ Hard limits come first and are never traded against time; a partial route from w
 ## Build and test from source
 
 ```bat
+Build_MarsNav.exe                     :: Windows: double-click to build MarsNav.exe (runs build_exe.bat; source: tools\build_launcher)
 build_exe.bat                         :: Windows: builds MarsNav.exe and dist\MarsNav-Windows.zip (recipe: tools\build_windows.py)
 selftest.bat                          :: end-to-end server check under load
 python tools\smoke_exe.py dist\MarsNav\MarsNav.exe   :: start the built program, check every page and API, stop it
