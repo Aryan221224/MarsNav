@@ -2,6 +2,25 @@
 // home), time left before sunset, shade and station work, against mission elapsed time.
 import { fmtDuration } from "../engine/util.js";
 
+// A track's name at the middle of its band, its scale against the plot at the band's own top and bottom (no value
+// can be read as belonging to the next track). Thin bands show the name only.
+function trackLabel(c, name, top, bot, plotLeft, hi, lo, color) {
+  const keep = c.font, align = c.textAlign;
+  c.fillStyle = color;
+  c.font = "600 11px 'Barlow Condensed', 'Barlow', sans-serif";
+  c.textAlign = "left";
+  c.fillText(name, 6, (top + bot) / 2 + 4);
+  if (bot - top >= 44 && hi != null) {
+    c.font = "10px 'IBM Plex Mono', monospace";
+    c.textAlign = "right";
+    c.globalAlpha = 0.8;
+    c.fillText(hi, plotLeft - 5, top + 9);
+    c.fillText(lo, plotLeft - 5, bot - 2);
+    c.globalAlpha = 1;
+  }
+  c.font = keep; c.textAlign = align;
+}
+
 export class Timeline {
   constructor(canvas) {
     this.cv = canvas;
@@ -28,7 +47,7 @@ export class Timeline {
   }
 
   _tOf(x) {
-    const L = 64, R = this.w - 14;
+    const L = 74, R = this.w - 14;
     return ((x - L) / (R - L)) * (this.route.t || 1);
   }
 
@@ -62,7 +81,7 @@ export class Timeline {
       return;
     }
     const pts = this.route.pts, T = this.route.t || 1;
-    const L = 64, R = this.w - 14;
+    const L = 74, R = this.w - 14;
     const X = (t) => L + ((R - L) * t) / T;
     const bands = [[8, 0.42], [0.46, 0.78], [0.8, 0.97]].map(([a, b]) => [this.h * (a < 1 ? a : 0.05), this.h * b]);
     bands[0][0] = 10;
@@ -106,10 +125,7 @@ export class Timeline {
     c.strokeStyle = "#d8a57a";
     c.lineWidth = 1.5;
     c.stroke();
-    c.fillStyle = text;
-    c.fillText("ELEV", 8, e0 + 10);
-    c.fillText(`${zmax.toFixed(0)}`, 8, e0 + 24);
-    c.fillText(`${zmin.toFixed(0)} m`, 8, e1);
+    trackLabel(c, "ELEV", e0, e1, L, `${zmax.toFixed(0)}`, `${zmin.toFixed(0)} m`, text);
     // --- walkback margin (worst consumable), 0-100 %
     const [m0, m1] = bands[1];
     const YM = (v) => m1 - (m1 - m0) * Math.max(0, Math.min(1, v));
@@ -126,10 +142,7 @@ export class Timeline {
       }
       prev = [x, y];
     }
-    c.fillStyle = text;
-    c.fillText("MARGIN", 8, m0 + 10);
-    c.fillText("100%", 8, m0 + 24);
-    c.fillText("0%", 8, m1);
+    trackLabel(c, "MARGIN", m0, m1, L, "100%", "0%", text);
     // --- sun elevation
     const [s0, s1] = bands[2];
     const YS = (e) => s1 - ((s1 - s0) * Math.max(0, Math.min(90, e))) / 90;
@@ -138,8 +151,7 @@ export class Timeline {
     c.strokeStyle = "#f2f5f8";
     c.lineWidth = 1;
     c.stroke();
-    c.fillStyle = text;
-    c.fillText("SUN", 8, s0 + 10);
+    trackLabel(c, "SUN", s0, s1, L, "90°", "0°", text);
     // cursors
     const mark = (t, col) => { const x = X(t); c.strokeStyle = col; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, 6); c.lineTo(x, this.h - 18); c.stroke(); };
     if (this.now != null) mark(this.now, "#3ee07e");
