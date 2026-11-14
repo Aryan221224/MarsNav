@@ -14,6 +14,7 @@ On Mars there is no GPS, and help can be 22 minutes away. MarsNav:
 • Plans five named routes on 1 m HiRISE terrain, with hard safety limits first and a walk home from every step
 • Reads suit telemetry in NASA's SUITS format, learns how hard the crew is really working, and re-plans before the margin runs out
 • Shows the same EVA on a habitat console, a helmet-visor HUD, a rover dashboard and a wrist cuff
+• Credits the terrain's shelter from cosmic rays, checked against Curiosity's radiation detector
 • Is checked against Perseverance's own drives and runs fully offline, as it must on Mars
 
 In 40 simulated EVAs with hidden surprises, no crew using MarsNav touched its emergency reserve.
@@ -21,6 +22,7 @@ In 40 simulated EVAs with hidden surprises, no crew using MarsNav touched its em
 NASA Space Apps Challenge 2026 · Challenge: Interplanetary Survival Guide: Martian Map
 
 Project and source code: https://github.com/Aryan221224/MarsNav
+Try it in your browser: https://aryan221224.github.io/MarsNav/
 Download for Windows: https://github.com/Aryan221224/MarsNav/releases/latest
 
 Built on NASA data: MRO HiRISE and CTX, CRISM, MGS MOLA, Mars Odyssey THEMIS and GRS, TES, Mars 2020 MEDA, MSL RAD, the SUITS telemetry format and DONKI space weather; with ESA Mars Express HRSC.
