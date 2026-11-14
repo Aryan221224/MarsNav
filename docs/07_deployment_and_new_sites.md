@@ -16,6 +16,10 @@ Browser support: current Chrome, Edge and Firefox (ES modules, module workers, `
 
 A site selector appears when more than one site is built. `#<site id>` in the address opens a site directly, for example `#jezero_east`.
 
+## Publishing the repository
+
+The links in the README, the submission write-up, this document and the user guide point to `github.com/Aryan221224/MarsNav`. To publish the project under another GitHub name, run `python tools/set_repo_url.py <owner>/<name>`, rebuild the guide (`python tools/guide/builder/build.py`) and commit. Pushing `main` to the new repository runs `.github/workflows/windows-exe.yml`, which tests the app, builds `MarsNav.exe` on a clean Windows machine and publishes `MarsNav-Windows.zip` as the latest release, so the download links work once that run has finished. The demo video's end card shows the address as rendered; re-render it (`submission/video/build_video.sh`) if the name changes.
+
 ## Adding a new site
 
 The software is site-agnostic. Everything specific to a place is in one JSON file, `pipeline/sites/<id>.json`.
