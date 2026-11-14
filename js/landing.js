@@ -1,0 +1,2716 @@
+// landing.js - Landing mode: choose where the crew lands and sets up the hub, on the whole of Mars streamed like a flight
+// simulator. The globe engine (tiles, LOD, camera, picking) is shared with the former Planet view; the panels screen every
+// candidate against NASA's human landing-site criteria (planet/assess.py on the server) and commit the chosen hub as an
+// EVA site.
+// The planet is a quadtree of equirectangular tiles (NASA Mars Trek's EQ tiling: zoom 0 = two 180 deg tiles). Each frame
+// the tree is walked from the two root tiles: a tile is split when its on-screen size exceeds ~1.3 tile widths, hidden
+// when it is behind the horizon or outside the view, and a parent keeps drawing until all four children have arrived, so
+// the ground never has holes. Tiles come from the local server (/tiles/dem, /tiles/img), which builds them on demand
+// from the real data (MOLA, HRSC-MOLA 200 m, CTX 20 m, HiRISE 1 m; Viking colour, CTX / HiRISE orthoimages) and keeps a
+// disk cache. Geometry is built relative to each tile's centre (floating origin), so a 20 m crater is as steady as the
+// globe. Units: kilometres.
+import * as THREE from "../vendor/three.module.min.js";
+import { loadPlace, placeHtml, timeHere, timeHtml } from "./placeview.js";
+import { GifEncoder } from "./gif.js";
+import { kml } from "./geoexport.js";
+import { pathKm, areaKm2, greatCircle, fmtDist, fmtArea } from "./measure.js";
+import { relayCoverage, hhmm } from "../engine/relay.js";
+import { marsState, jdTTFromMsd, msFromJdTT } from "../engine/marstime.js";
+
+const $ = (id) => document.getElementById(id);
+const R = 3396.19;                       // Mars sphere radius, km (IAU 2015; same as the data's datum)
+const DEG = Math.PI / 180;
+const MAXZ = 14;                         // finest zoom requested (~2 m / imagery pixel at the equator)
+const GRID = 65;                         // vertices per tile edge (DEM tiles are 257 x 257; every 4th sample)
+const MAX_LOADS = 6;                     // concurrent tile downloads
+const MAX_TILES = 700;                   // tiles kept in memory before the least recently used are dropped
+const SPLIT_PX = 330;                    // split a tile when it covers more than this many pixels
+
+// ----------------------------------------------------------------------------------------------- geometry helpers
+function pos(lon, lat, r, out = new THREE.Vector3()) {
+  const cl = Math.cos(lat * DEG);
+  return out.set(r * cl * Math.cos(lon * DEG), r * Math.sin(lat * DEG), -r * cl * Math.sin(lon * DEG));
+}
+function lonlatOf(v) {
+  const r = v.length();
+  return { lon: Math.atan2(-v.z, v.x) / DEG, lat: Math.asin(Math.max(-1, Math.min(1, v.y / r))) / DEG, r };
+}
+const wrap180 = (l) => ((((l + 180) % 360) + 360) % 360) - 180;
+const tileDeg = (z) => 180 / (1 << z);
+function tileOf(lon, lat, z) {
+  const d = tileDeg(z), nx = 2 << z, ny = 1 << z;
+  return [Math.min(ny - 1, Math.max(0, Math.floor((90 - lat) / d))), Math.floor((((lon + 180) % 360 + 360) % 360) / d) % nx];
+}
+function haversineKm(a, b) {
+  const p1 = a[1] * DEG, p2 = b[1] * DEG, dp = p2 - p1, dl = (b[0] - a[0]) * DEG;
+  const h = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+const fmtKm = (km) => km >= 100 ? `${km.toFixed(0)} km` : km >= 1 ? `${km.toFixed(1)} km` : `${(km * 1000).toFixed(0)} m`;
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// ------------------------------------------------------------------------------------------------------ state
+const S = {
+  base: "best", exag: 1, crit: "hls2", focus: null, dossier: null, quick: null, cand: [], screen: new Map(), set: "all",
+  iceTarget: null, datasets: {}, legendCache: new Map(),
+  cam: { lon: 77.5, lat: 18.4, range: 9000, heading: 0, tilt: 0 },   // range: km from the target point
+  targetElev: 0,
+  route: [], routeResult: null, pick: null, landing: null, names: [], sites: [], coverage: null,
+  online: false,
+  // Worldview-style tools: the season (drives the dust layers and the MARCI date), MARCI weather maps, overlay
+  // strength, compare (swipe / spy), the ruler
+  ls: 250, marci: { my: 28, days: null, cur: null }, op: 1,
+  cmp: { base: "", my: 29, mode: "swipe", split: 0.5, layer: null }, meas: { active: false, pts: [], closed: false },
+};
+
+// ------------------------------------------------------------------------------------------------------ renderer
+const canvas = $("globe");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, logarithmicDepthBuffer: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x000000);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.001, 1e6);
+scene.add(camera);
+scene.add(new THREE.AmbientLight(0xffffff, 1.35));
+const sun = new THREE.DirectionalLight(0xffffff, 1.1);
+sun.position.set(-0.5, 0.8, 1);                     // a headlight from the upper left of the view: relief reads as relief
+camera.add(sun);
+const tilesGroup = new THREE.Group(); scene.add(tilesGroup);
+const overlay = new THREE.Group(); scene.add(overlay);
+
+// stars and a thin atmosphere
+{
+  const g = new THREE.BufferGeometry(), n = 3000, p = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { const v = new THREE.Vector3().randomDirection().multiplyScalar(4e5); p.set([v.x, v.y, v.z], i * 3); }
+  g.setAttribute("position", new THREE.BufferAttribute(p, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xbfc6d0, size: 1.2, sizeAttenuation: false })));
+  const atm = new THREE.Mesh(new THREE.SphereGeometry(R * 1.018, 96, 48), new THREE.ShaderMaterial({
+    side: THREE.BackSide, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: "varying vec3 vN; varying vec3 vP; void main(){ vN = normalize(normalMatrix*normal); vec4 mv = modelViewMatrix*vec4(position,1.0); vP = mv.xyz; gl_Position = projectionMatrix*mv; }",
+    fragmentShader: "varying vec3 vN; varying vec3 vP; void main(){ float f = pow(1.0 - abs(dot(normalize(-vP), vN)), 3.0); gl_FragColor = vec4(0.85,0.55,0.35, f*0.55); }",
+  }));
+  atm.name = "atmosphere";
+  scene.add(atm);
+}
+
+function resize() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(canvas);
+
+// ------------------------------------------------------------------------------------------------- tile store
+const tiles = new Map();           // key -> tile {z,y,x,bbox,state,heights,mesh,center,radius,used}
+const queue = new Set();
+let loading = 0, frameNo = 0, loadedTotal = 0, failedTotal = 0;
+const key = (z, y, x) => `${z}/${y}/${x}`;
+
+function getTile(z, y, x) {
+  const k = key(z, y, x);
+  let t = tiles.get(k);
+  if (!t) {
+    const d = tileDeg(z), w = -180 + x * d, n = 90 - y * d;
+    t = { k, z, y, x, bbox: [w, n - d, w + d, n], state: "new", used: 0 };
+    const clat = Math.max(-89.9, Math.min(89.9, n - d / 2));
+    t.center = pos(w + d / 2, clat, R);
+    // bounding sphere: farthest corner from the centre, plus room for 21 km of relief (exaggerated)
+    let rad = 0;
+    for (const [lo, la] of [[w, n], [w + d, n], [w, n - d], [w + d, n - d], [w + d / 2, n], [w + d / 2, n - d]]) rad = Math.max(rad, pos(lo, la, R).distanceTo(t.center));
+    t.radius = rad + 25 * S.exag;
+    t.angR = Math.min(Math.PI, rad / R);
+    tiles.set(k, t);
+  }
+  return t;
+}
+
+function decodeMMD(buf) {
+  const dv = new DataView(buf);
+  const magic = String.fromCharCode(dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3));
+  if (magic !== "MMD1") throw new Error("not an MMD1 tile");
+  const n = dv.getUint16(4, true), lo = dv.getFloat32(8, true), scale = dv.getFloat32(12, true), ml = dv.getUint32(16, true);
+  const meta = JSON.parse(new TextDecoder().decode(new Uint8Array(buf, 20, ml)));
+  let off = 20 + ml; if (off % 2) off += 1;
+  const q = new Uint16Array(buf.slice(off, off + n * n * 2));
+  const h = new Float32Array(n * n);
+  let fill = 0, cnt = 0;
+  for (let i = 0; i < q.length; i++) if (q[i] !== 65535) { fill += lo + q[i] * scale; cnt++; }
+  fill = cnt ? fill / cnt : 0;
+  for (let i = 0; i < q.length; i++) h[i] = q[i] === 65535 ? fill : lo + q[i] * scale;
+  return { n, h, meta };
+}
+
+// the imagery asked for: base layer + overlays composited on the server (planet/imagery.py)
+function activeOverlays() {
+  const out = [];
+  for (const el of document.querySelectorAll("[data-ovl]")) {
+    if (!el.checked) continue;
+    const k = el.dataset.ovl;
+    out.push(k === "safety" ? `safety_${$("landerSel").value}` : k === "ice" ? $("iceDepth").value
+      : k === "dust" || k === "dust90" ? `${k}@${(Math.round(S.ls / 5) * 5) % 360}` : k);
+  }
+  return out;
+}
+// the base layer as the server names it: a MARCI map is "marci-<month>-<day>" for the chosen Mars year and season
+function baseLayer(base = S.base, my = S.marci.my) {
+  if (base !== "marci") return base;
+  const d = marciNearest(my, S.ls);
+  return d ? `marci-${d[0]}-${String(d[1]).padStart(2, "0")}` : "viking";
+}
+function imgLayer() {
+  const ov = activeOverlays();
+  return `${baseLayer()}${ov.length ? `&ovl=${ov.join(",")}` : ""}${ov.length && S.op < 1 ? `&op=${S.op}` : ""}`;
+}
+let texLoads = 0;                  // texture swaps in flight (the season animation waits for them)
+function swapTexture(t, want) {
+  t.texLayer = want; texLoads++;
+  return loadTexture(t, want).then((tex) => {
+    if (t.texLayer !== want || !t.mesh) { tex.dispose(); return; }
+    const old = t.mesh.material.map;
+    t.mesh.material.map = tex; t.texHave = want;
+    if (!old) { t.mesh.material.color.set(0xffffff); t.mesh.material.needsUpdate = true; } else old.dispose();
+    if (t.provisional && !t.refreshAt) t.refreshAt = performance.now() + 20000;
+  }).catch(() => {
+    // the old texture stays; asked for again in a few seconds when the tile is in view (selectTiles)
+    if (t.texLayer === want) { t.texLayer = t.texHave; t.texRetryAt = performance.now() + 4000; }
+  }).finally(() => { texLoads--; });
+}
+function reloadTextures() {
+  // the tiles on screen now; the others are swapped when they come into view (selectTiles), which keeps a change of
+  // layer, season or Mars year to a screenful of requests
+  const want = S.texWant = imgLayer();
+  for (const t of tiles.values()) if (t.state === "ready" && (t.mesh?.visible || t.z <= 1)) swapTexture(t, want);
+}
+function loadTexture(t, layer = imgLayer(), mark = true) {
+  const url = `/tiles/img/${t.z}/${t.y}/${t.x}.jpg?layer=${layer}`;
+  let prov = false;
+  // fetch (not the image loader) so the "provisional" header can be read
+  return fetch(url).then((r) => {
+    if (!r.ok) throw new Error(`imagery ${r.status}`);
+    prov = !!r.headers.get("X-MM-Provisional");
+    if (prov && mark) t.provisional = true;
+    return r.blob();
+  }).then((b) => createImageBitmap(b, { imageOrientation: "flipY" })).then((bmp) => {
+    const tex = new THREE.CanvasTexture(bmp);
+    tex.userData.provisional = prov;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+    tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  });
+}
+
+async function loadTile(t) {
+  const refresh = t.state === "ready";          // re-fetch of a provisional tile: keep drawing the old one meanwhile
+  const layer = S.texWant || imgLayer();
+  if (!refresh) t.state = "loading";
+  t.provisional = false;
+  loading++;
+  try {
+    const [dem, tex] = await Promise.all([
+      fetch(`/tiles/dem/${t.z}/${t.y}/${t.x}.mmd`).then((r) => {
+        if (!r.ok) throw new Error(`DEM ${r.status}`);
+        if (r.headers.get("X-MM-Provisional")) t.provisional = true;
+        return r.arrayBuffer();
+      }).then(decodeMMD),
+      loadTexture(t, layer).catch(() => null),
+    ]);
+    if (refresh && t.mesh?.material.map && tex) t.mesh.material.map.dispose();
+    t.dem = dem;
+    t.tex = tex;
+    if (tex) { t.texHave = t.texLayer = layer; }
+    const vis = t.mesh?.visible;
+    buildMesh(t);
+    if (vis) t.mesh.visible = true;
+    if (!refresh) loadedTotal++;
+    t.state = "ready";
+    t.refreshAt = t.provisional ? performance.now() + 20000 : 0;   // better data is downloading on the server: ask again
+  } catch (e) {
+    if (refresh) { t.refreshAt = performance.now() + 30000; return; }
+    t.state = "error"; t.err = String(e); failedTotal++;
+    t.retryAt = performance.now() + 8000;
+  } finally {
+    loading--;
+    pump();
+  }
+}
+
+function buildMesh(t) {
+  if (t.mesh) { tilesGroup.remove(t.mesh); t.mesh.geometry.dispose(); }
+  const { n, h } = t.dem;
+  const [w, s, e, nn] = t.bbox;
+  const G = GRID, step = (n - 1) / (G - 1);
+  const E = S.exag / 1000;                                 // metres of elevation -> km, exaggerated
+  const skirt = Math.max(0.05, tileDeg(t.z) * DEG * R * 0.02) ;
+  const V = G + 2;                                          // an outer ring of skirt vertices hangs below the edges
+  const P = new Float32Array(V * V * 3), UV = new Float32Array(V * V * 2);
+  const v = new THREE.Vector3();
+  const org = t.center;
+  for (let j = 0; j < V; j++) {
+    const gj = Math.min(G - 1, Math.max(0, j - 1));
+    const lat = nn - (nn - s) * gj / (G - 1);
+    for (let i = 0; i < V; i++) {
+      const gi = Math.min(G - 1, Math.max(0, i - 1));
+      const lon = w + (e - w) * gi / (G - 1);
+      const hv = h[Math.round(gj * step) * n + Math.round(gi * step)];
+      const edge = i === 0 || j === 0 || i === V - 1 || j === V - 1;
+      pos(lon, lat, R + hv * E - (edge ? skirt : 0), v).sub(org);
+      P.set([v.x, v.y, v.z], (j * V + i) * 3);
+      UV.set([gi / (G - 1), 1 - gj / (G - 1)], (j * V + i) * 2);
+    }
+  }
+  const idx = new Uint32Array((V - 1) * (V - 1) * 6);
+  let k = 0;
+  for (let j = 0; j < V - 1; j++) for (let i = 0; i < V - 1; i++) {
+    const a = j * V + i, b = a + 1, c = a + V, d = c + 1;
+    idx.set([a, c, b, b, c, d], k); k += 6;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.BufferAttribute(P, 3));
+  g.setAttribute("uv", new THREE.BufferAttribute(UV, 2));
+  g.setIndex(new THREE.BufferAttribute(idx, 1));
+  g.computeVertexNormals();
+  g.computeBoundingSphere();
+  const mat = t.mesh?.material || new THREE.MeshLambertMaterial({ color: t.tex ? 0xffffff : 0xb07a55 });
+  if (t.tex) { mat.map = t.tex; mat.color.set(0xffffff); mat.needsUpdate = true; }
+  t.mesh = new THREE.Mesh(g, mat);
+  t.mesh.position.copy(org);
+  t.mesh.matrixAutoUpdate = false; t.mesh.updateMatrix();
+  t.mesh.userData.tile = t;
+  t.mesh.visible = false;
+  tilesGroup.add(t.mesh);
+}
+
+function disposeTile(t) {
+  if (t.mesh) { tilesGroup.remove(t.mesh); t.mesh.geometry.dispose(); t.mesh.material.map?.dispose(); t.mesh.material.dispose(); }
+  t.texB?.dispose(); t.texB = null;
+  tiles.delete(t.k);
+}
+
+function want(t, prio) {
+  if (t.state === "new" || (t.state === "error" && performance.now() > t.retryAt)) { t.prio = prio; queue.add(t); }
+}
+function pump() {
+  if (loading >= MAX_LOADS || !queue.size) return;
+  const list = [...queue].filter((t) => t.used >= frameNo - 2 || t.z <= 1).sort((a, b) => a.prio - b.prio);
+  queue.clear();
+  for (const t of list) {
+    if (loading >= MAX_LOADS) { queue.add(t); continue; }
+    if (t.state === "new" || t.state === "error") loadTile(t);
+  }
+}
+
+// elevation (m) at a point from the finest tile in memory
+function elevAt(lon, lat) {
+  for (let z = MAXZ; z >= 0; z--) {
+    const [y, x] = tileOf(lon, lat, z);
+    const t = tiles.get(key(z, y, x));
+    if (!t || !t.dem) continue;
+    const [w, s, e, n] = t.bbox, N = t.dem.n;
+    const gx = Math.min(N - 1.001, Math.max(0, ((lon - w + 360) % 360) / (e - w) * (N - 1)));
+    const gy = Math.min(N - 1.001, Math.max(0, (n - lat) / (n - s) * (N - 1)));
+    const i = Math.floor(gx), j = Math.floor(gy), a = gx - i, b = gy - j, H = t.dem.h;
+    return (H[j * N + i] * (1 - a) + H[j * N + i + 1] * a) * (1 - b) + (H[(j + 1) * N + i] * (1 - a) + H[(j + 1) * N + i + 1] * a) * b;
+  }
+  return 0;
+}
+const surf = (lon, lat, liftKm = 0, elevM = null) => pos(lon, lat, R + (elevM ?? elevAt(lon, lat)) * S.exag / 1000 + liftKm);
+
+// ------------------------------------------------------------------------------------------------- camera
+const tmp = new THREE.Vector3();
+function placeCamera() {
+  const c = S.cam;
+  c.lat = Math.max(-89.9, Math.min(89.9, c.lat)); c.lon = wrap180(c.lon);
+  c.range = Math.max(0.03, Math.min(40000, c.range));
+  c.tilt = Math.max(0, Math.min(c.range < 3000 ? 80 : 80 * Math.max(0, (6000 - c.range) / 3000), c.tilt));
+  S.targetElev += (elevAt(c.lon, c.lat) - S.targetElev) * 0.25;
+  const T = pos(c.lon, c.lat, R + S.targetElev * S.exag / 1000);
+  const U = T.clone().normalize();
+  const E = new THREE.Vector3(-Math.sin(c.lon * DEG), 0, -Math.cos(c.lon * DEG));
+  const N = new THREE.Vector3().crossVectors(U, E).normalize();
+  const H = c.heading * DEG, tl = c.tilt * DEG;
+  const fwd = N.clone().multiplyScalar(Math.cos(H)).addScaledVector(E, Math.sin(H));   // horizontal view direction
+  const d = U.clone().multiplyScalar(-Math.cos(tl)).addScaledVector(fwd, Math.sin(tl)); // camera -> target
+  const P = T.clone().addScaledVector(d, -c.range);
+  // never below the ground
+  const ll = lonlatOf(P);
+  const ground = R + elevAt(ll.lon, ll.lat) * S.exag / 1000 + Math.max(0.02, c.range * 0.02);
+  if (ll.r < ground) P.setLength(ground);
+  camera.position.copy(P);
+  camera.up.copy(c.tilt < 1 ? fwd : U);
+  camera.lookAt(T);
+  const alt = P.length() - R;
+  camera.near = Math.max(0.0005, alt * 0.05 * Math.cos(tl) ** 2);
+  camera.far = P.length() + R * 1.5 + 5e5;
+  camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
+}
+
+// ------------------------------------------------------------------------------------------------- LOD walk
+const frustum = new THREE.Frustum(), projView = new THREE.Matrix4(), sphere = new THREE.Sphere();
+function selectTiles() {
+  frameNo++;
+  projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+  frustum.setFromProjectionMatrix(projView);
+  const camP = camera.position, camDist = camP.length();
+  const camDir = camP.clone().normalize();
+  const horizon = Math.acos(Math.min(1, R / camDist));
+  const pxPerRad = canvas.clientHeight / (2 * Math.tan(camera.fov * DEG / 2));
+  const draw = [];
+  let wanted = 0;
+
+  const visible = (t) => {
+    const ang = Math.acos(Math.max(-1, Math.min(1, camDir.dot(tmp.copy(t.center).normalize()))));
+    if (ang - t.angR > horizon + 0.02 + (21 * S.exag) / R) return false;
+    sphere.center.copy(t.center); sphere.radius = t.radius;
+    return frustum.intersectsSphere(sphere);
+  };
+  const split = (t) => {
+    if (t.z >= MAXZ) return false;
+    const d = Math.max(0.001, camP.distanceTo(t.center) - t.radius * 0.7);
+    const size = tileDeg(t.z) * DEG * R;              // N-S edge, km
+    return size / d * pxPerRad > SPLIT_PX;
+  };
+  const visit = (t) => {
+    t.used = frameNo;
+    if (!visible(t)) return;
+    const prio = t.z * 0.2 + camP.distanceTo(t.center) / (tileDeg(t.z) * DEG * R);
+    if (t.state !== "ready") { want(t, prio); wanted++; return; }
+    if (split(t)) {
+      const kids = [];
+      for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) kids.push(getTile(t.z + 1, t.y * 2 + dy, t.x * 2 + dx));
+      // only the children in view matter (the others would never be drawn)
+      const inView = kids.filter((c) => { c.used = frameNo; return visible(c); });
+      if (inView.every((c) => c.state === "ready")) { inView.forEach(visit); return; }
+      // children still coming (or unavailable): keep drawing this tile, never a mix of parent and children
+      inView.forEach((c) => { if (c.state !== "loading" && c.state !== "ready") { want(c, prio + 0.5); wanted++; } });
+    }
+    draw.push(t);
+  };
+  for (const x of [0, 1]) { const r = getTile(0, 0, x); r.used = frameNo; if (r.state !== "ready") { want(r, -1); } visit(r); }
+  for (const t of tiles.values()) if (t.mesh) t.mesh.visible = false;
+  for (const t of draw) if (t.mesh) t.mesh.visible = true;
+  const now = performance.now();
+  for (const t of draw) if (t.refreshAt && now > t.refreshAt && loading < MAX_LOADS) { t.refreshAt = 0; loadTile(t); }
+  if (S.texWant) for (const t of draw) if (t.state === "ready" && t.texHave !== S.texWant && t.texLayer !== S.texWant && !(t.texRetryAt > now) && texLoads < 16) swapTexture(t, S.texWant);
+  pump();
+  // evict least recently used
+  if (tiles.size > MAX_TILES) {
+    const old = [...tiles.values()].filter((t) => t.z > 1 && t.used < frameNo - 30 && t.state !== "loading").sort((a, b) => a.used - b.used);
+    for (const t of old.slice(0, tiles.size - MAX_TILES)) disposeTile(t);
+  }
+  return { drawn: draw.length, wanted };
+}
+
+// ------------------------------------------------------------------------------------------------- overlays
+const labelsEl = $("labels");
+const markers = [];      // {el, lon, lat, elev, kind}
+function clearMarkers(kind) {
+  for (let i = markers.length - 1; i >= 0; i--) if (markers[i].kind === kind) { markers[i].el.remove(); markers.splice(i, 1); }
+}
+function addMarker(kind, lon, lat, text, onClick, title) {
+  const el = document.createElement("div");
+  el.className = `mk ${kind}`; el.textContent = text;
+  if (title) el.title = title;
+  if (onClick) el.onclick = (ev) => { ev.stopPropagation(); onClick(); };
+  labelsEl.appendChild(el);
+  markers.push({ el, lon, lat, kind });
+  return el;
+}
+function updateMarkers() {
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const camP = camera.position, camDist = camP.length(), horizon = Math.acos(Math.min(1, R / camDist));
+  const camDir = camP.clone().normalize();
+  const showNames = $("namesChk").checked, showCand = $("ezChk").checked;
+  const far = S.cam.range > 5000;
+  for (const m of markers) {
+    if ((m.kind === "name" && !showNames) || (["ez", "starship", "heritage", "hub"].includes(m.kind) && !showCand)
+      || (far && m.kind === "heritage")) { m.el.style.display = "none"; continue; }
+    const p = surf(m.lon, m.lat, 0);
+    const ang = Math.acos(Math.max(-1, Math.min(1, camDir.dot(tmp.copy(p).normalize()))));
+    if (ang > horizon + 0.005) { m.el.style.display = "none"; continue; }
+    p.project(camera);
+    if (p.z > 1 || p.x < -1.1 || p.x > 1.1 || p.y < -1.1 || p.y > 1.1) { m.el.style.display = "none"; continue; }
+    m.el.style.display = "";
+    m.x = (p.x + 1) / 2 * w;
+    m.y = (1 - p.y) / 2 * h;
+    m.el.style.left = `${m.x}px`;
+    m.el.style.top = `${m.y}px`;
+  }
+  declutter(S.cam.range > 5200);
+}
+
+// a label that would overlap one already placed (higher priority first) keeps its dot but hides its text
+const LABEL_PRI = { pick: 7, rp: 6, hub: 5, ice: 5, ez: 3, starship: 3, name: 2, heritage: 1 };
+function declutter(far) {
+  const vis = markers.filter((m) => m.el.style.display !== "none");
+  const pri = (m) => (m.el.classList.contains("sel") ? 10 : 0) + (LABEL_PRI[m.kind] ?? 2);
+  vis.sort((a, b) => pri(b) - pri(a));
+  // every visible marker's dot is an obstacle: a label never covers another marker (its own dot sits just below it)
+  const placed = vis.map((m) => [m.x - 5, m.y - 10, 10, 10]);
+  for (const m of vis) {
+    const textShown = m.el.classList.contains("sel") || !(far && ["ez", "starship", "heritage", "hub"].includes(m.kind));
+    if (!textShown) { m.el.classList.remove("nolbl"); continue; }
+    const tw = m.el.textContent.length * 6.4 + 8;
+    const box = [m.x - tw / 2, m.y - 27, tw, 17];
+    const clash = placed.some((o) => box[0] < o[0] + o[2] && box[0] + box[2] > o[0] && box[1] < o[1] + o[3] && box[1] + box[3] > o[1]);
+    m.el.classList.toggle("nolbl", clash);
+    if (!clash) placed.push(box);
+  }
+}
+
+function lineFrom(points, color, opts = {}) {
+  // points: [[lon, lat, elevM|null], ...]; positions relative to the first point (precision), lifted off the ground
+  const lift = Math.max(0.01, Math.min(20, S.cam.range * 0.004));
+  const org = surf(points[0][0], points[0][1], lift, points[0][2]);
+  const arr = new Float32Array(points.length * 3);
+  points.forEach((p, i) => { const v = surf(p[0], p[1], lift, p[2]).sub(org); arr.set([v.x, v.y, v.z], i * 3); });
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(arr, 3));
+  const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity: opts.opacity ?? 1, depthTest: opts.depthTest ?? true }));
+  line.position.copy(org);
+  line.renderOrder = 5;
+  return line;
+}
+let overlayRange = 0;
+function rebuildOverlays() {
+  overlayRange = S.cam.range;
+  for (const c of [...overlay.children]) { overlay.remove(c); c.geometry.dispose(); c.material.dispose(); }
+  const rr = S.routeResult;
+  if (rr?.points?.length > 1) {
+    const pts = rr.points.map((p) => [p[0], p[1], p[2]]);
+    overlay.add(lineFrom(pts, 0x000000, { opacity: 0.6 }));
+    overlay.add(lineFrom(pts, 0xffffff, { depthTest: false, opacity: 0.35 }));
+    overlay.add(lineFrom(pts, 0xffffff));
+  } else if (S.route.length > 1) {
+    const pts = [];
+    for (let i = 0; i < S.route.length - 1; i++) {
+      const a = S.route[i], b = S.route[i + 1], n = 64;
+      for (let k = 0; k <= n; k++) {
+        const va = pos(a[0], a[1], 1), vb = pos(b[0], b[1], 1), v = va.lerp(vb, k / n);
+        const ll = lonlatOf(v); pts.push([ll.lon, ll.lat, null]);
+      }
+    }
+    overlay.add(lineFrom(pts, 0x9fb0c4, { opacity: 0.8 }));
+  }
+  if (S.landing?.ellipse) {
+    const e = S.landing.ellipse.map((p) => [p[0], p[1], null]); e.push(e[0]);
+    overlay.add(lineFrom(e, 0xffc629, { depthTest: false, opacity: 0.9 }));
+  }
+  if (S.focus && $("zoneChk").checked) {
+    // the Exploration Zone (100 km, pressurised-rover range) and the 5 km infrastructure radius (NASA HLS2 2015)
+    if (S.cam.range < 9000) overlay.add(lineFrom(circle(S.focus.lon, S.focus.lat, 100), 0xd8a57a, { depthTest: false, opacity: 0.85 }));
+    if (S.cam.range < 400) overlay.add(lineFrom(circle(S.focus.lon, S.focus.lat, 5), 0xf2f5f8, { depthTest: false, opacity: 0.6 }));
+  }
+  if (S.local?.offline || !$("localModal")?.hidden) {
+    // Local mode: the zones whose high-resolution data are on this computer (green rings)
+    for (const z of S.local?.zones || []) if (S.cam.range < 20000) overlay.add(lineFrom(circle(z.lon, z.lat, z.radius_km || 25), 0x3ee07e, { depthTest: false, opacity: 0.9 }));
+  }
+  if (S.iceTarget && S.focus) {
+    const n = 48, pts = [];
+    for (let k = 0; k <= n; k++) pts.push([S.focus.lon + wrap180(S.iceTarget.lon - S.focus.lon) * k / n, S.focus.lat + (S.iceTarget.lat - S.focus.lat) * k / n, null]);
+    overlay.add(lineFrom(pts, 0x7fc4ff, { depthTest: false, opacity: 0.95 }));
+  }
+  measureLines();
+  if (S.coverage && $("covChk").checked) {
+    const box = (b, color) => {
+      const [w, s, e, n] = b, pts = [], k = 12;
+      for (let i = 0; i <= k; i++) pts.push([w + (e - w) * i / k, n, null]);
+      for (let i = 1; i <= k; i++) pts.push([e, n - (n - s) * i / k, null]);
+      for (let i = 1; i <= k; i++) pts.push([e - (e - w) * i / k, s, null]);
+      for (let i = 1; i <= k; i++) pts.push([w, s + (n - s) * i / k, null]);
+      overlay.add(lineFrom(pts, color, { opacity: 0.85 }));
+    };
+    (S.coverage.ctx || []).slice(0, 300).forEach((c) => box(c.bbox, 0x3ccbff));
+    (S.coverage.hirise || []).slice(0, 200).forEach((c) => box(c.bbox, 0x3ee07e));
+  }
+}
+
+// geodesic circle of radius km around a point: [[lon, lat, null], ...]
+function circle(lon, lat, km, n = 96) {
+  const out = [], d = km / R, p1 = lat * DEG, l1 = lon * DEG;
+  for (let k = 0; k <= n; k++) {
+    const b = 2 * Math.PI * k / n;
+    const p2 = Math.asin(Math.sin(p1) * Math.cos(d) + Math.cos(p1) * Math.sin(d) * Math.cos(b));
+    const l2 = l1 + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(p1), Math.cos(d) - Math.sin(p1) * Math.sin(p2));
+    out.push([wrap180(l2 / DEG), p2 / DEG, null]);
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------------------------------------- input
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function pickAt(cx, cy) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hits = ray.intersectObjects(tilesGroup.children.filter((m) => m.visible), false);
+  if (hits.length) return lonlatOf(hits[0].point);
+  // fall back to the bare sphere
+  const o = ray.ray.origin, d = ray.ray.direction, b = o.dot(d), c = o.lengthSq() - R * R, disc = b * b - c;
+  if (disc < 0) return null;
+  return lonlatOf(o.clone().addScaledVector(d, -b - Math.sqrt(disc)));
+}
+let drag = null, dirty = true;
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+canvas.addEventListener("pointerdown", (e) => {
+  canvas.setPointerCapture(e.pointerId);
+  drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, rot: e.button === 2 || e.shiftKey, t: e.timeStamp };
+  canvas.classList.add("drag");
+});
+canvas.addEventListener("pointermove", (e) => {
+  hoverAt(e.clientX, e.clientY);
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  drag.x = e.clientX; drag.y = e.clientY;
+  const c = S.cam;
+  if (drag.rot) {
+    c.heading = (c.heading - dx * 0.3 + 360) % 360;
+    c.tilt += dy * 0.25;
+  } else {
+    const kmPerPx = c.range * 2 * Math.tan(camera.fov * DEG / 2) / canvas.clientHeight * (c.tilt > 1 ? 1 : 1);
+    const H = c.heading * DEG;
+    const dN = (dx * Math.sin(H) + dy * Math.cos(H)) * kmPerPx;
+    const dE = (-dx * Math.cos(H) + dy * Math.sin(H)) * kmPerPx;
+    c.lat += dN / R / DEG;
+    c.lon += dE / (R * Math.max(0.05, Math.cos(c.lat * DEG))) / DEG;
+  }
+  dirty = true;
+});
+canvas.addEventListener("pointerup", (e) => {
+  canvas.classList.remove("drag");
+  if (drag && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 4 && e.timeStamp - drag.t < 500 && e.button === 0) {
+    const p = pickAt(e.clientX, e.clientY);
+    if (p && S.meas.active) measureAdd(p.lon, p.lat);
+    else if (p) selectPoint(p.lon, p.lat);
+  }
+  drag = null;
+});
+canvas.addEventListener("dblclick", (e) => {
+  if (S.meas.active) { measureFinish(); return; }
+  const p = pickAt(e.clientX, e.clientY);
+  if (p) flyTo(p.lon, p.lat, S.cam.range * 0.35);
+});
+canvas.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const f = Math.exp(Math.sign(e.deltaY) * Math.min(Math.abs(e.deltaY), 200) * 0.0022);
+  // zoom towards the cursor: move the target part of the way to the point under the mouse
+  if (f < 1) {
+    const p = pickAt(e.clientX, e.clientY);
+    if (p) {
+      const c = S.cam, t = 1 - f;
+      let dl = wrap180(p.lon - c.lon);
+      c.lon += dl * t; c.lat += (p.lat - c.lat) * t;
+    }
+  }
+  S.cam.range *= f;
+  dirty = true;
+}, { passive: false });
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && S.meas.active) { measureFinish(); return; }
+  if (e.key === "Escape") {
+    if (closeTopDialog()) return;
+    $("searchRes").hidden = true; if (document.activeElement?.blur) document.activeElement.blur(); return;
+  }
+  if (e.target.closest("input, select, textarea")) return;
+  if (e.key === "/") { e.preventDefault(); $("searchIn").focus(); return; }
+  if (e.key === "?") { showHelp(); return; }
+  if (e.key === "a" || e.key === "A") { if (S.focus) assess(); return; }
+  if (e.key === "l" || e.key === "L") { $("layers").classList.toggle("collapsed"); return; }
+  if (e.key === "m" || e.key === "M") { measureToggle(); return; }
+  if (e.key === " " && !e.target.closest("button, a, summary")) { e.preventDefault(); $("marciPlay").click(); return; }
+  const c = S.cam, step = c.range * 0.15 / R / DEG;
+  const H = c.heading * DEG;
+  const mv = (n, ea) => { c.lat += n * Math.cos(H) - ea * Math.sin(H); c.lon += (n * Math.sin(H) + ea * Math.cos(H)) / Math.max(0.05, Math.cos(c.lat * DEG)); };
+  switch (e.key) {
+    case "ArrowUp": mv(step, 0); break;
+    case "ArrowDown": mv(-step, 0); break;
+    case "ArrowLeft": mv(0, -step); break;
+    case "ArrowRight": mv(0, step); break;
+    case "+": case "=": c.range /= 1.4; break;
+    case "-": case "_": c.range *= 1.4; break;
+    case "q": case "Q": c.heading = (c.heading + 350) % 360; break;
+    case "e": case "E": c.heading = (c.heading + 10) % 360; break;
+    case "PageUp": c.tilt += 5; break;
+    case "PageDown": c.tilt -= 5; break;
+    case "n": case "N": c.heading = 0; c.tilt = 0; break;
+    default: return;
+  }
+  e.preventDefault(); dirty = true;
+});
+
+let hoverT = 0;
+function hoverAt(x, y) {
+  const now = performance.now();
+  if (now - hoverT < 90) return;
+  hoverT = now;
+  const p = pickAt(x, y);
+  if (!p) { $("hudPos").textContent = "--"; return; }
+  const el = elevAt(p.lon, p.lat);
+  $("hudPos").textContent = `${Math.abs(p.lat).toFixed(4)}°${p.lat >= 0 ? "N" : "S"} ${Math.abs(p.lon).toFixed(4)}°${p.lon >= 0 ? "E" : "W"} · ${el.toFixed(0)} m`;
+}
+
+// smooth flights
+let flight = null;
+function flyTo(lon, lat, range, ms = 1800) {
+  const c = S.cam;
+  const from = { lon: c.lon, lat: c.lat, range: c.range };
+  const dist = haversineKm([from.lon, from.lat], [lon, lat]);
+  const peak = Math.max(from.range, range, Math.min(12000, dist * 1.2));
+  flight = { from, to: { lon: from.lon + wrap180(lon - from.lon), lat, range: Math.max(0.05, range) }, t0: performance.now(), ms, peak };
+}
+function stepFlight(now) {
+  if (!flight) return;
+  const { from, to, t0, ms, peak } = flight;
+  const u = Math.min(1, (now - t0) / ms), s = u * u * (3 - 2 * u);
+  const c = S.cam;
+  c.lon = from.lon + (to.lon - from.lon) * s;
+  c.lat = from.lat + (to.lat - from.lat) * s;
+  // log-space zoom out to the peak and back in
+  const a = Math.log(from.range), b = Math.log(to.range), p = Math.log(peak);
+  const lr = u < 0.5 ? a + (p - a) * Math.sin(u * Math.PI) : b + (p - b) * Math.sin(u * Math.PI);
+  c.range = Math.exp(lr);
+  dirty = true;
+  if (u >= 1) flight = null;
+}
+
+// ------------------------------------------------------------------------------------------------- server API
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(() => ({ ok: false, error: `HTTP ${r.status}` }));
+  if (!r.ok || j.ok === false) throw new Error(j.error || `HTTP ${r.status}`);
+  return j;
+}
+const post = (path, body) => api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+async function pollJob(id, onLog, onProgress) {
+  let since = 0;
+  for (;;) {
+    const j = await api(`/api/job/${id}?since=${since}`);
+    since = j.log_len;
+    if (j.log?.length) onLog?.(j.log);
+    onProgress?.(j);
+    if (j.status === "done") return j.result;
+    if (j.status === "error") throw new Error(j.error || "job failed");
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+}
+function toast(msg, ms = 4000) {
+  const t = $("toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), ms);
+}
+
+// ================================================================================================= Landing mode UI
+const KIND = { ez: "NASA Exploration Zone proposal (2015)", starship: "SpaceX Starship candidate (2021)", heritage: "Landed spacecraft",
+  hub: "Hub (built EVA site)", point: "Selected point" };
+const TAG = { ez: "EZ", starship: "Starship", heritage: "Landed", hub: "Hub" };
+const CRIT_SHORT = { lat: "Latitude", elev: "Elevation", landing: "Landing ellipse", slope: "km-scale slope", trn: "TRN map",
+  verify: "1 m verification", dust: "Dust / bearing strength", ice: "Water", craters: "Craters" };
+const GROUP_ORDER = ["Engineering", "Landing", "Resources", "Surface"];
+const OVL_NEEDS = { ice: "swim", ti: "ti", grs: "grs", craters: "craters" };
+const VERDICT_TEXT = { GO: "GO · suitable hub site", CAUTION: "CAUTION · usable with mitigations", "NO-GO": "NO-GO · outside the envelope" };
+const fmtLL = (lat, lon, d = 3) => `${Math.abs(lat).toFixed(d)}°${lat >= 0 ? "N" : "S"} ${Math.abs(lon).toFixed(d)}°${lon >= 0 ? "E" : "W"}`;
+const pct = (v) => `${Math.round(100 * (v || 0))} %`;
+const statusOf = (ok) => ok === true ? "go" : ok === false ? "nogo" : "unknown";
+const fmtN = (v, d = 0) => v == null || !isFinite(v) ? "–" : (+v).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* private mode */ } } };
+
+function currentZoom() {
+  const kmScreen = S.cam.range * 2 * Math.tan(camera.fov * DEG / 2);
+  for (let z = 0; z <= MAXZ; z++) if (tileDeg(z) * DEG * R < kmScreen) return z;
+  return MAXZ;
+}
+function kmPerPx() { return S.cam.range * 2 * Math.tan(camera.fov * DEG / 2) / Math.max(1, canvas.clientHeight); }
+
+// ------------------------------------------------------------------------------------------------- tabs, help, layers panel
+function showTab(name) {
+  for (const b of document.querySelectorAll(".tabs button")) b.setAttribute("aria-selected", String(b.dataset.tab === name));
+  for (const p of document.querySelectorAll(".tabpane")) p.hidden = p.dataset.pane !== name;
+}
+for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => showTab(b.dataset.tab);
+// ------------------------------------------------------------------------------------------------- dialogs
+// Every dialog (help and the guide, Local mode, space weather) opens and closes the same way: its close button,
+// Escape or a click outside closes it, and the keyboard focus goes back to the control that opened it.
+const DIALOGS = ["help", "localModal", "swxModal"];
+const dlgOpener = new Map();
+function openDialog(id, opener) {
+  const d = $(id);
+  if (d.hidden) dlgOpener.set(id, opener || document.activeElement); // re-opening in place keeps the first opener
+  d.hidden = false;
+  d.querySelector("button, [href], input, select, textarea")?.focus({ preventScroll: true });
+}
+function closeDialog(id) {
+  const d = $(id);
+  if (d.hidden) return false;
+  d.hidden = true;
+  if (id === "help") restoreHelp();
+  const o = dlgOpener.get(id);
+  dlgOpener.delete(id);
+  if (o?.isConnected && o.focus) o.focus({ preventScroll: true });
+  return true;
+}
+function closeTopDialog() { return DIALOGS.some((id) => closeDialog(id)); }
+for (const id of DIALOGS) $(id).addEventListener("click", (e) => { if (e.target === $(id)) closeDialog(id); });
+// the help dialog also hosts the Guide chooser: put the help page back before showing help
+function restoreHelp() {
+  const m = $("help");
+  if (!m.dataset.orig) return;
+  m.querySelector(".mbox").innerHTML = m.dataset.orig;
+  $("helpClose").onclick = () => closeDialog("help");
+}
+function showHelp() { restoreHelp(); openDialog("help"); }
+$("btnHelp").onclick = showHelp;
+$("helpClose").onclick = () => closeDialog("help");
+$("layersToggle").onclick = () => {
+  const c = $("layers").classList.toggle("collapsed");
+  $("layersToggle").setAttribute("aria-expanded", String(!c));
+};
+
+// ------------------------------------------------------------------------------------------------- map layers and legend
+$("baseSel").onchange = () => { S.base = $("baseSel").value; reloadTextures(); saveHash(); };
+function bindOvl(el) {
+  el.onchange = () => {
+    const need = OVL_NEEDS[el.dataset.ovl];
+    if (el.checked && need && S.datasets[need] && !S.datasets[need].installed) {
+      toast(`${S.datasets[need].name} is not installed yet: see the Data tab (one download).`, 6000);
+      showTab("data");
+    }
+    reloadTextures(); updateLegend(); saveHash();
+  };
+}
+for (const el of document.querySelectorAll("[data-ovl]")) bindOvl(el);
+$("iceDepth").onchange = () => { if (document.querySelector('[data-ovl="ice"]').checked) { reloadTextures(); updateLegend(); saveHash(); } };
+$("exag").oninput = () => {
+  S.exag = +$("exag").value; $("exagV").textContent = S.exag;
+  for (const t of tiles.values()) { t.radius = t.radius - 25 * (t.lastExag || 1) + 25 * S.exag; t.lastExag = S.exag; if (t.dem) buildMesh(t); }
+  rebuildOverlays(); dirty = true;
+};
+$("covChk").onchange = () => { if ($("covChk").checked) loadCoverage(); else { S.coverage = null; rebuildOverlays(); } };
+$("namesChk").onchange = $("ezChk").onchange = () => { dirty = true; };
+$("zoneChk").onchange = () => rebuildOverlays();
+
+let legendSeq = 0;
+async function updateLegend() {
+  // a legend can take a while to arrive when the server is busy with tiles: only the newest call may write the box,
+  // so a slow answer for overlays that have since been switched off never replaces the current legend
+  const seq = ++legendSeq;
+  const box = $("legend"), parts = [];
+  for (const o of activeOverlays()) {
+    const key = o.startsWith("safety") ? "safety" : o;
+    let L = S.legendCache.get(key);
+    if (L === undefined) {
+      try { L = (await api(`/api/legend?ovl=${encodeURIComponent(o)}`)).legend; } catch { L = null; }
+      S.legendCache.set(key, L);
+    }
+    if (seq !== legendSeq) return;
+    if (L) parts.push(legendHtml(key, L));
+  }
+  if (seq !== legendSeq) return;
+  box.innerHTML = parts.join("");
+  box.hidden = !parts.length;
+}
+function legendHtml(key, L) {
+  const note = (L.note ? `<p>${esc(L.note)}</p>` : "") + (L.data_url ? `<p><a href="${esc(L.data_url)}" target="_blank" rel="noopener">Get the data ↗</a></p>` : "");
+  if (L.classes) {
+    const sw = L.classes.map((c) => `<i style="background:rgba(${c.rgba[0]},${c.rgba[1]},${c.rgba[2]},${Math.min(1, c.rgba[3] * 1.8)})"></i><span>${esc(c.label)}</span>`).join("");
+    if (key !== "safety") return `<div class="lg"><b>${esc(L.title)}</b><div class="cls">${sw}</div>${note}</div>`;
+    return `<div class="lg"><b>${esc(L.title)} · ${esc(landerName())}</b><div class="cls">${sw}</div>
+      <p>Resolution follows your zoom; over HiRISE footprints it reaches lander scale (1–2 m).</p></div>`;
+  }
+  if (L.ticks?.length) {
+    const n = L.ticks.length;
+    const grad = L.ticks.map((t, i) => `rgba(${Math.round(t.rgba[0] * 255)},${Math.round(t.rgba[1] * 255)},${Math.round(t.rgba[2] * 255)},${Math.min(1, t.rgba[3] * 1.3 + 0.12).toFixed(2)}) ${(100 * i / (n - 1)).toFixed(0)}%`).join(",");
+    return `<div class="lg"><b>${esc(L.title)}</b><div class="ramp" style="background:linear-gradient(90deg,${grad})"></div>
+      <div class="ticks">${L.ticks.map((t) => `<span>${esc(t.label)}</span>`).join("")}</div>${note}</div>`;
+  }
+  return `<div class="lg"><b>${esc(L.title)}</b>${note}</div>`;
+}
+
+let covT = 0;
+async function loadCoverage() {
+  if (!$("covChk").checked) return;
+  const c = S.cam, dLat = Math.min(60, c.range / R / DEG * 1.2), dLon = Math.min(180, dLat / Math.max(0.1, Math.cos(c.lat * DEG)));
+  try {
+    const cov = await api(`/api/coverage?w=${c.lon - dLon}&s=${Math.max(-90, c.lat - dLat)}&e=${c.lon + dLon}&n=${Math.min(90, c.lat + dLat)}`);
+    S.coverage = cov; rebuildOverlays();
+    toast(`${cov.hirise.length} HiRISE 1 m (green) and ${cov.ctx.length} CTX 20 m (blue) elevation models in view${cov.ctx.length >= 300 ? " (first 300 shown)" : ""}`, 3000);
+  } catch (e) { toast(e.message); }
+}
+
+// ------------------------------------------------------------------------------------------------- mission settings
+let reassessT = 0;
+function missionChanged() {
+  if (document.querySelector('[data-ovl="safety"]').checked) { reloadTextures(); S.legendCache.delete("safety"); updateLegend(); }
+  const lv = $("landerSel").value;
+  if ([...$("siteLander").options].some((o) => o.value === lv)) $("siteLander").value = lv;
+  clearTimeout(reassessT);
+  if (S.dossier) reassessT = setTimeout(assess, 350);
+}
+$("landerSel").onchange = missionChanged;
+// the lander menu shows short names (they fit narrow screens); sentences use the full name
+function landerName() { const o = $("landerSel").selectedOptions[0]; return o.dataset.long || o.text.split("·")[0].trim(); }
+$("landAz").onchange = missionChanged;
+for (const b of document.querySelectorAll(".seg button[data-crit]")) {
+  b.onclick = () => {
+    if (S.crit === b.dataset.crit) return;
+    S.crit = b.dataset.crit;
+    for (const x of document.querySelectorAll(".seg button[data-crit]")) x.setAttribute("aria-checked", String(x === b));
+    S.screen.clear();
+    renderCandList();
+    screenAll(true);
+    if (S.dossier) assess(); else if (S.focus) quickLook(selToken);
+    saveHash();
+  };
+}
+
+// ------------------------------------------------------------------------------------------------- candidates
+async function loadCandidates() {
+  try {
+    const c = await api("/api/candidates");
+    S.candSources = c.sources || {};
+    const out = [];
+    for (const e of c.ez || []) out.push({ ...e, kind: "ez", sub: `abstract ${e.abstract ?? ""}`, url: e.abstract_url, url2: e.slides_url });
+    for (const e of c.starship || []) out.push({ ...e, kind: "starship", sub: e.tier ? `${e.tier} site` : "" });
+    for (const e of c.heritage || []) out.push({ ...e, kind: "heritage", sub: [e.year, e.note].filter(Boolean).join(" · ") });
+    S.cand = out;
+    $("nEz").textContent = (c.ez || []).length; $("nSs").textContent = (c.starship || []).length; $("nHe").textContent = (c.heritage || []).length;
+    for (const k of ["ez", "starship", "heritage"]) clearMarkers(k);
+    for (const x of out) {
+      const el = addMarker(x.kind, x.lon, x.lat, x.name, () => openCandidate(x), `${x.name} · ${KIND[x.kind]}`);
+      el.dataset.cid = x.id;
+    }
+    renderCandList();
+    restoreFocusFromHash();
+    screenAll(true);
+  } catch (e) {
+    $("candList").innerHTML = `<li class="hint">Candidate list unavailable: ${esc(e.message)}</li>`;
+  }
+}
+function visibleCands() {
+  const q = $("candFilter").value.trim().toLowerCase();
+  let list = S.cand.filter((c) => (S.set === "all" || c.kind === S.set)
+    && (!q || c.name.toLowerCase().includes(q) || (c.proposer || "").toLowerCase().includes(q) || (c.sub || "").toLowerCase().includes(q)));
+  const by = $("candSort").value;
+  const sc = (c) => S.screen.get(c.id)?.score ?? -1;
+  if (by === "score") list.sort((a, b) => sc(b) - sc(a) || a.name.localeCompare(b.name));
+  else if (by === "name") list.sort((a, b) => a.name.localeCompare(b.name));
+  else list.sort((a, b) => Math.abs(a.lat) - Math.abs(b.lat));
+  return list;
+}
+function renderCandList() {
+  const ol = $("candList"), list = visibleCands();
+  ol.innerHTML = "";
+  if (!S.cand.length) { ol.innerHTML = `<li class="hint">Loading candidate sites…</li>`; return; }
+  if (!list.length) { ol.innerHTML = `<li class="hint">No candidate matches.</li>`; }
+  const fid = S.focus?.cand?.id;
+  for (const c of list) {
+    const s = S.screen.get(c.id);
+    const li = document.createElement("li");
+    if (c.id === fid) li.className = "sel";
+    const elev = s?.elev_m != null ? s.elev_m / 1000 : c.elev_km;
+    li.innerHTML = `<span class="t">${esc(c.name)}${c.kind === "starship" && c.tier ? `<small>${esc(c.tier)}</small>` : c.kind === "heritage" && c.year ? `<small>${c.year}</small>` : ""}</span>
+      <span class="m"><span class="tag ${c.kind}">${TAG[c.kind]}</span> ${fmtLL(c.lat, c.lon, 1)}${elev != null ? ` · ${elev.toFixed(1)} km` : ""}${c.proposer ? ` · ${esc(c.proposer)}` : ""}</span>
+      <span class="b">${s ? `<span class="badge ${s.verdict}" title="Screen score (global data)">${s.score ?? "–"}</span><span class="dots">${s.rows.map((r) =>
+        `<i class="${r.status}" title="${esc(CRIT_SHORT[r.id] || r.id)}: ${esc(r.value)}"></i>`).join("")}</span>` : ""}</span>`;
+    li.onclick = () => openCandidate(c);
+    ol.appendChild(li);
+  }
+  // candidate markers: dim the ones outside the chosen list, colour the dot by the screen verdict
+  for (const m of markers) {
+    if (!["ez", "starship", "heritage"].includes(m.kind)) continue;
+    const id = m.el.dataset.cid, s = S.screen.get(id);
+    m.el.classList.toggle("dim", S.set !== "all" && S.set !== m.kind);
+    m.el.classList.toggle("sel", id === fid);
+    m.el.classList.remove("v-GO", "v-CAUTION", "v-NO-GO");
+    if (s?.verdict) m.el.classList.add(`v-${s.verdict}`);
+  }
+}
+for (const b of document.querySelectorAll("#candChips .chip")) {
+  b.onclick = () => {
+    S.set = b.dataset.set;
+    for (const x of document.querySelectorAll("#candChips .chip")) x.classList.toggle("on", x === b);
+    renderCandList();
+  };
+}
+$("candFilter").oninput = renderCandList;
+$("candSort").onchange = renderCandList;
+$("btnScreen").onclick = () => screenAll(false);
+
+let screening = false;
+async function screenAll(quiet) {
+  if (screening || !S.cand.length) return;
+  screening = true;
+  const btn = $("btnScreen"); btn.disabled = true; btn.textContent = "Screening…";
+  try {
+    const { results } = await post("/api/screen", { points: S.cand.map((c) => [c.lon, c.lat, c.id]), crit: S.crit });
+    for (const r of results) S.screen.set(r.id, r);
+    const n = { GO: 0, CAUTION: 0, "NO-GO": 0 };
+    for (const r of results) n[r.verdict] = (n[r.verdict] || 0) + 1;
+    const unknown = Object.values(S.datasets).filter((d) => !d.installed).length;
+    $("screenNote").innerHTML = `${results.length} candidates screened against <b>${esc(S.crit === "starship" ? "Starship 2021" : "NASA HLS 2015")}</b>:
+      <span class="ok-t">${n.GO} go</span> · <span class="warn-t">${n.CAUTION} caution</span> · <span class="bad-t">${n["NO-GO"]} no-go</span>.
+      Global data only (latitude, elevation, dust, water, craters); open one for the landing ellipse and the full dossier.${unknown ? ` <span class="warn-t">${unknown} science layer${unknown > 1 ? "s" : ""} not installed: fewer criteria.</span>` : ""}`;
+    renderCandList();
+    if (!quiet) toast(`Screened ${results.length} candidates.`);
+  } catch (e) {
+    if (!quiet) toast(`Screening failed: ${e.message}`);
+  } finally { screening = false; btn.disabled = false; btn.textContent = "Screen all candidates"; }
+}
+
+function openCandidate(c, fly = true) {
+  if (fly) flyTo(c.lon, c.lat, Math.min(Math.max(S.cam.range * 0.5, 450), 700));
+  selectPoint(c.lon, c.lat, c);
+}
+
+// ------------------------------------------------------------------------------------------------- hubs (built sites)
+async function loadHubs() {
+  clearMarkers("hub");
+  try {
+    const { sites } = await api("/api/sites");
+    S.sites = sites.filter((s) => s.center);
+    const ol = $("hubList"); ol.innerHTML = "";
+    if (!S.sites.length) ol.innerHTML = `<li class="hint">No hubs yet. Assess a site, then press “Set as hub…”.</li>`;
+    for (const s of S.sites) {
+      const c = s.center, cand = { id: `hub:${s.id}`, siteId: s.id, kind: "hub", name: s.name || s.id, lon: c.lon, lat: c.lat };
+      addMarker("hub", c.lon, c.lat, `▲ ${s.short || s.name || s.id}`, () => openCandidate(cand), `Hub: ${s.name}`).dataset.cid = cand.id;
+      const li = document.createElement("li");
+      li.innerHTML = `<span class="t">▲ ${esc(s.name || s.id)}</span>
+        <span class="m">${fmtLL(c.lat, c.lon, 3)}${s.dem_res_m ? ` · ${s.dem_res_m} m elevation` : ""}${s.lander ? ` · ${esc(s.lander)}` : ""}</span>
+        <span class="b"><a class="btn small" href="index.html#${encodeURIComponent(s.id)}" title="Open in the EVA planner">Open</a></span>`;
+      li.onclick = (e) => { if (!e.target.closest("a")) openCandidate(cand); };
+      ol.appendChild(li);
+    }
+  } catch { /* no sites */ }
+}
+
+// ------------------------------------------------------------------------------------------------- selection and dossier
+// narrow screens: the dossier overlays the globe; it opens on a selection and has a close button
+{
+  const x = document.createElement("button");
+  x.className = "btn ghost icon dclose"; x.textContent = "×"; x.title = "Close the dossier"; x.setAttribute("aria-label", "Close the dossier");
+  x.onclick = () => $("dossier").classList.add("closed");
+  $("dossier").prepend(x);
+  $("dossier").classList.add("closed");
+}
+let selToken = 0;
+function selectPoint(lon, lat, cand = null) {
+  $("dossier").classList.remove("closed");
+  lon = wrap180(lon);
+  const tok = ++selToken;
+  S.focus = { lon, lat, cand, name: cand?.name || null };
+  S.dossier = null; S.landing = null; S.iceTarget = null; S.quick = null; S.place = null;
+  clearMarkers("pick"); clearMarkers("ice");
+  if (!cand) addMarker("pick", lon, lat, "◆");
+  $("dEmpty").hidden = true; $("dBody").hidden = false;
+  $("dKind").textContent = cand ? KIND[cand.kind] : KIND.point;
+  $("dName").textContent = cand?.name || "Unnamed site";
+  $("dCoords").textContent = `${fmtLL(lat, lon, 4)}`;
+  setGauge(null, null);
+  setVerdict(null, "Reading the global data…");
+  $("btnAssess").disabled = false; $("btnAssess").textContent = "Assess landing site";
+  setPrimary("btnAssess");
+  $("btnSafe").hidden = true;
+  $("btnHub").disabled = true; $("btnHub").textContent = "Set as hub…";
+  $("btnReport").disabled = true; $("btnJson").disabled = true; $("btnKml").disabled = false;
+  $("hubCard").hidden = true; $("siteDone").innerHTML = ""; $("siteLog").hidden = true;
+  $("btnAddRoute").disabled = false;
+  $("dSections").innerHTML = "";
+  $("dPlace").innerHTML = `${timeSection()}<div class="pv-loading">Reading every data layer at this place…</div>`;
+  tickPlaceTime();
+  rebuildOverlays(); renderCandList(); saveHash();
+  quickLook(tok);
+}
+// Everything at the selected place (planet/place.py): shown for any point on Mars, before and after an assessment
+function timeSection() {
+  return `<section class="pv-sec" data-pv="time"><h3>Time here now <small>Mars24 clock, live</small></h3><div id="pvTime"></div></section>`;
+}
+function tickPlaceTime() {
+  const el = $("pvTime"), f = S.focus;
+  if (el && f) el.innerHTML = timeHtml(timeHere(Date.now(), f.lon, f.lat));
+}
+setInterval(tickPlaceTime, 1000);
+function renderPlace() {
+  if (!S.place) return;
+  $("dPlace").innerHTML = `<h3 class="pv-group">All data at this place <small>every layer MarsNav holds, for any point on Mars</small></h3>${timeSection()}` +
+    placeHtml(S.place, { fold: true, links: true, open: S.dossier ? ["where", "env"] : undefined });
+  tickPlaceTime();
+  $("btnJson").disabled = false;
+}
+async function quickLook(tok) {
+  const f = S.focus; if (!f) return;
+  const z = Math.max(6, Math.min(12, currentZoom() + 1));
+  S.place = null;                                     // a criteria change asks again: the quick screen comes with the place
+  const qtok = S.quickTok = (S.quickTok || 0) + 1;
+  loadPlace(f.lon, f.lat, (d) => {
+    if (tok !== selToken || qtok !== S.quickTok) return;
+    S.place = d; renderPlace();
+    if (S.quick && !S.dossier) { S.quick.sc = d.screen; renderQuick(f); }
+  }, { crit: S.crit, stillWanted: () => tok === selToken && qtok === S.quickTok }).catch((e) => {
+    if (tok === selToken && qtok === S.quickTok) $("dPlace").innerHTML = `${timeSection()}<p class="pv-loading">Place data unavailable: ${esc(e.message)}. The server keeps working; select the point again.</p>`;
+    tickPlaceTime();
+  });
+  const pt = await api(`/api/point?lon=${f.lon}&lat=${f.lat}&z=${z}`).catch((e) => ({ err: e.message }));
+  if (tok !== selToken || S.dossier) return;
+  S.quick = { pt, sc: S.place?.screen ?? null };
+  renderQuick(f);
+}
+function renderQuick(f) {
+  const { pt, sc } = S.quick;
+  if (!f.cand && pt.names?.length) { f.name = `Near ${pt.names[0].name}`; $("dName").textContent = f.name; }
+  if (sc) {
+    setGauge(sc.score, sc.verdict, true);
+    setVerdict(sc.verdict, `Preliminary, from global data. Assess for the landing ellipse, surface, water and environment.`, true);
+  } else setVerdict(null, S.place ? "Global screen unavailable. Assess for the full dossier." : "Reading the global data…");
+  const rows = sc ? sc.rows.map((r) => `<div class="crit"><i class="${r.status}"></i><span class="l">${esc(CRIT_SHORT[r.id] || r.id)}</span><span class="v">${esc(r.value)}</span></div>`).join("") : "";
+  const src = (pt.sources || []).filter((s) => (s.frac ?? 1) > 0.01).map((s) => esc(s.name || s)).join(", ") || "MOLA";
+  $("dSections").innerHTML = candidateSection(f.cand) + `
+    <section class="sect"><h3>Quick screen <small>${esc(S.crit === "starship" ? "Starship 2021" : "NASA HLS 2015")}</small></h3>${rows || `<p class="hint">No screen.</p>`}</section>
+    <section class="sect"><h3>Here <small>best elevation at this zoom</small></h3>
+      ${pt.err ? `<p class="warn-t">${esc(pt.err)}</p>` : `<div class="kv">
+        <span>Elevation</span><span>${pt.elev_m != null ? `${fmtN(pt.elev_m)} m` : "–"}</span>
+        <span>Local slope</span><span>${pt.slope_deg != null ? `${pt.slope_deg.toFixed(1)}° over ${fmtKm((pt.baseline_m || 0) / 1000)}` : "–"}</span>
+        <span>Elevation data</span><span>${src}${pt.finest_m ? ` (finest ${fmtKm(pt.finest_m / 1000)})` : ""}</span>
+        ${(pt.names || []).length ? `<span>Nearby</span><span>${pt.names.map((n) => `${esc(n.name)} <span class="na-t">${fmtKm(n.dist_km ?? 0)}</span>`).join("<br>")}</span>` : ""}
+      </div>`}
+    </section>` + extraSections(null);
+  wireExtraSections();
+}
+function candidateSection(c) {
+  if (!c) return "";
+  const rows = [];
+  if (c.kind === "ez") {
+    rows.push(["Proposed by", esc(c.proposer || "–")]);
+    rows.push(["Workshop", "First Landing Site / Exploration Zone Workshop, NASA, Oct 2015"]);
+    const links = [c.url && `<a href="${esc(c.url)}" target="_blank" rel="noopener">abstract (PDF)</a>`, c.url2 && `<a href="${esc(c.url2)}" target="_blank" rel="noopener">presentation</a>`].filter(Boolean);
+    if (links.length) rows.push(["Documents", links.join(" · ")]);
+  } else if (c.kind === "starship") {
+    rows.push(["Study", "Golombek et al. 2021, LPSC 52 #2420"]);
+    if (c.tier) rows.push(["Tier", esc(c.tier)]);
+  } else if (c.kind === "heritage") {
+    if (c.year) rows.push(["Landed", String(c.year)]);
+    if (c.note) rows.push(["Note", esc(c.note)]);
+  } else if (c.kind === "hub") {
+    rows.push(["EVA site", `<a href="index.html#${encodeURIComponent(c.siteId)}">open in the EVA planner</a>`]);
+  }
+  if (c.elev_km != null) rows.push(["Listed elevation", `${c.elev_km.toFixed(2)} km`]);
+  return `<section class="sect"><h3>${esc(TAG[c.kind] || "Site")} <small>${esc(KIND[c.kind])}</small></h3><div class="kv">${rows.map(([a, b]) => `<span>${a}</span><span>${b}</span>`).join("")}</div></section>`;
+}
+
+function setGauge(score, verdict, prelim = false) {
+  const arc = $("gArc"), C = 113.1;
+  arc.style.strokeDashoffset = score == null ? C : C * (1 - Math.max(0, Math.min(100, score)) / 100);
+  arc.style.stroke = verdict === "GO" ? "var(--go)" : verdict === "CAUTION" ? "var(--caution)" : verdict === "NO-GO" ? "var(--nogo)" : "var(--unknown)";
+  arc.style.opacity = prelim ? 0.55 : 1;
+  $("dScore").textContent = score ?? "–";
+  $("dGauge").title = score == null ? "Not scored" : `${prelim ? "Preliminary " : ""}score ${score} / 100`;
+}
+function setVerdict(v, small, prelim = false) {
+  const el = $("dVerdict");
+  el.className = `verdictbar ${v || ""}`;
+  el.innerHTML = `${v ? `${prelim ? "Preliminary · " : ""}${esc(prelim ? v : VERDICT_TEXT[v] || v)}` : "Not assessed yet"}<small>${small}</small>`;
+}
+
+$("btnAssess").onclick = () => assess();
+// the crew displays for this place (helmet visor, rover dashboard, wrist cuff): hud.html reads the place itself
+$("btnCrew").onclick = () => {
+  const f = S.focus; if (!f) return;
+  const u = new URL("hud.html", location.href);
+  u.searchParams.set("lon", f.lon.toFixed(5)); u.searchParams.set("lat", f.lat.toFixed(5));
+  u.searchParams.set("name", f.cand?.name || f.name || "Selected place");
+  u.searchParams.set("mode", "visor");
+  const w = window.open(u.href, "marsnav-hud-place", "popup=yes,width=1280,height=760");
+  if (!w) toast("The browser blocked the display window: allow pop-ups for this page.");
+};
+$("dCoords").onclick = async () => {
+  if (!S.focus) return;
+  const t = `${S.focus.lat.toFixed(5)}, ${S.focus.lon.toFixed(5)}`;
+  try { await navigator.clipboard.writeText(t); toast(`Copied ${t} (lat, lon; east-positive)`); } catch { toast(t); }
+};
+
+async function assess() {
+  const f = S.focus; if (!f) return;
+  const tok = selToken;
+  const lander = $("landerSel").value, az = ((+$("landAz").value || 0) % 360 + 360) % 360;
+  $("dProgress").hidden = false; $("btnAssess").disabled = true;
+  $("dProgress").querySelector("span").textContent = `Assessing for a ${landerName()}: elevation mosaic over the landing ellipse, water ice, craters, dust…`;
+  try {
+    const d = await api(`/api/assess?lon=${f.lon}&lat=${f.lat}&lander=${lander}&az=${az}&crit=${S.crit}`);
+    if (tok !== selToken) return;
+    Object.assign(d, { lander, az, name: f.name, candidate: f.cand ? { id: f.cand.id, kind: f.cand.kind, name: f.cand.name } : null, generated: new Date().toISOString() });
+    if (!f.cand && d.context?.names?.length && (!f.name || f.name === "Unnamed site")) { f.name = d.name = `Near ${d.context.names[0].name}`; $("dName").textContent = f.name; }
+    S.dossier = d; S.landing = d.landing;
+    S.iceTarget = d.ice?.found ? { lon: d.ice.lon, lat: d.ice.lat } : null;
+    renderDossier(d);
+    rebuildOverlays();
+    const major = (d.landing?.majorM || 2000) / 1000;
+    if (S.cam.range > major * 60 || S.cam.range < major * 1.2) flyTo(f.lon, f.lat, Math.max(3, major * 4));
+  } catch (e) {
+    if (tok !== selToken) return;
+    setVerdict(null, `Assessment failed: ${esc(e.message)}. The server keeps working; try again, or zoom out and assess a nearby point.`);
+  } finally {
+    if (tok === selToken) { $("dProgress").hidden = true; $("btnAssess").disabled = false; $("btnAssess").textContent = "Re-assess"; }
+  }
+}
+
+function critHtml(r) {
+  return `<div class="crit"><i class="${r.status}" title="${r.status}"></i><span class="l">${esc(r.label)}</span>
+    <span class="v">${esc(r.value)} <span class="na-t">· need ${esc(r.limit)}</span></span>
+    <span class="s">${esc(r.source)}${r.note ? ` · ${esc(r.note)}` : ""}</span></div>`;
+}
+function meter(label, v) {
+  if (v == null || !isFinite(v)) return `<div class="meter"><span>${label}</span><span class="tr"></span><span class="n na-t">–</span></div>`;
+  const x = Math.max(-1, Math.min(1, v)), left = x >= 0 ? 50 : 50 + x * 50, w = Math.abs(x) * 50;
+  const col = x >= 0.5 ? "var(--info)" : x >= 0 ? "#7fc4ff99" : "var(--nogo)";
+  return `<div class="meter" title="SWIM ice consistency Ci: +1 every dataset agrees with ice, 0 ambiguous, -1 inconsistent. Tick: 0.5"><span>${label}</span><span class="tr"><i style="left:${left}%;width:${w}%;background:${col}"></i><b></b></span><span class="n">${x >= 0 ? "+" : ""}${x.toFixed(2)}</span></div>`;
+}
+// one highlighted (accent) action in the dossier at a time: the next step
+function setPrimary(id) { for (const b of ["btnAssess", "btnSafe", "btnHub"]) $(b).classList.toggle("accent", b === id); }
+// a row of section links at the top of a long dossier; each jumps to its part
+const DINDEX = [["Criteria", "Criteria"], ["Landing ellipse", "Landing"], ["Water and resources", "Water"], ["Environment", "Environment"],
+  ["Earth relay coverage", "Relay"], ["Weather here in past years", "Weather"]];
+function dossierIndex() {
+  const heads = [...$("dSections").querySelectorAll("section.sect > h3")];
+  const links = DINDEX.map(([h, lbl]) => [heads.find((e) => e.firstChild?.textContent.trim().startsWith(h))?.parentElement, lbl]).filter(([sec]) => sec);
+  links.push([$("dPlace"), "All data"]);
+  const nav = document.createElement("nav");
+  nav.className = "dindex"; nav.setAttribute("aria-label", "Dossier sections");
+  for (const [sec, lbl] of links) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = lbl;
+    b.onclick = () => sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    nav.appendChild(b);
+  }
+  $("dSections").prepend(nav);
+}
+function renderDossier(d) {
+  setGauge(d.score, d.verdict);
+  const c = d.counts || {};
+  setVerdict(d.verdict, `${c.go || 0} go · ${c.caution || 0} caution · ${c.nogo || 0} no-go${c.unknown ? ` · ${c.unknown} unknown` : ""} — ${esc(d.criteria_label)}`);
+  $("btnHub").disabled = false;
+  $("btnHub").textContent = d.verdict === "NO-GO" ? "Set as hub anyway…" : "Set as hub…";
+  $("btnReport").disabled = false; $("btnJson").disabled = false;
+  const L = d.landing || {}, sf = L.safety || {}, fr = sf.ellipse || {}, ns = sf.nearest_safe;
+  const moveSafe = sf.target_class && sf.target_class !== "safe" && ns && ns.dist_m > 5 && ns.dist_m < 20000;
+  $("btnSafe").hidden = !moveSafe;
+  if (moveSafe) $("btnSafe").textContent = `Move to nearest safe spot (${fmtKm(ns.dist_m / 1000)})`;
+  // the next step is the highlighted button: commit the hub; for a no-go site, moving to safe ground if there is any
+  setPrimary(d.verdict !== "NO-GO" ? "btnHub" : moveSafe ? "btnSafe" : null);
+
+  const sect = [];
+  // criteria
+  const groups = {};
+  for (const r of d.criteria || []) (groups[r.group] ||= []).push(r);
+  sect.push(`<section class="sect"><h3>Criteria <small>${esc(d.criteria_label)}</small></h3>${GROUP_ORDER.concat(Object.keys(groups).filter((g) => !GROUP_ORDER.includes(g)))
+    .filter((g) => groups[g]).map((g) => `<div class="lbl" style="margin-top:6px">${esc(g)}</div>${groups[g].map(critHtml).join("")}`).join("")}</section>`);
+  sect.push(candidateSection(d.candidate && S.focus?.cand));
+
+  // landing ellipse
+  if (L.ok !== false && L.majorM) {
+    const bar = `<div class="fracbar" title="Share of the landing ellipse by class"><i style="width:${100 * (fr.safe || 0)}%;background:var(--go)"></i><i style="width:${100 * (fr.caution || 0)}%;background:var(--caution)"></i><i style="width:${100 * (fr.hazard || 0)}%;background:var(--nogo)"></i><i style="width:${100 * (fr.nogo || 0)}%;background:#9664dc"></i></div>`;
+    const fid = L.hirise_dtms ? `<p class="ok-t">Lander-scale data: ${L.hirise_dtms} HiRISE 1 m elevation model${L.hirise_dtms > 1 ? "s" : ""} over the ellipse. The hub's EVA site gets measured metre-scale hazards and 25 cm imagery.</p>`
+      : L.ctx_dtms ? `<p class="warn-t">Reduced fidelity: 20 m CTX elevation here, no 1 m HiRISE model. Boulders and scarps under ~40 m are not seen; a crewed landing needs new HiRISE stereo first. Turn on “HiRISE / CTX elevation footprints” to find covered ground.</p>`
+        : `<p class="bad-t">Low fidelity: only ${fmtKm((L.cell_m || 200) / 1000)} elevation exists here. Move into CTX (blue) or HiRISE (green) footprints before committing.</p>`;
+    sect.push(`<section class="sect"><h3>Landing ellipse <small>${esc(L.label || "")}</small></h3>
+      ${bar}<div class="hint"><span class="ok-t">${pct(fr.safe)} safe</span> · <span class="warn-t">${pct(fr.caution)} caution</span> · <span class="bad-t">${pct(fr.hazard)} hazard</span>${fr.nogo ? ` · ${pct(fr.nogo)} no-go` : ""}</div>
+      <div class="kv" style="margin-top:8px">
+        <span>Ellipse</span><span>${fmtKm(L.majorM / 1000)} × ${fmtKm(L.minorM / 1000)}, approach ${L.azimuthDeg}°</span>
+        <span>Touchdown point</span><span class="${sf.target_class === "safe" ? "ok-t" : sf.target_class === "caution" ? "warn-t" : "bad-t"}">${esc(sf.target_class || "–")}${sf.verified ? " (verified at lander scale)" : " (candidate at this resolution)"}</span>
+        <span>Slope limits</span><span>hazard &gt; ${sf.slope_hazard_deg ?? "–"}°, caution &gt; ${sf.slope_caution_deg ?? "–"}° over ${fmtKm((sf.baseline_m || 0) / 1000)}</span>
+        <span>Elevation data</span><span>${fmtKm((L.cell_m || 0) / 1000)} · ${esc((L.sources || []).join(", "))}</span>
+        <span>HiRISE / CTX DTMs</span><span>${L.hirise_dtms ?? 0} / ${L.ctx_dtms ?? 0} over the ellipse</span>
+        ${ns && sf.target_class !== "safe" ? `<span>Nearest safe</span><span>${fmtKm(ns.dist_m / 1000)} away</span>` : ""}
+      </div>
+      <div style="margin-top:6px">${(L.checks || []).map((k) => `<div class="crit"><i class="${statusOf(k.ok)}"></i><span class="l">${esc(k.label)}</span><span class="v">${esc(k.value)}</span></div>`).join("")}</div>
+      ${fid}
+      <div class="row"><button class="btn small" id="btnShowSafety">${document.querySelector('[data-ovl="safety"]').checked ? "Safety map is on" : "Show the safety map"}</button><button class="btn small ghost" id="btnFitEllipse">Zoom to the ellipse</button></div>
+    </section>`);
+  }
+
+  // water
+  const ice = d.ice, di = d.data?.ice, grs = d.data?.grs_h2o_wt, sw = d.datasets?.swim;
+  let water = "";
+  if (di) water += `<div class="lbl">SWIM ice consistency here</div>${meter("0–1 m", di["0-1 m"])}${meter("1–5 m", di["1-5 m"])}${meter("&gt; 5 m", di[">5 m"])}`;
+  if (ice?.outside) water += `<p class="hint">Poleward of 60° SWIM has no map; shallow ground ice is common there (Phoenix dug into it at 68°N).</p>`;
+  else if (ice?.found) water += `<div class="kv" style="margin-top:6px"><span>Nearest ice (Ci ≥ 0.5)</span><span class="${ice.dist_km <= 5 ? "ok-t" : "warn-t"}">${fmtKm(ice.dist_km)} away, ${esc(ice.depth)}, Ci ${ice.ci >= 0 ? "+" : ""}${ice.ci.toFixed(2)}</span>
+      <span>Ice-consistent ground</span><span>${pct(ice.share_within_km)} of the 100 km zone</span></div>
+      <div class="row"><button class="btn small" id="btnIceShow">Show the ice target</button></div>`;
+  else if (ice && !ice.found) water += `<p class="bad-t">No ice-consistent ground (Ci ≥ 0.5, 0–5 m) within 100 km${ice.best_ci != null ? `; best Ci ${ice.best_ci >= 0 ? "+" : ""}${ice.best_ci.toFixed(2)}` : ""}. Water would come from hydrated minerals or be shipped.</p>`;
+  if (grs != null) water += `<div class="kv" style="margin-top:6px"><span>GRS hydrogen</span><span>${grs.toFixed(1)} wt% water-equivalent, top ~0.5 m (5° cell)</span></div>`;
+  if (sw && !sw.installed) water += `<p class="warn-t">The SWIM ice layer is not installed: water is judged from the coarse GRS map. <button class="btn small" id="btnGoData">Data tab</button></p>`;
+  water += `<p class="hint">NASA's HLS2 call asks for water ice (or hydrated minerals) yielding &gt; 100 t of water within the zone, ideally within 5 km of the landing site for ISRU plants.</p>`;
+  sect.push(`<section class="sect"><h3>Water and resources <small>ISRU</small></h3>${water}</section>`);
+
+  // surface
+  const ti = d.data?.ti, g = d.geology, cr = d.craters, cz = d.craters_zone;
+  const craterTxt = !cr ? `<span class="na-t">crater layer not installed</span>`
+    : `${cr.inside ? `inside a ${cr.inside.diameter_km.toFixed(1)} km crater, ${fmtKm(cr.inside.rim_km)} from its rim${cr.inside.interior ? ` (${esc(cr.inside.interior)})` : ""}` : "not inside a ≥ 1 km crater"}
+       ${cr.nearest_rim ? `<br>nearest rim: ${cr.nearest_rim.diameter_km.toFixed(1)} km crater, ${fmtKm(Math.max(0, cr.nearest_rim.rim_km))} away` : ""}`;
+  sect.push(`<section class="sect"><h3>Surface <small>ground the lander and habitat sit on</small></h3><div class="kv">
+    <span>Thermal inertia</span><span>${ti?.value != null ? `${fmtN(ti.value)} SI · ${esc(ti.class)}` : ti ? "no data" : `<span class="na-t">layer not installed</span>`}</span>
+    <span>Geologic unit</span><span>${g?.unit ? `<b>${esc(g.unit)}</b> · ${esc(g.description || "")}` : g?.error ? `<span class="na-t">USGS map service not reachable</span>` : "–"}</span>
+    <span>Craters here</span><span>${craterTxt}</span>
+    ${cr ? `<span>Within 10 km</span><span>${cr.count} craters ≥ 1 km${cr.count_5km ? `, ${cr.count_5km} ≥ 5 km` : ""}</span>` : ""}
+    ${cz ? `<span>Within 100 km</span><span>${cz.count} craters ≥ 1 km (${fmtN(cz.n1_per_1e6km2)} per 10⁶ km²)${cz.largest_km ? `, largest ${cz.largest_km.toFixed(0)} km` : ""}</span>` : ""}
+  </div><p class="hint">Crater density is a proxy for surface age and for boulder fields around fresh craters; walls and fresh ejecta are the rockiest ground.</p></section>`);
+
+  // environment
+  const E = d.environment || {};
+  sect.push(`<section class="sect"><h3>Environment <small>for the crew and power</small></h3><div class="kv">
+    <span>Surface pressure</span><span>${fmtN(E.pressure_pa)} Pa (datum 610 Pa)</span>
+    <span>Air overhead</span><span>${fmtN(E.column_g_cm2, 1)} g/cm² of shielding</span>
+    <span>Sunlight, top of air</span><span>${fmtN(E.sun_toa?.mean_wm2)} W/m² mean (${fmtN(E.sun_toa?.min_wm2)}–${fmtN(E.sun_toa?.max_wm2)} over the year)</span>
+    <span>Sunlight, at surface</span><span>≈ ${fmtN(E.sun_surface_mean_wm2)} W/m² mean, ${fmtN(E.sun_surface_min_wm2)} worst season</span>
+    <span>Latitude</span><span>${Math.abs(d.target.lat).toFixed(2)}° ${d.target.lat >= 0 ? "N" : "S"}</span>
+  </div><p class="hint">${esc(E.notes || "")}</p></section>`);
+
+  // context
+  const cx = d.context || {};
+  const li = (arr, f) => (arr || []).map(f).join("");
+  sect.push(`<section class="sect"><h3>Context <small>what else is near</small></h3>
+    ${cx.ez?.length ? `<div class="lbl">NASA Exploration Zones</div><ol class="list">${li(cx.ez, (e) => `<li data-go="${e.lon},${e.lat},${esc(e.id)}"><span class="t">${esc(e.name)}<small>${esc(e.proposer || "")}</small></span><span class="m">${fmtKm(e.dist_km)} away${e.abstract_url ? ` · <a href="${esc(e.abstract_url)}" target="_blank" rel="noopener">abstract</a>` : ""}</span></li>`)}</ol>` : ""}
+    ${cx.starship?.length ? `<div class="lbl">Starship candidate</div><ol class="list">${li(cx.starship, (e) => `<li data-go="${e.lon},${e.lat},${esc(e.id)}"><span class="t">${esc(e.name)}</span><span class="m">${fmtKm(e.dist_km)} away</span></li>`)}</ol>` : ""}
+    ${cx.heritage?.length ? `<div class="lbl">Landed spacecraft</div><ol class="list">${li(cx.heritage, (e) => `<li data-go="${e.lon},${e.lat},${esc(e.id)}"><span class="t">${esc(e.name)}<small>${e.year || ""}</small></span><span class="m">${fmtKm(e.dist_km)} away</span></li>`)}</ol>` : ""}
+    ${cx.names?.length ? `<div class="lbl">IAU names</div><div class="hint">${cx.names.map((n) => `${esc(n.name)} (${esc(n.type || "")}, ${fmtKm(n.dist_km)})`).join(" · ")}</div>` : ""}
+  </section>`);
+
+  // science along the way: the bundled catalogues near the site (planet/features.py)
+  const sc = d.science;
+  if (sc) {
+    const rows = Object.values(sc.layers || {}).sort((a, b) => (a.nearest?.km ?? 1e9) - (b.nearest?.km ?? 1e9))
+      .map((p) => `<span>${esc(p.name)}</span><span>${fmtN(p.count)} within ${fmtN(sc.radius_km)} km · nearest: ${esc(p.nearest.label)}, ${fmtKm(p.nearest.km)}</span>`).join("");
+    const pp = sc.planetary_protection;
+    sect.push(`<section class="sect"><h3>Science along the way <small>catalogued features within ${fmtN(sc.radius_km)} km</small></h3>
+      ${rows ? `<div class="kv">${rows}</div>` : `<p class="hint">No catalogued minerals, ice landforms, active slopes or mission sites within ${fmtN(sc.radius_km)} km.</p>`}
+      ${pp ? `<p class="warn-t">Planetary protection: ${esc(pp.label)} ${fmtKm(pp.nearest_rsl_km)} away. ${esc(pp.note)}</p>` : ""}
+      <p class="hint">Show them under Map layers, Science atlas. The Science tab ranks every site for an objective.</p></section>`);
+  }
+  if (d.objectives?.length && !d.objectives[0].error) {
+    const top = Math.max(1, ...d.objectives.map((o) => o.score));
+    sect.push(`<section class="sect"><h3>Science objectives here <small>evidence within 100 km</small></h3>${d.objectives.map((o) =>
+      `<div class="crit"><i class="${o.score >= 6 ? "go" : o.score >= 2 ? "caution" : "unknown"}"></i><span class="l">${esc(o.title)}</span>
+        <span class="v"><i class="sbar"><b style="width:${Math.max(3, 100 * o.score / top)}%"></b></i> ${o.score.toFixed(1)}</span></div>`).join("")}</section>`);
+  }
+  // chemistry, gravity, radiation
+  const ch = d.data?.chem, md = d.model || {};
+  const chemRows = ch ? Object.values(ch).map((e) => `<span>${esc(e.name)} (GRS)</span><span>${e.value != null ? `${fmtN(e.value, e.value < 2 ? 2 : 1)} ${esc(e.unit)}` : "no measurement here"}</span>`).join("")
+    : `<span>GRS elements</span><span class="na-t">layer not installed</span>`;
+  sect.push(`<section class="sect"><h3>Chemistry, gravity and radiation</h3><div class="kv">${chemRows}
+    <span>Albedo (TES)</span><span>${d.data?.albedo != null ? fmtN(d.data.albedo, 3) : `<span class="na-t">layer not installed</span>`}</span>
+    <span>Gravity anomaly</span><span>${d.data?.gravity_mgal != null ? `${d.data.gravity_mgal > 0 ? "+" : ""}${fmtN(d.data.gravity_mgal)} mGal (MRO GMM-3)` : `<span class="na-t">layer not installed</span>`}</span>
+    <span>Cosmic-ray dose</span><span>${md.gcr_ugy_day != null ? `${fmtN(md.gcr_ugy_day)} µGy/day · ${fmtN(md.gcr_msv_day, 2)} mSv/day (${md.gcr_vs_gale >= 1 ? "+" : ""}${fmtN(100 * (md.gcr_vs_gale - 1))} % vs Curiosity at Gale)${md.gcr_extrapolated ? ' <span class="warn-t">extrapolated</span>' : ""}` : "–"}</span>
+    <span>Space weather now</span><span>${S.swx?.level ? `<span class="${S.swx.level === "quiet" ? "ok-t" : S.swx.level === "storm" ? "bad-t" : "warn-t"}">${esc(S.swx.headline)}</span>` : "–"}</span>
+  </div><p class="hint">GRS cells are 5° wide. The dose is Curiosity's RAD record moved by the air column overhead (galactic cosmic rays only; solar particle events come on top).</p></section>`);
+
+  // sources
+  const ds = d.datasets || {};
+  sect.push(`<section class="sect"><h3>Data sources</h3><ul class="srcs">
+    <li>Elevation: MOLA MEGDR (Smith et al. 2001); HRSC-MOLA blend 200 m; CTX 20 m and HiRISE 1 m DTMs (USGS Astrogeology, CC0)${L.sources ? ` — used here: ${esc(L.sources.join(", "))}` : ""}</li>
+    ${Object.values(ds).map((v) => `<li>${esc(v.name)}: ${esc(v.cite)}${v.installed ? "" : ` <span class="warn-t">(not installed)</span>`}</li>`).join("")}
+    <li>Geology: Tanaka K.L. et al. 2014, Geologic map of Mars, USGS SIM 3292 (OGC API, astrogeology.usgs.gov)</li>
+    <li>Candidates: NASA First Landing Site / Exploration Zone workshop (2015; EZ centres from the NASA Mars Trek EZMars service); Golombek M. et al. 2021, LPSC 52 #2420 (Starship); landed-spacecraft positions from NSSDCA / PDS</li>
+    <li>Criteria: NASA Human Landing Sites call (2015) and HLS2 workshop; Starship study (Golombek et al. 2021). Environment: model values [ASSUME], see notes.</li>
+  </ul></section>`);
+
+  $("dSections").innerHTML = sect.join("") + extraSections(d);
+  dossierIndex();
+  renderPlace();
+  wireExtraSections();
+  // wire the buttons made above
+  $("btnShowSafety")?.addEventListener("click", () => {
+    const cb = document.querySelector('[data-ovl="safety"]');
+    if (!cb.checked) { cb.checked = true; reloadTextures(); updateLegend(); saveHash(); }
+    $("btnShowSafety").textContent = "Safety map is on";
+    flyTo(S.focus.lon, S.focus.lat, Math.max(2, (L.majorM || 2000) / 1000 * 3));
+  });
+  $("btnFitEllipse")?.addEventListener("click", () => flyTo(S.focus.lon, S.focus.lat, Math.max(1.5, (L.majorM || 2000) / 1000 * 2.2)));
+  $("btnIceShow")?.addEventListener("click", showIceTarget);
+  $("btnGoData")?.addEventListener("click", () => showTab("data"));
+  for (const el of $("dSections").querySelectorAll("[data-go]")) {
+    el.addEventListener("click", (ev) => {
+      if (ev.target.closest("a")) return;
+      const [lo, la, id] = el.dataset.go.split(",");
+      const c = S.cand.find((x) => x.id === id);
+      if (c) openCandidate(c); else { flyTo(+lo, +la, 500); selectPoint(+lo, +la); }
+    });
+  }
+}
+function showIceTarget() {
+  const f = S.focus, t = S.iceTarget;
+  if (!f || !t) return;
+  clearMarkers("ice");
+  addMarker("ice", t.lon, t.lat, "❄ ice", () => flyTo(t.lon, t.lat, Math.min(S.cam.range, 60)), "Nearest ground consistent with shallow water ice (SWIM Ci ≥ 0.5)");
+  const cb = document.querySelector('[data-ovl="ice"]');
+  if (!cb.checked && S.datasets.swim?.installed) { cb.checked = true; reloadTextures(); updateLegend(); }
+  const km = haversineKm([f.lon, f.lat], [t.lon, t.lat]);
+  flyTo((f.lon + f.lon + wrap180(t.lon - f.lon)) / 2, (f.lat + t.lat) / 2, Math.max(20, km * 2.6));
+  rebuildOverlays();
+}
+$("btnSafe").onclick = () => {
+  const ns = S.dossier?.landing?.safety?.nearest_safe; if (!ns) return;
+  const cand = S.focus?.cand ? { ...S.focus.cand, name: `${S.focus.cand.name} (refined)` } : null;
+  selectPoint(ns.lon, ns.lat, cand);
+  flyTo(ns.lon, ns.lat, Math.min(S.cam.range, 30));
+  setTimeout(assess, 200);
+};
+
+// ------------------------------------------------------------------------------------------------- commit the hub
+$("btnHub").onclick = () => {
+  const f = S.focus, d = S.dossier; if (!f || !d) return;
+  const card = $("hubCard"); card.hidden = false;
+  $("siteLog").hidden = true; $("siteDone").innerHTML = "";
+  const base = (f.cand?.name || f.name || "New").replace(/^Near /, "").replace(/ \(refined\)$/, "");
+  $("siteName").value = `${base} Base`;
+  const lv = d.lander;
+  $("siteLander").value = [...$("siteLander").options].some((o) => o.value === lv) ? lv : "human";
+  let warn = $("hubWarn");
+  if (!warn) { warn = document.createElement("p"); warn.id = "hubWarn"; card.querySelector("h3").after(warn); }
+  warn.className = d.verdict === "GO" ? "ok-t" : d.verdict === "CAUTION" ? "warn-t" : "bad-t";
+  warn.textContent = d.verdict === "GO" ? `Assessed GO (score ${d.score}) for ${d.criteria_label}.`
+    : d.verdict === "CAUTION" ? `Assessed CAUTION (score ${d.score}): see the amber criteria before committing.`
+      : `Assessed NO-GO for ${d.criteria_label}. Build it only for study; the crew should not land here.`;
+  card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  $("siteName").focus({ preventScroll: true });
+  $("siteName").select();
+};
+$("btnSiteCancel").onclick = () => { $("hubCard").hidden = true; };
+$("btnSiteGo").onclick = async () => {
+  const f = S.focus; if (!f) return;
+  const btn = $("btnSiteGo"); btn.disabled = true; btn.textContent = "Building…";
+  const log = $("siteLog"); log.hidden = false; log.textContent = "Starting the hub build…\n";
+  $("siteDone").innerHTML = "";
+  try {
+    const name = $("siteName").value.trim() || "New hub";
+    const { job } = await post("/api/site", { lon: f.lon, lat: f.lat, km: +$("siteKm").value || 10, lander: $("siteLander").value, name, hub: [f.lon, f.lat] });
+    const res = await pollJob(job, (lines) => { log.textContent += lines.map((x) => x[1]).join("\n") + "\n"; log.scrollTop = 1e9; });
+    if (!res?.id) throw new Error("the build finished without a site id (see the log)");
+    log.textContent += `\nDone: ${res.name} (${res.dem_res_m} m elevation${res.hirise?.length ? `, ${res.hirise.length} HiRISE DTM(s)` : ""}).\n`;
+    $("siteDone").innerHTML = `<p class="ok-t">Hub “${esc(res.name)}” is built and saved.</p>
+      <div class="row"><a class="btn accent grow" href="index.html#${encodeURIComponent(res.id)}">Open ${esc(res.name)} in the EVA planner</a></div>`;
+    toast(`Hub ${res.name} built.`);
+    loadHubs();
+  } catch (e) {
+    log.textContent += `\nFailed: ${e.message}\n`;
+    $("siteDone").innerHTML = `<p class="bad-t">The build failed: ${esc(e.message)}. Nothing was changed; you can try again.</p>`;
+  } finally { btn.disabled = false; btn.textContent = "Build hub site"; }
+};
+
+// ------------------------------------------------------------------------------------------------- report and JSON
+function snapshot() {
+  try { renderer.render(scene, camera); return canvas.toDataURL("image/jpeg", 0.85); } catch { return null; }
+}
+$("btnJson").onclick = () => {
+  const d = S.dossier;
+  if (!d && !S.place) return;
+  const out = { app: "MarsNav · Landing mode", ...(d || { name: S.focus?.name, generated: new Date().toISOString() }), place: S.place };
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(out, null, 2)], { type: "application/json" }));
+  a.download = `${d ? "hub-dossier" : "place"}-${(out.name || "site").replace(/[^\w-]+/g, "_")}-${out.generated.slice(0, 10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+};
+$("btnReport").onclick = () => {
+  const d = S.dossier; if (!d) return;
+  const img = snapshot();
+  const secs = $("dSections").cloneNode(true);
+  const place = $("dPlace").cloneNode(true);
+  for (const x of place.querySelectorAll("details")) x.open = true;
+  secs.append(...place.childNodes);
+  for (const b of secs.querySelectorAll("button")) b.remove();
+  const css = `body{font:13px/1.45 Barlow,Segoe UI,Arial,sans-serif;color:#111;margin:28px;max-width:900px}h1{font-size:22px;margin:0}h3{font-size:14px;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #222;padding-bottom:2px;margin:18px 0 6px;display:flex;justify-content:space-between}h3 small{font-weight:400;text-transform:none;color:#555}
+    .v{font-weight:700;font-size:18px;padding:6px 10px;border:2px solid;display:inline-block;margin:8px 0}.GO{color:#0a7a3a}.CAUTION{color:#9a6b00}.NO-GO{color:#b3261e}
+    .crit{display:grid;grid-template-columns:14px 1fr;gap:0 8px;padding:4px 0;border-bottom:1px solid #ddd}.crit>i{width:10px;height:10px;border-radius:50%;margin-top:4px;background:#999}.crit>i.go{background:#1a9e55}.crit>i.caution{background:#e0a100}.crit>i.nogo{background:#d33}
+    .crit .l{font-weight:600}.crit .v,.crit .s{grid-column:2;font-weight:400;font-size:12px;border:0;padding:0;margin:0;display:block}.s{color:#555}.kv{display:grid;grid-template-columns:170px 1fr;gap:3px 10px}.kv>span:nth-child(odd){color:#555}
+    .fracbar{display:flex;height:10px;margin:4px 0}.fracbar i{display:block}.meter{display:grid;grid-template-columns:60px 1fr 50px;gap:8px;align-items:center}.meter .tr{height:8px;background:#ddd;position:relative}.meter .tr i{position:absolute;top:0;bottom:0}
+    .pv-kv{display:grid;grid-template-columns:170px 1fr;gap:3px 10px}.pv-kv>span:nth-child(odd){color:#555}.pv-sec>summary,.pv-sec>h3,.pv-group{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #222;margin:18px 0 6px;list-style:none}.pv-sec small,.pv-group small{font-weight:400;text-transform:none;color:#555}
+    .pv-meter,.pv-rel,.pv-obj{display:grid;grid-template-columns:110px 1fr 90px;gap:8px;align-items:center}.pv-meter .tr,.pv-rel .tr,.pv-obj .tr{height:8px;background:#ddd;position:relative}.pv-meter .tr i,.pv-rel .tr i,.pv-obj .tr i{position:absolute;top:0;bottom:0;left:0;background:#555}.pv-rel .tr.tri i{position:static;display:block;height:2px;margin:1px 0}.pv-na,.pv-hint,.pv-lbl{color:#666}.pv-warn{color:#9a6b00}.pv-bad{color:#b3261e}.pv-ok{color:#0a7a3a}
+    .list{list-style:none;padding:0;margin:0}.tag,.badge{font-size:11px}.hint,.na-t{color:#666}.ok-t{color:#0a7a3a}.warn-t{color:#9a6b00}.bad-t{color:#b3261e}.lbl{font-weight:700;font-size:11px;text-transform:uppercase;color:#444;margin-top:6px}
+    img{width:100%;border:1px solid #999;margin:10px 0}.bar{display:flex;gap:10px;align-items:center}@media print{.noprint{display:none}body{margin:12mm}}`;
+  const verdictClass = d.verdict || "";
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Hub site dossier · ${esc(d.name || "")}</title><style>${css}</style></head><body>
+    <div class="bar noprint"><button onclick="print()">Print / save as PDF</button></div>
+    <h1>Hub site dossier: ${esc(d.name || "Selected site")}</h1>
+    <div>${fmtLL(d.target.lat, d.target.lon, 4)} · lat ${d.target.lat.toFixed(5)}, lon ${d.target.lon.toFixed(5)} (east-positive, IAU 2015 sphere)</div>
+    <div>Lander: ${esc(d.landing?.label || d.lander)} · approach ${d.az}° · criteria: ${esc(d.criteria_label)}</div>
+    <div class="v ${verdictClass}">${esc(VERDICT_TEXT[d.verdict] || d.verdict)} · score ${d.score ?? "–"} / 100</div>
+    ${img ? `<img src="${img}" alt="Globe view of the site">` : ""}
+    ${secs.innerHTML}
+    <p class="hint">Generated ${new Date(d.generated).toLocaleString()} by MarsNav (NASA Space Apps 2026). A first screen from orbital data: a crewed site still needs HiRISE imaging and 1 m elevation over the whole landing ellipse, and the project's own engineering review, before commitment.</p>
+  </body></html>`;
+  const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  const w = window.open(url, "_blank");
+  if (!w) { const a = document.createElement("a"); a.href = url; a.download = `hub-dossier-${(d.name || "site").replace(/[^\w-]+/g, "_")}.html`; a.click(); }
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+};
+
+// ------------------------------------------------------------------------------------------------- traverse
+function renderRoutePts() {
+  const ol = $("routePts"); ol.innerHTML = "";
+  clearMarkers("rp");
+  S.route.forEach((p, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="num">${fmtLL(p[1], p[0], 3)}</span> ${p[2] ? `<small class="hint">${esc(p[2])}</small>` : ""}`;
+    const del = document.createElement("button"); del.textContent = "×"; del.title = "Remove"; del.className = "btn small ghost";
+    del.onclick = () => { S.route.splice(i, 1); S.routeResult = null; renderRoutePts(); rebuildOverlays(); };
+    li.appendChild(del); ol.appendChild(li);
+    addMarker("rp", p[0], p[1], String(i + 1), () => flyTo(p[0], p[1], Math.min(S.cam.range, 300)));
+  });
+  $("btnRoute").disabled = S.route.length < 2;
+}
+$("btnAddRoute").onclick = () => {
+  const f = S.focus; if (!f) return;
+  S.route.push([f.lon, f.lat, f.cand?.name || f.name || ""]);
+  S.routeResult = null;
+  renderRoutePts(); rebuildOverlays();
+  showTab("trav");
+};
+$("btnRouteClear").onclick = () => { S.route = []; S.routeResult = null; $("routeOut").innerHTML = ""; $("profile").hidden = true; renderRoutePts(); rebuildOverlays(); };
+$("btnRoute").onclick = async () => {
+  const btn = $("btnRoute"); btn.disabled = true;
+  const out = $("routeOut");
+  const total = S.route.slice(1).reduce((a, p, i) => a + haversineKm(S.route[i], p), 0);
+  out.innerHTML = `<div class="hint">Solving ${fmtKm(total)} straight-line on the real terrain…</div><pre class="log" id="routeLog"></pre>`;
+  try {
+    const { job } = await post("/api/route", { points: S.route.map((p) => [p[0], p[1]]), mode: $("modeSel").value });
+    const res = await pollJob(job, (lines) => { const l = $("routeLog"); if (l) { l.textContent += lines.map((x) => x[1]).join("\n") + "\n"; l.scrollTop = 1e9; } });
+    if (!res?.points) throw new Error("the route job finished without a path (see the log)");
+    S.routeResult = res;
+    rebuildOverlays();
+    const detour = res.straight_m ? res.distance_m / res.straight_m : 1;
+    out.innerHTML = `<table>
+      <tr><td>Traveller</td><td>${esc(res.mode_label)}</td></tr>
+      <tr><td>Distance</td><td class="num">${fmtKm(res.distance_m / 1000)} <small class="hint">(${detour.toFixed(2)}× straight line)</small></td></tr>
+      <tr><td>Climb / descent</td><td class="num">${res.ascent_m.toFixed(0)} m / ${res.descent_m.toFixed(0)} m</td></tr>
+      <tr><td>Steepest</td><td class="num ${res.over_limit_m > 0 ? "bad-t" : ""}">${res.max_slope_deg.toFixed(1)}°${res.over_limit_m > 0 ? ` · ${fmtKm(res.over_limit_m / 1000)} over the limit` : ""}</td></tr>
+      <tr><td>Driving time</td><td class="num">${res.drive_hours.toFixed(1)} h ≈ ${res.sols} sols</td></tr>
+      <tr><td>Resolution</td><td>${res.legs.map((l) => l.levels.map((v) => `z${v.zoom}: ${fmtKm(v.cell_m / 1000)} (${v.sources.join(", ")})`).join(" → ")).join("<br>")}</td></tr>
+      </table>
+      ${res.legs.some((l) => l.relaxed) ? `<p class="warn-t">No path stays within the slope limit on at least one leg: the least-steep path is shown.</p>` : ""}
+      <p class="hint">${esc(res.assumptions)}. ${esc(res.warning)}</p>`;
+    drawProfile(res.points);
+    let w = 180, e = -180, s = 90, n = -90;
+    for (const p of res.points) { w = Math.min(w, p[0]); e = Math.max(e, p[0]); s = Math.min(s, p[1]); n = Math.max(n, p[1]); }
+    const span = Math.max((e - w) * Math.cos((s + n) / 2 * DEG), n - s) * DEG * R;
+    flyTo((w + e) / 2, (s + n) / 2, Math.max(20, span * 1.4));
+  } catch (e) {
+    out.innerHTML = `<p class="bad-t">Traverse failed: ${esc(e.message)}</p>`;
+  } finally { btn.disabled = S.route.length < 2; }
+};
+function drawProfile(points) {
+  const cv = $("profile"); cv.hidden = false;
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.width = Math.max(200, cv.clientWidth) * dpr, h = cv.height = 150 * dpr;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#0b0f14"; g.fillRect(0, 0, w, h);
+  const D = points[points.length - 1][3] || 1;
+  let lo = Infinity, hi = -Infinity;
+  for (const p of points) { lo = Math.min(lo, p[2]); hi = Math.max(hi, p[2]); }
+  if (hi - lo < 10) { hi += 5; lo -= 5; }
+  const pad = 26 * dpr, X = (d) => pad + (w - pad - 8) * d / D, Y = (z) => h - pad + (pad * 1.4 - h) * (z - lo) / (hi - lo);
+  g.strokeStyle = "#2a3646"; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(pad, 6); g.lineTo(pad, h - pad); g.lineTo(w - 4, h - pad); g.stroke();
+  g.beginPath();
+  points.forEach((p, i) => (i ? g.lineTo(X(p[3]), Y(p[2])) : g.moveTo(X(p[3]), Y(p[2]))));
+  g.strokeStyle = "#ffffff"; g.lineWidth = 1.5 * dpr; g.stroke();
+  const lim = { crewed_rover: 20, robotic_rover: 25, walk: 20 }[$("modeSel").value] || 20;
+  g.strokeStyle = "#ff7470"; g.lineWidth = 3 * dpr;
+  for (let i = 1; i < points.length; i++) if (points[i][4] > lim) { g.beginPath(); g.moveTo(X(points[i - 1][3]), Y(points[i - 1][2])); g.lineTo(X(points[i][3]), Y(points[i][2])); g.stroke(); }
+  g.fillStyle = "#b8c2ce"; g.font = `${11 * dpr}px IBM Plex Mono, monospace`;
+  g.fillText(`${hi.toFixed(0)} m`, 2, 14 * dpr);
+  g.fillText(`${lo.toFixed(0)} m`, 2, h - pad - 2);
+  g.fillText(fmtKm(D / 1000), w - 70 * dpr, h - 8);
+}
+
+// ------------------------------------------------------------------------------------------------- data tab: science layers, offline
+S.dsFailed = {};
+let dsJobRunning = false;
+async function loadDatasets() {
+  try {
+    const { datasets } = await api("/api/datasets");
+    S.datasets = datasets;
+  } catch { return; }
+  const ids = Object.keys(S.datasets), missing = ids.filter((k) => !S.datasets[k].installed);
+  $("dsList").innerHTML = ids.map((k) => {
+    const v = S.datasets[k];
+    return `<div class="ds"><div class="h"><span>${esc(v.name)}</span>${v.installed ? `<span class="ok-t">✔ installed</span>` : `<span class="na-t">${v.size_mb} MB</span>`}</div>
+      <p>${esc(v.what)}</p><p>${esc(v.res)} · ${esc(v.cite)}</p>
+      ${S.dsFailed[k] ? `<p class="bad-t">Last attempt: ${esc(S.dsFailed[k])}</p>` : ""}</div>`;
+  }).join("");
+  const mb = missing.reduce((a, k) => a + (S.datasets[k].size_mb || 0), 0);
+  const btn = $("btnInstall");
+  btn.hidden = !missing.length || dsJobRunning;
+  btn.textContent = missing.length === ids.length ? `Install science layers (${Math.round(mb)} MB, once)` : `Install the missing layer${missing.length > 1 ? "s" : ""} (${Math.round(mb)} MB)`;
+  const pill = $("dsPill");
+  pill.textContent = `SCIENCE ${ids.length - missing.length}/${ids.length}`;
+  pill.className = `pill ${missing.length ? "warn" : "ok"}`;
+  pill.title = missing.length ? `Not installed: ${missing.map((k) => S.datasets[k].name).join(", ")}` : "Water ice, thermal inertia, GRS water and craters are installed";
+  pill.style.cursor = "pointer";
+  pill.onclick = () => showTab("data");
+  updateBanner();
+}
+function updateBanner() {
+  const b = $("banner");
+  const ids = Object.keys(S.datasets), missing = ids.filter((k) => !S.datasets[k].installed);
+  if (dsJobRunning) {
+    b.hidden = false;
+    b.innerHTML = `<span class="grow"><b>Installing science layers</b> · <span id="bnTxt">${esc($("dsTxt")?.textContent || "starting")}</span></span><button class="btn small ghost" id="bnData">Details</button>`;
+  } else if (missing.length && !S.bannerClosed && !S.local?.offline) {
+    const mb = Math.round(missing.reduce((a, k) => a + (S.datasets[k].size_mb || 0), 0));
+    b.hidden = false;
+    b.innerHTML = `<span class="grow"><b>${missing.length === ids.length ? "Science layers are not installed." : `${missing.map((k) => esc(S.datasets[k].name.split(" ")[0])).join(", ")} not installed.`}</b>
+      Water ice, dust and crater criteria need them (${mb} MB, downloaded once from NASA / PSI / USGS).</span>
+      <button class="btn small accent" id="bnInstall">Install</button><button class="btn small ghost" id="bnLater">Later</button>`;
+  } else { b.hidden = true; return; }
+  $("bnInstall")?.addEventListener("click", () => installDatasets());
+  $("bnLater")?.addEventListener("click", () => { S.bannerClosed = true; b.hidden = true; });
+  $("bnData")?.addEventListener("click", () => showTab("data"));
+}
+$("btnInstall").onclick = () => installDatasets();
+async function installDatasets() {
+  const missing = Object.keys(S.datasets).filter((k) => !S.datasets[k].installed);
+  if (!missing.length || dsJobRunning) return;
+  try {
+    const { job } = await post("/api/datasets/install", { ids: missing });
+    store.set("mm.dsJob", job);
+    followDsJob(job);
+  } catch (e) { toast(`Could not start the install: ${e.message}`); }
+}
+async function followDsJob(job) {
+  if (dsJobRunning) return;
+  dsJobRunning = true;
+  $("btnInstall").hidden = true;
+  const box = $("dsJob");
+  box.innerHTML = `<div class="bar"><i id="dsBar"></i></div><div class="hint" id="dsTxt">Starting…</div><pre class="log" id="dsLog"></pre>`;
+  updateBanner();
+  const nIds = Math.max(1, Object.keys(S.datasets).filter((k) => !S.datasets[k].installed).length);
+  let doneLayers = 0;
+  try {
+    const res = await pollJob(job, (lines) => {
+      const lg = $("dsLog"); if (!lg) return;
+      for (const [, t] of lines) {
+        lg.textContent += t + "\n";
+        if (/: ready \(|: already installed|NOT INSTALLED/.test(t)) doneLayers++;
+        const m = t.match(/(\d+) of (\d+) MB/);
+        const frac = (doneLayers + (m ? +m[1] / Math.max(1, +m[2]) : 0)) / nIds;
+        $("dsBar").style.width = `${Math.min(100, 100 * frac)}%`;
+        $("dsTxt").textContent = t.trim();
+        const bt = $("bnTxt"); if (bt) bt.textContent = t.trim();
+      }
+      lg.scrollTop = 1e9;
+    });
+    S.dsFailed = res?.failed || {};
+    $("dsBar").style.width = "100%";
+    const nf = Object.keys(S.dsFailed).length;
+    $("dsTxt").innerHTML = nf ? `<span class="warn-t">${(res.installed || []).length} layer(s) installed; ${nf} could not be downloaded now (see below). Try again later.</span>` : `<span class="ok-t">All science layers are installed.</span>`;
+    toast(nf ? `Science layers: ${nf} not installed (server not answering). The rest work now.` : "Science layers installed.", 6000);
+  } catch (e) {
+    $("dsTxt").innerHTML = `<span class="bad-t">Install failed: ${esc(e.message)}</span>`;
+  } finally {
+    dsJobRunning = false; store.set("mm.dsJob", null);
+    S.legendCache.clear();
+    await loadDatasets();
+    reloadTextures(); updateLegend();
+    S.screen.clear(); screenAll(true);
+    if (S.dossier) assess();
+  }
+}
+
+$("btnPrecache").onclick = async () => {
+  const c = S.cam, dLat = Math.min(10, c.range / R / DEG * 0.6), dLon = dLat / Math.max(0.1, Math.cos(c.lat * DEG));
+  const out = $("preOut"), btn = $("btnPrecache");
+  btn.disabled = true;
+  out.innerHTML = `<div class="bar"><i id="preBar"></i></div><div class="hint" id="preTxt">Planning…</div>`;
+  try {
+    const { job } = await post("/api/precache", { w: c.lon - dLon, s: c.lat - dLat, e: c.lon + dLon, n: c.lat + dLat, zmax: +$("preZ").value, layers: [S.base] });
+    const res = await pollJob(job, (lines) => {
+      const last = lines[lines.length - 1][1]; $("preTxt").textContent = last;
+      const m = last.match(/(\d+)\/(\d+)/); if (m) $("preBar").style.width = `${100 * m[1] / m[2]}%`;
+    });
+    $("preBar").style.width = "100%";
+    $("preTxt").textContent = res ? `${res.tiles} tiles saved in ${res.seconds} s. This area now works offline.` : "Done.";
+  } catch (e) { out.innerHTML = `<p class="bad-t">${esc(e.message)}</p>`; }
+  finally { btn.disabled = false; }
+};
+
+
+// ------------------------------------------------------------------------------------------------- Local mode (Mars, no internet)
+// Every dataset on this computer at native resolution (planet/localmode.py), then Mars mode: the server sends nothing to
+// the internet and serves everything from the local copies. The panel shows sizes, progress and the refused requests.
+const GB = (b) => b == null ? "–" : b >= 1e9 ? `${(b / 1e9).toFixed(b >= 1e10 ? 0 : 1)} GB` : `${Math.max(0.1, b / 1e6).toFixed(b >= 1e8 ? 0 : 1)} MB`;
+const LOCAL_KEY = "mm.localPlan";
+S.localPlan = (() => {
+  try { const j = JSON.parse(store.get(LOCAL_KEY) || "null"); if (j && Array.isArray(j.global)) return j; } catch { /* default */ }
+  return { global: null, zones: [], parts: null };
+})();
+S.local = null;
+function saveLocalPlan() { store.set(LOCAL_KEY, JSON.stringify(S.localPlan)); }
+function localPlanForServer() {
+  return { global: S.localPlan.global || [], zones: S.localPlan.zones.map((z) => ({ ...z, parts: S.localPlan.parts })) };
+}
+async function loadLocal() {
+  try { S.local = await api("/api/local/status"); } catch { return; }
+  const L = S.local;
+  if (!S.localPlan.global) S.localPlan.global = Object.entries(L.global_packs).filter(([, v]) => v.default).map(([k]) => k);
+  if (!S.localPlan.parts) S.localPlan.parts = Object.keys(L.zone_parts);
+  if (!S.localPlan.zones.length && S.sites.length) S.localPlan.zones = S.sites.slice(0, 1).map((s) => ({ id: s.id, name: s.short || s.name, lon: s.center.lon, lat: s.center.lat, radius_km: 25 }));
+  renderLocalPill();
+  if (!$("localModal").hidden) renderLocal();
+  const running = L.progress?.running;
+  clearTimeout(loadLocal._t);
+  loadLocal._t = setTimeout(loadLocal, running || !$("localModal").hidden ? 2000 : 15000);
+}
+function renderLocalPill() {
+  const L = S.local; if (!L) return;
+  const pill = $("localPill");
+  document.body.classList.toggle("mars", !!L.offline);
+  pill.classList.toggle("on", !!L.offline);
+  pill.classList.toggle("have", !L.offline && L.bytes > 1e9);
+  pill.textContent = L.offline ? "MARS MODE · LOCAL DATA ONLY" : L.progress?.running ? `LOCAL · ${Math.round(100 * (L.progress.done_bytes / Math.max(1, L.progress.total_bytes)))} %` : `LOCAL MODE${L.bytes > 1e8 ? ` · ${GB(L.bytes)}` : ""}`;
+  if (L.offline) {
+    const np = $("netPill"); np.textContent = "EARTH LINK OFF"; np.className = "pill warn";
+    np.title = "Mars mode: nothing is sent to the internet; everything comes from this computer";
+    $("banner").hidden = true;
+  }
+  rebuildOverlays();
+}
+function openLocal() { openDialog("localModal"); renderLocal(); loadLocal(); }
+$("localPill").onclick = openLocal;
+$("btnOpenLocal").onclick = openLocal;
+$("localClose").onclick = () => closeDialog("localModal");
+
+function renderLocal() {
+  const L = S.local; if (!L) { $("globalTbl").innerHTML = `<tr><td class="hint">Reading what is on this computer…</td></tr>`; return; }
+  // Mars mode bar
+  $("marsChk").checked = !!L.offline;
+  $("marsChk").closest(".marsbar").classList.toggle("on", !!L.offline);
+  const c = L.net?.counters || {};
+  const hosts = Object.entries(c.blocked_hosts || {}).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([h, n]) => `${esc(h)} ${n}`).join(", ");
+  $("marsStats").innerHTML = `
+    <span>Earth link <b class="${L.offline ? "warn-t" : L.net?.online ? "ok-t" : "bad-t"}">${L.offline ? "OFF (Mars mode)" : L.net?.online ? "online" : "unreachable"}</b></span>
+    <span>Data on this PC <b>${GB(L.bytes)}</b></span>
+    <span>Free disk <b>${GB(L.disk?.free)}</b></span>
+    ${L.offline ? `<span>Requests refused <b>${c.blocked || 0}</b>${hosts ? ` <span class="hint">(${hosts})</span>` : ""}</span>` : `<span class="hint">Switch on to prove it: the app then refuses every internet request and counts them here.</span>`}`;
+  // whole-planet packs
+  const sel = new Set(S.localPlan.global || []);
+  $("globalTbl").innerHTML = Object.entries(L.global_packs).map(([k, v]) => {
+    const p = L.packs[k] || {};
+    const state = p.complete ? `<span class="ok-t">✔ on this PC</span>` : p.bytes ? `<span class="warn-t">${GB(p.bytes)} so far</span>` : `<span class="na-t">not yet</span>`;
+    return `<tr><td><input type="checkbox" data-gp="${k}" ${sel.has(k) ? "checked" : ""} aria-label="${esc(v.name)}"></td>
+      <td><div class="nm">${esc(v.name)}</div><div class="rs">${esc(v.res)} · ${esc(v.why || "")}</div></td>
+      <td class="sz">${v.kind === "tiles" || v.kind === "geology" ? "≈ " : ""}${GB(v.bytes)}</td><td class="stt">${state}</td></tr>`;
+  }).join("");
+  for (const cb of $("globalTbl").querySelectorAll("[data-gp]")) cb.onchange = () => {
+    const s2 = new Set(S.localPlan.global); cb.checked ? s2.add(cb.dataset.gp) : s2.delete(cb.dataset.gp);
+    S.localPlan.global = [...s2]; saveLocalPlan(); $("localEst").innerHTML = "";
+  };
+  // zones
+  const have = new Set((L.zones || []).map((z) => z.id));
+  $("zoneList").innerHTML = S.localPlan.zones.length ? "" : `<li class="hint">No zone yet: select a site on the globe and press “Add selected site”, or add your hubs.</li>`;
+  S.localPlan.zones.forEach((z, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="t">${esc(z.name)}<small>${z.radius_km} km radius</small></span>
+      <span class="m">${fmtLL(z.lat, z.lon, 2)} · ${have.has(z.id) ? `<span class="ok-t">✔ on this PC</span>` : `<span class="na-t">not downloaded</span>`}</span>
+      <span class="b"><button class="x" title="Remove this zone" aria-label="Remove ${esc(z.name)}">×</button></span>`;
+    li.querySelector(".x").onclick = (e) => { e.stopPropagation(); S.localPlan.zones.splice(i, 1); saveLocalPlan(); renderLocal(); };
+    li.onclick = () => { flyTo(z.lon, z.lat, Math.max(30, z.radius_km * 5)); };
+    $("zoneList").appendChild(li);
+  });
+  const parts = new Set(S.localPlan.parts || []);
+  $("zoneParts").innerHTML = Object.entries(L.zone_parts).map(([k, v]) => `<label><input type="checkbox" data-zp="${k}" ${parts.has(k) ? "checked" : ""}> ${esc(v)}</label>`).join("");
+  for (const cb of $("zoneParts").querySelectorAll("[data-zp]")) cb.onchange = () => {
+    const s2 = new Set(S.localPlan.parts); cb.checked ? s2.add(cb.dataset.zp) : s2.delete(cb.dataset.zp);
+    S.localPlan.parts = [...s2]; saveLocalPlan(); $("localEst").innerHTML = "";
+  };
+  // progress
+  const P = L.progress;
+  const running = !!P?.running;
+  $("btnLocalGo").disabled = running || !!L.offline;
+  $("btnLocalGo").title = L.offline ? "Switch Mars mode off to download (it needs the internet)" : "";
+  $("btnEstimate").disabled = running;
+  $("btnLocalCancel").hidden = !running;
+  $("localProg").hidden = !P;
+  if (P) {
+    const frac = P.total_bytes ? Math.min(1, P.done_bytes / P.total_bytes) : 0;
+    $("lpBar").style.width = `${(100 * frac).toFixed(1)}%`;
+    $("lpTxt").innerHTML = running
+      ? `Downloading: item ${Math.min(P.items_total, P.items_done + 1)} of ${P.items_total} · ${GB(P.done_bytes)} of ${GB(P.total_bytes)}`
+      : P.result?.ok ? `<span class="ok-t">Done: everything selected is on this computer.</span> You can switch Mars mode on.`
+        : P.result?.cancelled ? `<span class="warn-t">Stopped. What was downloaded is kept; Download continues from here.</span>`
+          : P.stopped ? `<span class="warn-t">${esc(P.stopped)}</span>` : `<span class="warn-t">Finished with problems (below). Download again to retry them.</span>`;
+    $("lpRate").textContent = running && P.rate_bps ? `${GB(P.rate_bps)}/s${P.eta_s ? ` · about ${fmtDur(P.eta_s)} left` : ""}` : "";
+    const ifrac = P.tiles_total ? P.tiles_done / P.tiles_total : P.item_total ? Math.min(1, P.item_done / P.item_total) : 0;
+    $("lpItemBar").style.width = `${(100 * ifrac).toFixed(1)}%`;
+    $("lpItem").textContent = P.item || "";
+    $("lpItemTxt").textContent = P.tiles_total ? `${(P.tiles_done || 0).toLocaleString()} / ${P.tiles_total.toLocaleString()} tiles` : P.item_total ? `${GB(P.item_done)} / ${GB(P.item_total)}` : "";
+    const lg = $("lpLog");
+    lg.textContent = [...(P.log || []), ...(P.errors || []).map((e) => `PROBLEM: ${e}`)].join("\n");
+    lg.scrollTop = 1e9;
+  }
+}
+const fmtDur = (s) => s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min` : s >= 60 ? `${Math.round(s / 60)} min` : `${s} s`;
+
+$("zoneAddSel").onclick = () => {
+  const f = S.focus;
+  if (!f) { toast("Select a site on the globe first (a candidate, a hub or any point)."); return; }
+  const r = +$("zoneRadius").value || 25;
+  const id = (f.cand?.id || `p${f.lat.toFixed(3)}_${f.lon.toFixed(3)}`).replace(/[^\w.-]/g, "_");
+  S.localPlan.zones = S.localPlan.zones.filter((z) => z.id !== id);
+  S.localPlan.zones.push({ id, name: (f.cand?.name || f.name || "Selected site").replace(/^Near /, ""), lon: +f.lon.toFixed(5), lat: +f.lat.toFixed(5), radius_km: r });
+  saveLocalPlan(); $("localEst").innerHTML = ""; renderLocal();
+};
+$("zoneAddHubs").onclick = () => {
+  const r = +$("zoneRadius").value || 25;
+  for (const s of S.sites) {
+    if (S.localPlan.zones.some((z) => z.id === s.id)) continue;
+    S.localPlan.zones.push({ id: s.id, name: s.short || s.name, lon: s.center.lon, lat: s.center.lat, radius_km: r });
+  }
+  saveLocalPlan(); $("localEst").innerHTML = ""; renderLocal();
+};
+$("btnEstimate").onclick = async () => {
+  const btn = $("btnEstimate"); btn.disabled = true; btn.textContent = "Measuring…";
+  $("localEst").innerHTML = `<p class="hint">Asking each server for the exact file sizes (HTTP Content-Length)…</p>`;
+  try {
+    const e = await post("/api/local/estimate", { plan: localPlanForServer() });
+    S.localEst = e;
+    const groups = {};
+    for (const it of e.items) (groups[it.group === "global" ? "Whole planet" : it.zone || it.group] ||= []).push(it);
+    $("localEst").innerHTML = `<div class="tot">
+        <span>Selected <b>${GB(e.total_bytes)}</b></span><span>Already here <b>${GB(e.have_bytes)}</b></span>
+        <span>To download <b>${GB(e.need_bytes)}</b></span><span>Free disk <b>${GB(e.free_bytes)}</b></span>
+        <span class="${e.fits ? "ok-t" : "bad-t"}">${e.fits ? "Fits on this disk" : "Does not fit: untick some packs or use a smaller radius"}</span></div>
+      <details><summary class="hint">Item by item</summary><table class="tbl">${Object.entries(groups).map(([g, its]) =>
+        `<tr><td colspan="3" class="lbl">${esc(g)}</td></tr>` + its.map((it) =>
+          `<tr><td>${esc(it.label)}${it.count != null ? ` <span class="na-t">(${it.count.toLocaleString()} ${it.part && it.part.endsWith("dtm") || it.part && it.part.endsWith("ortho") ? "files" : "tiles"})</span>` : ""}</td><td class="num">${it.approx ? "≈ " : ""}${GB(it.bytes)}</td><td class="num na-t">${it.have ? `${GB(it.have)} here` : ""}</td></tr>`).join("")).join("")}</table></details>`;
+  } catch (err) { $("localEst").innerHTML = `<p class="bad-t">Could not measure: ${esc(err.message)}</p>`; }
+  finally { btn.disabled = false; btn.textContent = "Measure sizes"; }
+};
+$("btnLocalGo").onclick = async () => {
+  if (!(S.localPlan.global || []).length && !S.localPlan.zones.length) { toast("Choose at least one pack or zone."); return; }
+  try {
+    await post("/api/local/install", { plan: localPlanForServer() });
+    toast("Downloading to this computer. You can keep using the app; the download resumes if it is interrupted.", 6000);
+    setTimeout(async () => { await loadLocal(); $("localProg").scrollIntoView({ behavior: "smooth", block: "nearest" }); }, 800);
+  } catch (err) { toast(`Could not start: ${err.message}`); }
+};
+$("btnLocalCancel").onclick = async () => { try { await post("/api/local/cancel", {}); toast("Stopping after the current file…"); } catch { /* */ } };
+$("marsChk").onchange = async () => {
+  const on = $("marsChk").checked;
+  try {
+    await post("/api/local/mode", { offline: on });
+    toast(on ? "Mars mode on: nothing is sent to the internet. Everything you see now comes from this computer."
+      : "Mars mode off: the app may use the internet again.", 6000);
+    S.legendCache.clear();
+    for (const t of tiles.values()) if (t.state === "ready" && t.z >= 6) t.refreshAt = performance.now() + 200;   // redraw from the local data
+    await loadLocal(); refreshStatus();
+  } catch (err) { $("marsChk").checked = !on; toast(`Could not switch: ${err.message}`); }
+};
+
+// ------------------------------------------------------------------------------------------------- search
+// the search hint fits the box: a shorter one where the top bar is narrow
+const SEARCH_HINT = ["Search places, candidates, or type lat, lon   ( / )", "Search places, sites, lat lon  ( / )"];
+function searchHint() { $("searchIn").placeholder = SEARCH_HINT[$("searchIn").clientWidth < 380 ? 1 : 0]; }
+new ResizeObserver(searchHint).observe($("searchIn"));
+let searchT = 0;
+$("searchIn").addEventListener("input", () => { clearTimeout(searchT); searchT = setTimeout(runSearch, 180); });
+$("searchForm").addEventListener("submit", (e) => { e.preventDefault(); const b = $("searchRes").querySelector("button:not([disabled])"); if (b && !$("searchRes").hidden) b.click(); else runSearch(true); });
+document.addEventListener("click", (e) => { if (!e.target.closest(".search")) $("searchRes").hidden = true; });
+function parseLatLon(q) {
+  const m = q.match(/^\s*(-?\d+(?:\.\d+)?)\s*°?\s*([NSns])?\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*°?\s*([EWew])?\s*$/);
+  if (!m) return null;
+  let lat = +m[1], lon = +m[3];
+  if (m[2] && /s/i.test(m[2])) lat = -Math.abs(lat);
+  if (m[4] && /w/i.test(m[4])) lon = -Math.abs(lon);
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 360) return null;
+  return { lat, lon: wrap180(lon) };
+}
+let searchSeq = 0;
+async function runSearch(submit = false) {
+  const q = $("searchIn").value.trim(), box = $("searchRes");
+  const seq = ++searchSeq;
+  if (q.length < 2) { box.hidden = true; return; }
+  const ll = parseLatLon(q);
+  if (ll) {
+    box.innerHTML = "";
+    const b = document.createElement("button");
+    b.type = "button";                                // inside the search form: a pick must not submit it again
+    b.innerHTML = `Go to ${fmtLL(ll.lat, ll.lon, 4)}<small>latitude, longitude (east-positive)</small>`;
+    b.onclick = () => { box.hidden = true; flyTo(ll.lon, ll.lat, 300); selectPoint(ll.lon, ll.lat); };
+    box.appendChild(b); box.hidden = false;
+    if (submit) b.click();
+    return;
+  }
+  const ql = q.toLowerCase();
+  const local = S.cand.filter((c) => c.name.toLowerCase().includes(ql) || (c.proposer || "").toLowerCase().includes(ql)).slice(0, 8);
+  const hubs = S.sites.filter((s) => (s.name || s.id).toLowerCase().includes(ql)).slice(0, 4);
+  // hubs and candidates are on this computer: show them at once; IAU place names come from the server and are added
+  // when they arrive, with a "searching" row meanwhile
+  box.innerHTML = "";
+  const group = (title) => { const d = document.createElement("div"); d.className = "grp"; d.textContent = title; box.appendChild(d); return d; };
+  const item = (html, fn) => { const b = document.createElement("button"); b.type = "button"; b.innerHTML = html; b.onclick = () => { box.hidden = true; fn(); }; box.appendChild(b); return b; };
+  if (hubs.length) { group("Hubs"); for (const s of hubs) item(`▲ ${esc(s.name || s.id)}<small>built EVA site</small>`, () => openCandidate({ id: `hub:${s.id}`, siteId: s.id, kind: "hub", name: s.name || s.id, lon: s.center.lon, lat: s.center.lat })); }
+  if (local.length) { group("Candidate sites"); for (const c of local) item(`${esc(c.name)}<small>${TAG[c.kind]} · ${fmtLL(c.lat, c.lon, 1)}${c.proposer ? ` · ${esc(c.proposer)}` : ""}</small>`, () => { $("searchIn").value = c.name; openCandidate(c); }); }
+  const wait = document.createElement("div");
+  wait.className = "pending";
+  wait.textContent = "Searching IAU place names…";
+  box.appendChild(wait);
+  box.hidden = false;
+  let iau = [];
+  try { iau = (await api(`/api/search?q=${encodeURIComponent(q)}&limit=12`)).results; } catch { /* names offline */ }
+  if (seq !== searchSeq || box.hidden) return;        // a newer search, or the list was closed (a pick, Esc, a click away)
+  wait.remove();
+  if (iau.length) {
+    group("IAU place names");
+    for (const r of iau) {
+      item(`${esc(r.name)}<small>${esc(r.type || "")}${r.diameter_km ? ` · ${(+r.diameter_km).toFixed(0)} km` : ""} · ${fmtLL(+r.lat, +r.lon, 2)}</small>`, () => {
+        $("searchIn").value = r.name;
+        const d = +r.diameter_km || 30;
+        flyTo(+r.lon, +r.lat, Math.max(5, Math.min(8000, d * 2.2)));
+        clearMarkers("name");
+        loadNames();
+        addMarker("name", +r.lon, +r.lat, r.name, () => selectPoint(+r.lon, +r.lat));
+        setTimeout(() => selectPoint(+r.lon, +r.lat), 1900);
+      });
+    }
+  }
+  if (!box.children.length) { const b = document.createElement("button"); b.disabled = true; b.textContent = `Nothing matches “${q}”. Try a crater name or “18.4N 77.5E”.`; box.appendChild(b); }
+  box.hidden = false;
+}
+const FAMOUS = [["Olympus Mons", -133.8, 18.65], ["Valles Marineris", -59.2, -13.9], ["Hellas Planitia", 70.5, -42.4], ["Jezero", 77.58, 18.38],
+  ["Gale", 137.85, -5.4], ["Elysium Mons", 146.9, 24.8], ["Arsia Mons", -120.46, -8.26], ["Utopia Planitia", 117.5, 49.7], ["Argyre Planitia", -43, -49.7],
+  ["Planum Boreum", 0, 88], ["Planum Australe", 160, -84], ["Meridiani Planum", -3.7, -0.2], ["Isidis Planitia", 88, 13], ["Arcadia Planitia", -165, 47],
+  ["Amazonis Planitia", -163, 25], ["Chryse Planitia", -40, 25], ["Acidalia Planitia", -21, 47]];
+function loadNames() { for (const [n, lon, lat] of FAMOUS) addMarker("name", lon, lat, n, () => { flyTo(lon, lat, 1400); selectPoint(lon, lat); }); }
+
+// ------------------------------------------------------------------------------------------------- controls, scale, needle
+$("zIn").onclick = () => { S.cam.range /= 1.8; dirty = true; };
+$("zOut").onclick = () => { S.cam.range *= 1.8; dirty = true; };
+$("north").onclick = () => { S.cam.heading = 0; S.cam.tilt = 0; dirty = true; };
+$("tilt").onclick = () => {
+  if (S.cam.range > 3000) { toast("Zoom in to tilt the view."); return; }
+  S.cam.tilt = S.cam.tilt > 10 ? 0 : 55; dirty = true;
+};
+function updateScale() {
+  const kpp = kmPerPx(), target = kpp * 110;
+  const p = 10 ** Math.floor(Math.log10(target));
+  const nice = [5, 2, 1].map((m) => m * p).find((v) => v <= target) || p;
+  $("scaleBar").style.width = `${Math.max(20, nice / kpp).toFixed(0)}px`;
+  $("scaleTxt").textContent = fmtKm(nice);
+  $("needle").style.transform = `rotate(${-S.cam.heading}deg)`;
+}
+
+// ------------------------------------------------------------------------------------------------- status
+async function refreshStatus() {
+  try {
+    const s = await api("/api/planet/status");
+    S.online = s.online;
+    const g16 = s.megdr?.global16_key, prog = s.megdr?.progress || {};
+    S.demDownload = !s.megdr?.global16 && g16 && prog[g16] ? prog[g16] : null;
+    $("offline").hidden = true;
+    const pill = $("netPill");
+    const mars = !!s.local?.offline;
+    pill.textContent = mars ? "EARTH LINK OFF" : s.online ? "NASA / USGS · ONLINE" : "OFFLINE · local data";
+    pill.className = `pill ${mars ? "warn" : s.online ? "ok" : "bad"}`;
+    pill.title = mars ? "Mars mode: nothing is sent to the internet; everything comes from this computer"
+      : s.online ? "Connected to the NASA / USGS data servers" : `No internet: working from the data on this computer. ${s.net?.last_error || ""}`;
+    if (S.local && !!S.local.offline !== mars) loadLocal();
+    const gb = (b) => (b / 1e9).toFixed(b > 1e9 ? 1 : 2);
+    $("cacheOut").textContent = `Cache: ${s.cache.tiles.toLocaleString()} tiles, ${gb(s.cache.bytes)} of ${gb(s.cache.limit)} GB.`;
+    const cat = s.catalog || {};
+    $("srcOut").innerHTML = `<b>Elevation</b>: MOLA MEGDR 463 m global${s.megdr.global16 ? " ✔" : " (downloading)"}; HRSC-MOLA blend 200 m${s.blend.usable ? " ✔" : ""};
+      CTX 20 m DTMs: ${cat.ctx?.count ?? "…"}; HiRISE 1 m DTMs: ${cat.hirise?.count ?? "…"} (USGS Astrogeology STAC, CC0).<br>
+      <b>Imagery</b>: CTX global mosaic 5 m (Dickson et al. 2023, via Esri / ASU); HiRISE 25 cm mosaics; THEMIS day and night IR 100 m; Viking MDIM 2.1 colour (NASA Mars Trek).<br>
+      <b>Maps</b>: USGS SIM 3292 geologic map (Tanaka et al. 2014); science layers in the list above.<br>
+      <b>Names</b>: ${s.names.count.toLocaleString()} IAU / USGS Gazetteer features.`;
+    if (!dsJobRunning) {
+      const dj = (s.jobs || []).find((j) => j.kind === "datasets") || null;
+      if (dj) followDsJob(dj.id);
+      else if (s.datasets && Object.entries(s.datasets).some(([k, v]) => S.datasets[k] && S.datasets[k].installed !== v)) loadDatasets();
+    }
+  } catch {
+    $("offline").hidden = false;
+    // a copy served from the web (the GitHub Pages demo) has no MarsNav server behind it: say so and point to the
+    // planner, the download and the video instead of asking for MarsNav.exe
+    const hosted = !/^(localhost|127\.|\[::1\]|0\.0\.0\.0)/.test(location.hostname) && location.protocol === "https:";
+    $("offlineLocal").hidden = hosted; $("offlineHosted").hidden = !hosted;
+    if (hosted) $("offline").querySelector("h2").textContent = "Landing mode runs in the desktop app";
+    $("netPill").textContent = hosted ? "WEB DEMO" : "SERVER NOT RUNNING"; $("netPill").className = hosted ? "pill" : "pill bad";
+  }
+}
+
+// ------------------------------------------------------------------------------------------------- URL state
+function saveHash() {
+  const c = S.cam, f = S.focus;
+  const ov = [...document.querySelectorAll("[data-ovl]")].filter((x) => x.checked).map((x) => x.dataset.ovl).join("+");
+  const sel = !f ? "" : f.cand && ["ez", "starship", "heritage"].includes(f.cand.kind) && !/refined/.test(f.cand.name) ? `c:${f.cand.id}` : `${f.lat.toFixed(5)};${f.lon.toFixed(5)}`;
+  const x = [`ls=${+S.ls.toFixed(1)}`, `my=${S.marci.my}`, S.op < 1 ? `op=${Math.round(S.op * 100)}` : "", S.cmp.base ? `cmp=${S.cmp.base}~${S.cmp.mode}~${S.cmp.my}` : ""].filter(Boolean).join(";");
+  history.replaceState(null, "", `#${c.lat.toFixed(4)},${c.lon.toFixed(4)},${c.range.toFixed(2)},${c.heading.toFixed(0)},${c.tilt.toFixed(0)},${S.base},${S.crit},${ov},${encodeURIComponent(sel)},${encodeURIComponent(x)}`);
+}
+let hashSel = null;
+function readHash() {
+  const p = decodeURIComponent(location.hash.slice(1)).split(",");
+  if (p.length >= 3 && p.slice(0, 3).every((v) => v !== "" && isFinite(+v))) {
+    Object.assign(S.cam, { lat: +p[0], lon: +p[1], range: +p[2], heading: +p[3] || 0, tilt: +p[4] || 0 });
+    if ([...$("baseSel").options].some((o) => o.value === p[5])) { S.base = p[5]; $("baseSel").value = p[5]; }
+    if (p[6] === "hls2" || p[6] === "starship") {
+      S.crit = p[6];
+      for (const x of document.querySelectorAll(".seg button[data-crit]")) x.setAttribute("aria-checked", String(x.dataset.crit === S.crit));
+    }
+    S.hashOvls = (p[7] || "").split("+").filter(Boolean);       // the atlas layers are added later: they are ticked then
+    for (const k of S.hashOvls) { const cb = document.querySelector(`[data-ovl="${k}"]`); if (cb) cb.checked = true; }
+    hashSel = p[8] || null;
+    for (const kv of (p[9] || "").split(";")) {
+      const [k, v] = kv.split("=");
+      if (k === "ls" && isFinite(+v)) S.ls = ((+v % 360) + 360) % 360;
+      if (k === "my" && [28, 29, 30, 31, 32].includes(+v)) S.marci.my = +v;
+      if (k === "op" && isFinite(+v)) S.op = Math.max(0.1, Math.min(1, +v / 100));
+      if (k === "cmp" && v) { const [b, m, y] = v.split("~"); S.cmp.base = b; S.cmp.mode = m === "spy" ? "spy" : "swipe"; S.cmp.my = +y || 29; }
+    }
+    return true;
+  }
+  return false;
+}
+function restoreFocusFromHash() {
+  if (!hashSel) return;
+  const s = hashSel; hashSel = null;
+  if (s.startsWith("c:")) { const c = S.cand.find((x) => x.id === s.slice(2)); if (c) openCandidate(c, false); return; }
+  const [la, lo] = s.split(";").map(Number);
+  if (isFinite(la) && isFinite(lo)) selectPoint(lo, la);
+}
+
+// ------------------------------------------------------------------------------------------------- science atlas
+// every whole-planet layer by kind of measurement (planet/atlas.py); the ones already in the list above are skipped
+const GROUP_COLOUR = { spectral: "#6aa0ff", chemical: "#8fd36a", water: "#3ccbff", thermal: "#e6a03c", topographic: "#c9a57a",
+  geophysical: "#d06ad0", atmospheric: "#f06060", activity: "#ff6a4a", missions: "#ffffff" };
+async function loadAtlas() {
+  let cat;
+  try { cat = await api("/api/atlas"); } catch { return; }
+  S.atlas = cat;
+  const have = new Set([...document.querySelectorAll("#layersBody .ovl [data-ovl]")].map((x) => x.dataset.ovl));
+  const box = $("atlasBox");
+  box.innerHTML = `<div class="lbl">Science atlas · whole planet</div>` + cat.groups.map((g) => {
+    const rows = g.layers.filter((L) => !have.has(L.id)).map((L) => {
+      if (L.needs) OVL_NEEDS[L.id] = L.needs;
+      const tip = [L.what, L.cite].filter(Boolean).join(" · ");
+      return `<label class="chk" title="${esc(tip)}"><input type="checkbox" data-ovl="${esc(L.id)}"><i class="sw" style="--c:${GROUP_COLOUR[g.id] || "#aaa"}"></i>${esc(L.name)}${L.count ? ` <small class="cnt">${fmtN(L.count)}</small>` : ""}${L.installed === false ? ` <small class="na-t">not installed</small>` : ""}</label>`;
+    }).join("");
+    return rows ? `<details class="agrp"${g.id === "spectral" ? " open" : ""}><summary>${esc(g.name)}</summary><div class="ovl">${rows}</div></details>` : "";
+  }).join("");
+  let ticked = false;
+  for (const el of box.querySelectorAll("[data-ovl]")) {
+    bindOvl(el);
+    if (S.hashOvls?.includes(el.dataset.ovl)) { el.checked = true; el.closest("details").open = true; ticked = true; }
+  }
+  if (ticked) { reloadTextures(); updateLegend(); }
+}
+
+// ------------------------------------------------------------------------------------------------- science objectives, missions
+async function loadScience() {
+  try {
+    const [o, m] = await Promise.all([api("/api/objectives"), api("/api/missions")]);
+    S.objectives = o.objectives || [];
+    S.missions = m.missions || [];
+    S.missionsAsOf = m.as_of;
+  } catch { return; }
+  $("objSel").innerHTML = S.objectives.map((o) => `<option value="${esc(o.id)}">${esc(o.title)}</option>`).join("");
+  $("objSel").onchange = renderObjective;
+  renderObjective();
+  $("nMis").textContent = S.missions.length;
+  renderMissions();
+  // where future missions go: their landing regions on the globe
+  clearMarkers("future");
+  for (const m of S.missions.filter((x) => misGroup(x) === "future")) {
+    for (const p of m.regions || (m.site?.lon != null ? [m.site] : [])) addMarker("future", p.lon, p.lat, `${m.name}${m.regions ? `: ${p.name}` : ""}`, () => { selectPoint(p.lon, p.lat); showTab("sci"); }, `${m.name} · ${m.status}`);
+  }
+}
+function renderObjective() {
+  const o = S.objectives?.find((x) => x.id === $("objSel").value);
+  if (!o) return;
+  $("objCard").innerHTML = `<div class="kind">${esc(o.goal)}</div><p>${esc(o.question)}</p>
+    <p class="hint"><b>Why humans:</b> ${esc(o.why_humans)}</p>
+    <div class="lbl">Example places</div><ol class="list">${o.examples.map((e, k) => `<li data-ex="${k}"><span class="t">${esc(e.name)}<small>${esc(e.why)}</small></span><span class="m">${fmtLL(e.lat, e.lon, 2)}${e.site ? "<br>EVA site" : ""}</span></li>`).join("")}</ol>
+    <p class="hint"><b>At stations:</b> ${esc(o.at_stations)}</p><p class="hint"><b>Safety:</b> ${esc(o.safety)}</p>`;
+  for (const li of $("objCard").querySelectorAll("[data-ex]")) {
+    li.onclick = () => { const e = o.examples[+li.dataset.ex]; flyTo(e.lon, e.lat, e.site ? 60 : 900); selectPoint(e.lon, e.lat); };
+  }
+  $("objRank").innerHTML = "";
+}
+$("btnObjLayers").onclick = () => {
+  const o = S.objectives?.find((x) => x.id === $("objSel").value);
+  if (!o) return;
+  for (const id of o.layers) {
+    const cb = document.querySelector(`[data-ovl="${id}"]`);
+    if (cb && !cb.checked) { cb.checked = true; cb.closest("details")?.setAttribute("open", ""); }
+  }
+  $("layers").classList.remove("collapsed");
+  $("layersToggle").setAttribute("aria-expanded", "true");
+  reloadTextures(); updateLegend(); saveHash();
+  toast(`Map layers for “${o.title}” are on (top left).`);
+};
+$("btnObjRank").onclick = async () => {
+  const ol = $("objRank");
+  ol.innerHTML = `<li class="hint">Scoring every candidate site and hub…</li>`;
+  try {
+    const r = await api(`/api/objective/rank?id=${encodeURIComponent($("objSel").value)}&limit=20`);
+    const top = Math.max(1e-6, r.ranked[0]?.score || 0);
+    ol.innerHTML = r.ranked.map((x) => {
+      const why = [...x.evidence.map((e) => `${e.count} × ${e.label.toLowerCase()} (nearest ${fmtKm(e.nearest_km)})`), ...x.data].slice(0, 3).join(" · ");
+      return `<li data-id="${esc(x.id)}" data-ll="${x.lon},${x.lat}"><span class="t">${esc(x.name)}<small>${esc(why || "no catalogued evidence within 100 km")}</small></span>
+        <span class="m"><i class="sbar"><b style="width:${Math.max(4, 100 * x.score / top)}%"></b></i>${x.score.toFixed(1)}</span></li>`;
+    }).join("");
+    for (const li of ol.querySelectorAll("li[data-id]")) {
+      li.onclick = () => {
+        const c = S.cand.find((x) => x.id === li.dataset.id);
+        if (c) { openCandidate(c); return; }
+        const [lo, la] = li.dataset.ll.split(",").map(Number);
+        flyTo(lo, la, 400); selectPoint(lo, la);
+      };
+    }
+  } catch (e) { ol.innerHTML = `<li class="hint bad-t">${esc(e.message)}</li>`; }
+};
+const misGroup = (m) => /^active/.test(m.status) ? "active" : /en route|planned|development|slipped|studied/.test(m.status) ? "future" : "past";
+let misFilter = "all";
+for (const b of $("misChips").querySelectorAll("button")) {
+  b.onclick = () => { misFilter = b.dataset.mis; for (const x of $("misChips").querySelectorAll("button")) x.classList.toggle("on", x === b); renderMissions(); };
+}
+for (const b of $("sciChips").querySelectorAll("button")) {
+  b.onclick = () => {
+    for (const x of $("sciChips").querySelectorAll("button")) x.classList.toggle("on", x === b);
+    $("sciObj").hidden = b.dataset.sci !== "obj";
+    $("sciMis").hidden = b.dataset.sci !== "mis";
+  };
+}
+function renderMissions() {
+  const list = (S.missions || []).filter((m) => misFilter === "all" || misGroup(m) === misFilter);
+  const line = (label, v) => v && v !== "-" ? `<small>${label}${esc(v)}</small>` : "";
+  $("misList").innerHTML = list.map((m) => `<li data-k="${S.missions.indexOf(m)}"><span class="t">${esc(m.name)}<small>${esc(m.agency)} · ${esc(m.kind)} · ${esc(m.years || "")}</small>
+      ${line("", m.science)}${line("In MarsNav: ", m.data_in_marsnav)}${line("For crews: ", m.for_crews)}</span>
+      <span class="m"><span class="st ${misGroup(m)}">${esc(m.status)}</span>${m.site?.lon != null ? `<br>${fmtLL(m.site.lat, m.site.lon, 2)}` : m.regions ? `<br>${m.regions.length} candidate regions` : ""}</span></li>`).join("");
+  $("misNote").textContent = `Status as of ${S.missionsAsOf}, from NASA, ESA, JAXA, CNSA and press reports cited per mission (planet/data/missions.json).`;
+  for (const li of $("misList").querySelectorAll("li[data-k]")) {
+    li.onclick = () => {
+      const m = S.missions[+li.dataset.k], p = m.site?.lon != null ? m.site : m.regions?.[0];
+      if (!p) return;
+      flyTo(p.lon, p.lat, ["rover", "lander", "helicopter"].includes(m.kind) ? 120 : 2500);
+      selectPoint(p.lon, p.lat);
+    };
+  }
+}
+
+// ------------------------------------------------------------------------------------------------- space weather
+const SWX_WORD = { quiet: "QUIET", watch: "WATCH", storm: "STORM", unknown: "–" };
+async function loadSwx() {
+  try { S.swx = await api("/api/spaceweather"); } catch { return; }
+  const w = S.swx, pill = $("swxPill");
+  pill.textContent = `SPACE WX ${SWX_WORD[w.level] || "–"}`;
+  pill.className = `pill ${w.level === "quiet" ? "ok" : w.level === "storm" ? "bad" : "warn"}`;
+  pill.title = `${w.headline}. ${(w.reasons || []).join(". ")}`;
+  if (!$("swxModal").hidden) renderSwx();
+}
+function renderSwx() {
+  const w = S.swx;
+  if (!w) { $("swxBody").innerHTML = `<p class="hint">The MarsNav server did not answer.</p>`; return; }
+  const g = w.geometry || {};
+  $("swxSub").textContent = `${w.source}${w.fetched_utc ? ` · fetched ${w.fetched_utc} (${w.age_h} h ago)` : ""}`;
+  const arr = (w.mars_arrivals || []).slice(-6).reverse(), sep = w.sep || [], fl = w.flares || [];
+  $("swxBody").innerHTML = `<div class="verdictbar ${w.level === "quiet" ? "GO" : w.level === "storm" ? "NO-GO" : "CAUTION"}">${esc(w.headline)}</div>
+    <ul class="srcs">${(w.reasons || []).map((r) => `<li>${esc(r)}</li>`).join("")}</ul>
+    ${w.action ? `<p><b>For EVAs:</b> ${esc(w.action)}</p>` : ""}
+    <div class="kv"><span>Sun-Earth-Mars angle</span><span>${fmtN(g.separation_deg)}° (${g.mars_minus_earth_deg >= 0 ? "Mars ahead of Earth" : "Mars behind Earth"})</span>
+      <span>Earth-Mars distance</span><span>${fmtN(g.distance_au, 2)} AU · ${fmtN(g.light_min, 1)} light-minutes</span></div>
+    <p class="hint">${esc(g.note || "")}</p>
+    <h3 class="lbl">CME arrivals at Mars (WSA-ENLIL)</h3>
+    ${arr.length ? `<table class="tbl">${arr.map((a) => `<tr><td>${esc(a.arrival_utc)}</td><td>${a.glancing ? "glancing" : "direct"}${a.speed_kms ? `, ${a.speed_kms} km/s` : ""}</td><td>${a.hours_from_now >= 0 ? `in ${fmtN(a.hours_from_now)} h` : `${fmtN(-a.hours_from_now)} h ago`}</td><td>${a.link ? `<a href="${esc(a.link)}" target="_blank" rel="noopener">DONKI</a>` : ""}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
+    <h3 class="lbl">Solar particle events (near Earth)</h3>
+    ${sep.length ? `<table class="tbl">${sep.slice(0, 6).map((x) => `<tr><td>${esc(x.time_utc)}</td><td>${fmtN(x.hours_ago)} h ago</td><td>${esc((x.instruments || []).join(", "))}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
+    <h3 class="lbl">M and X flares</h3>
+    ${fl.length ? `<table class="tbl">${fl.slice(0, 6).map((x) => `<tr><td>${esc(x.peak_utc)}</td><td>${esc(x.class)}</td><td>${esc(x.source || "")}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
+    <p class="hint">${esc(w.basis || "")}</p>`;
+}
+$("swxPill").onclick = () => { renderSwx(); openDialog("swxModal"); };
+$("swxClose").onclick = () => closeDialog("swxModal");
+$("swxRefresh").onclick = async () => {
+  $("swxJob").textContent = "Asking NASA DONKI…";
+  try {
+    const { job } = await post("/api/spaceweather/refresh", {});
+    await pollJob(job, (lines) => { $("swxJob").textContent = lines[lines.length - 1]; });
+    await loadSwx();
+    renderSwx();
+  } catch (e) { $("swxJob").textContent = e.message; }
+};
+
+// ================================================================================================= Worldview-style tools
+// Season and MARCI weather maps, overlay strength, compare (swipe / spy), the ruler with area statistics, the extra
+// dossier sections (Earth relay, statistics inside the landing ellipse, past weather), KML export and stories.
+
+// ------------------------------------------------------------------------------------------------- season, MARCI
+const SEASON_WORD = (ls) => ["northern spring", "northern summer", "northern autumn", "northern winter"][Math.floor((((ls % 360) + 360) % 360) / 90)];
+// a sol whose map lost orbits (under 60 % of 60 S - 60 N mapped) is shown only if no better one is within 6 deg
+const MIN_COV = 0.6;
+const okDay = (d) => (d[4] ?? 1) >= MIN_COV;
+function marciNearest(my, ls) {
+  const D = S.marci.days;
+  if (!D) return null;
+  let best = null, bs = 1e9;
+  for (const d of D) {
+    if (d[2] !== my) continue;
+    const g = Math.abs(((d[3] - ls + 540) % 360) - 180);
+    if (g > 6) continue;
+    const sc = g + (okDay(d) ? 0 : 100);
+    if (sc < bs) { bs = sc; best = d; }
+  }
+  return best;
+}
+// the season of that Mars year's map closest to ls (MARCI began at Ls 132 of MY 28; MY 32 ends at Ls 110)
+function marciClosestLs(my, ls) {
+  let best = ls, bs = 1e9;
+  for (const d of S.marci.days || []) if (d[2] === my) { const sc = Math.abs(((d[3] - ls + 540) % 360) - 180) + (okDay(d) ? 0 : 100); if (sc < bs) { bs = sc; best = d[3]; } }
+  return best;
+}
+// Earth date (UTC) of a Mars year and season: MY 1 began at Ls 0 on MSD 28892.7 (engine/marstime.js marsYear)
+function dateOfMyLs(my, ls) {
+  let msd = 28892.7 + (my - 1) * 668.5991 + (ls / 360) * 668.5991;
+  for (let k = 0; k < 8; k++) {
+    const L = marsState(jdTTFromMsd(msd)).Ls;
+    msd += (((ls - L + 540) % 360) - 180) / 360 * 668.5991 * 0.9;
+  }
+  return new Date(msFromJdTT(jdTTFromMsd(msd)));
+}
+async function loadMarciIndex() {
+  if (S.marci.days) return S.marci.days;
+  try {
+    const r = await api("/api/marci/index");
+    S.marci.days = r.days; S.marci.cite = r.cite; S.marci.doi = r.doi;
+  } catch { S.marci.days = []; }
+  return S.marci.days;
+}
+let seasonT = 0;
+function seasonUi() {
+  $("lsR").value = Math.round(S.ls);
+  $("lsV").textContent = `Ls ${Math.round(S.ls)}°`;
+  $("lsWord").textContent = SEASON_WORD(S.ls) + (S.ls >= 180 && S.ls < 330 ? " · dust-storm season" : "");
+  $("marciRow").hidden = S.base !== "marci";
+  [...$("playStep").options].forEach((o, i) => { o.textContent = S.base === "marci" ? `${STEP_SOLS[i]} sol${STEP_SOLS[i] > 1 ? "s" : ""}` : `${STEP_DEG[i]}°`; });
+  $("marciMy").value = String(S.marci.my);
+  $("opR").value = Math.round(S.op * 100);
+  $("opV").textContent = `${Math.round(S.op * 100)} %`;
+  marciLine();
+}
+function marciLine() {
+  const out = $("marciOut");
+  const rows = [];
+  if (S.base === "marci") rows.push(["", S.marci.my]);
+  if (S.cmp.base === "marci") rows.push(["Compared: ", S.cmp.my]);
+  if (!rows.length) { out.textContent = ""; return; }
+  if (!S.marci.days) { out.textContent = "Loading the MARCI index…"; return; }
+  out.innerHTML = rows.map(([pre, my]) => pre + marciInfo(my)).join("<br>") + `<br><span class="na-t">Wang &amp; Richardson 2015; Harvard Dataverse, CC0; NASA/JPL-Caltech/MSSS</span>`;
+}
+function marciInfo(my) {
+  const d = marciNearest(my, S.ls);
+  if (!d) return `<span class="warn-t">No MARCI map within 6° of Ls ${Math.round(S.ls)} in MY ${my}</span> (mapping began at Ls 132 of MY 28; a few months have gaps).`;
+  const dt = dateOfMyLs(d[2], d[3]);
+  const f = S.marciFetch?.[d[0]], here = S.marciLocal?.has(d[0]);
+  const dl = here ? "" : f && !f.error ? ` · <span class="warn-t">downloading this month from Harvard Dataverse: ${(f.done / 1e6).toFixed(1)} of ${(f.total / 1e6).toFixed(0)} MB</span>`
+    : f?.error ? ` · <span class="bad-t">download failed: ${esc(f.error)}</span>`
+    : S.marciOffline ? ` · <span class="warn-t">not on this computer, and the app is offline (Mars mode): the dimmed Viking map stands in</span>` : "";
+  return `MRO MARCI · MY ${d[2]} · Ls ${d[3].toFixed(1)}° · ${dt.toISOString().slice(0, 10)}${dl}`;
+}
+let marciPoll = 0;
+const marciWaiting = new Set();
+function marciWanted() {
+  const subs = new Set();
+  for (const [on, my] of [[S.base === "marci", S.marci.my], [S.cmp.base === "marci", S.cmp.my]]) {
+    const d = on ? marciNearest(my, S.ls) : null;
+    if (d) subs.add(d[0]);
+  }
+  return subs;
+}
+// a month of maps just arrived: the tiles drawn from the stand-in (dimmed Viking) are asked for again
+function refreshStandIns() {
+  for (const t of tiles.values()) {
+    if (t.mesh?.material.map?.userData?.provisional) { t.texHave = null; if (t.mesh.visible && S.texWant) swapTexture(t, S.texWant); }
+    if (t.texB?.userData?.provisional) t.texBLayer = null;
+  }
+}
+async function pollMarci() {
+  clearTimeout(marciPoll);
+  const want = marciWanted();
+  if (!want.size) { marciLine(); return; }
+  try {
+    const st = await api("/api/marci/status");
+    S.marciFetch = st.fetching || {};
+    S.marciLocal = new Set(st.local || []);
+    S.marciOffline = !!st.offline;
+    let pending = false, arrived = false;
+    for (const sub of want) {
+      if (S.marciLocal.has(sub)) { if (marciWaiting.delete(sub)) arrived = true; continue; }
+      const f = S.marciFetch[sub];
+      if (f?.error || S.marciOffline) { marciWaiting.delete(sub); continue; }   // shown under the control; tried again on the next change
+      pending = true; marciWaiting.add(sub);
+      if (!f) post("/api/marci/fetch", { sub }).catch(() => null);
+    }
+    if (arrived) refreshStandIns();
+    marciLine();
+    if (pending) marciPoll = setTimeout(pollMarci, 1000);
+  } catch { marciPoll = setTimeout(pollMarci, 3000); }
+}
+function seasonChanged(now = false) {
+  seasonUi();
+  clearTimeout(seasonT);
+  const go = () => {
+    const seasonal = activeOverlays().some((o) => /^dust/.test(o));
+    if (S.base === "marci" || seasonal) { reloadTextures(); updateLegend(); }
+    if (S.cmp.base === "marci") S.cmp.layer = cmpLayer();
+    saveHash();
+    pollMarci();
+  };
+  if (now) go(); else seasonT = setTimeout(go, 250);
+}
+$("lsR").addEventListener("input", () => { S.ls = +$("lsR").value; seasonChanged(); });
+$("marciMy").addEventListener("change", () => {
+  S.marci.my = +$("marciMy").value;
+  if (S.marci.days && !marciNearest(S.marci.my, S.ls)) S.ls = marciClosestLs(S.marci.my, S.ls);
+  seasonChanged(true);
+});
+$("opR").addEventListener("input", () => { S.op = +$("opR").value / 100; $("opV").textContent = `${Math.round(S.op * 100)} %`; clearTimeout(seasonT); seasonT = setTimeout(() => { reloadTextures(); saveHash(); }, 300); });
+$("baseSel").onchange = async () => {
+  S.base = $("baseSel").value;
+  if (S.base === "marci") {
+    await loadMarciIndex();
+    if (!marciNearest(S.marci.my, S.ls)) S.ls = Math.max(S.ls, 135);    // MARCI mapping began at Ls 132 of MY 28
+  }
+  seasonChanged(true);
+};
+
+// play: MARCI sol by sol through the chosen Mars year (or, without MARCI, the season in 5 deg steps), each step held
+// until the map in view has arrived; GIF: the same, recorded
+const PLAY = { on: false, gif: null };
+const settle = async (maxMs = 9000) => {
+  const t0 = performance.now();
+  await new Promise((r) => setTimeout(r, 350));
+  while (performance.now() - t0 < maxMs) {
+    // this step's textures, a MARCI month still downloading (its tiles are stand-ins until pollMarci swaps them), and
+    // tiles of the view still missing (up to 3 s). Elevation tiles refreshing in the background (provisional while the
+    // MOLA grid downloads) do not hold the animation.
+    if (!texLoads && !marciWaiting.size && (!lastStat.wanted || performance.now() - t0 > 3000)) break;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+};
+// step per frame: MARCI maps (sols) on the weather map, degrees of Ls otherwise (the dust layer changes every 5 deg)
+const STEP_SOLS = [1, 5, 15], STEP_DEG = [5, 10, 30];
+const playStep = () => Math.max(0, Math.min(2, (+$("playStep").value || 1) - 1));
+function stepSeason() {
+  const k = playStep();
+  if (S.base === "marci" && S.marci.days) {
+    // the next well-covered sols of this Mars year after the one on screen (in season order)
+    let D = S.marci.days.filter((d) => d[2] === S.marci.my && okDay(d));
+    if (!D.length) D = S.marci.days.filter((d) => d[2] === S.marci.my);
+    const cur = marciNearest(S.marci.my, S.ls), at = cur ? cur[3] : S.ls;
+    const i = D.findIndex((d) => d[3] > at + 1e-6);
+    S.ls = D[i < 0 ? 0 : (i + STEP_SOLS[k] - 1) % D.length][3];
+  } else S.ls = (S.ls + STEP_DEG[k]) % 360;
+  seasonChanged(true);
+}
+async function playLoop() {
+  while (PLAY.on) {
+    await settle();
+    if (!PLAY.on) break;
+    if (PLAY.gif) {
+      captureFrame();
+      $("marciGif").textContent = `${PLAY.gif.n} / ${PLAY.gif.max}`;
+      if (PLAY.gif.n >= PLAY.gif.max) { PLAY.on = false; break; }
+    }
+    stepSeason();
+    if (!PLAY.gif) await new Promise((r) => setTimeout(r, 450));
+  }
+  $("marciPlay").textContent = "Play";
+  if (PLAY.gif) finishGif();
+}
+$("marciPlay").addEventListener("click", () => {
+  PLAY.on = !PLAY.on;
+  $("marciPlay").textContent = PLAY.on ? "Stop" : "Play";
+  if (PLAY.on) playLoop();
+});
+function captureFrame() {
+  const g = PLAY.gif;
+  renderer.render(scene, camera);
+  g.ctx.fillStyle = "#000"; g.ctx.fillRect(0, 0, g.cv.width, g.cv.height);
+  g.ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, g.w, g.h);
+  g.ctx.fillStyle = "#0b0f14"; g.ctx.fillRect(0, g.h, g.w, 26);
+  g.ctx.fillStyle = "#f2f5f8"; g.ctx.font = "600 13px Barlow, system-ui, sans-serif";
+  const d = S.base === "marci" ? marciNearest(S.marci.my, S.ls) : null;
+  g.ctx.fillText(d ? `MRO MARCI · MY ${d[2]} · Ls ${d[3].toFixed(1)}° · ${dateOfMyLs(d[2], d[3]).toISOString().slice(0, 10)} · MarsNav`
+    : `Season Ls ${Math.round(S.ls)}° · ${activeOverlays().join(", ") || S.base} · MarsNav`, 8, g.h + 18);
+  g.enc.addFrame(g.ctx.getImageData(0, 0, g.cv.width, g.cv.height).data);
+  g.n++;
+}
+function finishGif() {
+  const g = PLAY.gif;
+  PLAY.gif = null;
+  $("marciGif").textContent = "Encoding…";
+  setTimeout(() => {
+    try {
+      const bytes = g.enc.encode();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([bytes], { type: "image/gif" }));
+      a.download = `marsnav_${S.base === "marci" ? `marci_my${S.marci.my}` : "season"}_ls${Math.round(g.ls0)}.gif`;
+      document.body.appendChild(a); a.click(); a.remove();
+      toast(`GIF saved: ${g.n} frames.`);
+    } catch (err) { toast(`GIF failed: ${err.message}`); }
+    $("marciGif").textContent = "GIF";
+  }, 30);
+}
+$("marciGif").addEventListener("click", () => {
+  if (PLAY.on) { PLAY.on = false; return; }
+  const w = Math.min(640, canvas.clientWidth), h = Math.round(w * canvas.clientHeight / canvas.clientWidth);
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h + 26;
+  PLAY.gif = { enc: new GifEncoder(cv.width, cv.height, { delayMs: 220 }), cv, ctx: cv.getContext("2d", { willReadFrequently: true }), w, h, n: 0, max: 30, ls0: S.ls };
+  PLAY.on = true;
+  $("marciPlay").textContent = "Stop";
+  playLoop();
+});
+
+// ------------------------------------------------------------------------------------------------- compare
+// The second map (B) is rendered in its own pass into a canvas over the globe, clipped to the right of the swipe line
+// or to a lens around the cursor; each tile keeps a second texture for it.
+const cmpCanvas = $("cmpCanvas"), cmpCtx = cmpCanvas.getContext("2d");
+let cmpLoads = 0;
+function cmpLayer() {
+  const b = S.cmp.base;
+  if (!b) return null;
+  return b === "marci" ? baseLayer("marci", S.cmp.my) : b;
+}
+function compareUi() {
+  const on = !!S.cmp.base;
+  $("cmpRow").hidden = !on;
+  $("cmpMyL").hidden = S.cmp.base !== "marci";
+  $("cmpBase").value = S.cmp.base; $("cmpMy").value = String(S.cmp.my);
+  for (const b of $("cmpModeL").querySelectorAll("[data-cm]")) b.setAttribute("aria-pressed", String(b.dataset.cm === S.cmp.mode));
+  cmpCanvas.hidden = !on; $("cmpHandle").hidden = !on || S.cmp.mode !== "swipe";
+  const name = (v, my) => v === "marci" ? `MARCI MY ${my}` : ($("baseSel").querySelector(`option[value="${v}"]`)?.textContent || v).split(",")[0];
+  $("cmpTagA").textContent = `◀ ${name(S.base, S.marci.my)}`;
+  $("cmpTagB").textContent = `${name(S.cmp.base, S.cmp.my)} ▶`;
+  placeHandle();
+}
+async function compareChanged() {
+  S.cmp.base = $("cmpBase").value; S.cmp.my = +$("cmpMy").value;
+  if (S.cmp.base === "marci") await loadMarciIndex();
+  S.cmp.layer = cmpLayer();
+  for (const t of tiles.values()) if (t.texB && t.texBLayer !== S.cmp.layer) { t.texB.dispose(); t.texB = null; t.texBLayer = null; }
+  compareUi(); saveHash(); pollMarci();
+}
+$("cmpBase").addEventListener("change", compareChanged);
+$("cmpMy").addEventListener("change", compareChanged);
+for (const b of $("cmpModeL").querySelectorAll("[data-cm]")) b.addEventListener("click", () => { S.cmp.mode = b.dataset.cm; compareUi(); saveHash(); });
+function placeHandle() {
+  const h = $("cmpHandle");
+  h.style.left = `${S.cmp.split * canvas.clientWidth}px`;
+}
+{
+  const h = $("cmpHandle");
+  let dragging = false;
+  h.addEventListener("pointerdown", (e) => { dragging = true; h.setPointerCapture(e.pointerId); e.preventDefault(); });
+  h.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const r = canvas.getBoundingClientRect();
+    S.cmp.split = Math.max(0.03, Math.min(0.97, (e.clientX - r.left) / r.width));
+    placeHandle();
+  });
+  h.addEventListener("pointerup", () => { dragging = false; });
+  canvas.addEventListener("pointermove", (e) => { const r = canvas.getBoundingClientRect(); S.cmp.lens = [e.clientX - r.left, e.clientY - r.top]; });
+}
+function renderCompare() {
+  const L = S.cmp.layer;
+  // second textures for the tiles in view
+  const vis = [...tiles.values()].filter((t) => t.mesh?.visible);
+  const now = performance.now();
+  for (const t of vis) {
+    const stale = t.texBLayer !== L || (t.texBRetry && now > t.texBRetry);
+    if (stale && !t.loadingB && cmpLoads < 6) {
+      t.loadingB = true; cmpLoads++; t.texBRetry = 0;
+      const want = L;
+      loadTexture(t, want, false).then((tex) => {
+        if (S.cmp.layer !== want || !t.mesh) { tex.dispose(); return; }
+        t.texB?.dispose(); t.texB = tex; t.texBLayer = want;
+        if (tex.userData.provisional) t.texBRetry = performance.now() + 15000;
+      }).catch(() => { t.texBRetry = performance.now() + 8000; }).finally(() => { t.loadingB = false; cmpLoads--; });
+    }
+  }
+  const w = canvas.width, h = canvas.height;
+  if (cmpCanvas.width !== w || cmpCanvas.height !== h) { cmpCanvas.width = w; cmpCanvas.height = h; }
+  const swap = [];
+  for (const t of vis) if (t.texB && t.texBLayer === L && t.mesh.material.map) { swap.push([t.mesh.material, t.mesh.material.map]); t.mesh.material.map = t.texB; }
+  renderer.render(scene, camera);
+  cmpCtx.clearRect(0, 0, w, h);
+  cmpCtx.drawImage(canvas, 0, 0);
+  for (const [m, map] of swap) m.map = map;
+  const cw = canvas.clientWidth;
+  if (S.cmp.mode === "spy") {
+    const [x, y] = S.cmp.lens || [cw / 2, canvas.clientHeight / 2];
+    cmpCanvas.style.clipPath = `circle(130px at ${x}px ${y}px)`;
+  } else cmpCanvas.style.clipPath = `inset(0 0 0 ${S.cmp.split * cw}px)`;
+}
+
+// ------------------------------------------------------------------------------------------------- ruler
+function measureToggle(on = !S.meas.active) {
+  S.meas.active = on;
+  if (on && S.meas.closed) { S.meas.pts = []; S.meas.closed = false; }
+  $("ruler").setAttribute("aria-pressed", String(on));
+  $("measureL").hidden = !on && !S.meas.pts.length;
+  canvas.classList.toggle("measuring", on);
+  labelsEl.classList.toggle("measuring", on);             // labels let clicks through to the planet while measuring
+  if (on && !S.meas.pts.length) { $("mlOut").textContent = "Click the planet to add points; double-click to finish."; $("mlStats").innerHTML = ""; }
+}
+function measureAdd(lon, lat) {
+  const last = S.meas.pts[S.meas.pts.length - 1];
+  if (last && pathKm([last, [lon, lat]]).total < Math.max(0.001, S.cam.range * 0.003)) return;
+  S.meas.pts.push([lon, lat]);
+  measureDraw();
+}
+function measureFinish() { S.meas.active = false; $("ruler").setAttribute("aria-pressed", "false"); canvas.classList.remove("measuring"); labelsEl.classList.remove("measuring"); measureDraw(); }
+function measureDraw() {
+  clearMarkers("ms");
+  S.meas.pts.forEach(([lo, la], k) => addMarker("ms", lo, la, k === S.meas.pts.length - 1 ? "◆" : "•"));
+  rebuildOverlays();
+  const P = S.meas.pts, ring = S.meas.closed ? [...P, P[0]] : P;
+  if (P.length < 2) { $("mlOut").textContent = P.length ? "Add the next point." : "Click the planet to add points."; return; }
+  const len = pathKm(ring);
+  // climb and descent along the line from the elevation tiles in memory
+  let up = 0, down = 0, prev = null, lo = Infinity, hi = -Infinity;
+  for (let k = 1; k < ring.length; k++) {
+    for (const [a, b] of greatCircle(ring[k - 1], ring[k], Math.max(0.05, len.total / 400))) {
+      const e = elevAt(a, b);
+      if (prev != null) { if (e > prev) up += e - prev; else down += prev - e; }
+      prev = e; lo = Math.min(lo, e); hi = Math.max(hi, e);
+    }
+  }
+  const flat = hi - lo < 0.5 && Math.abs(lo) < 0.5;          // the stand-in tiles before the elevation data is here
+  $("mlOut").innerHTML = `<b class="num">${fmtDist(len.total)}</b> ${S.meas.closed ? "perimeter" : `along ${ring.length - 1} segment${ring.length > 2 ? "s" : ""}`}
+    ${S.meas.closed ? `· area <b class="num">${fmtArea(areaKm2(P))}</b>` : ""}<br>
+    ${flat ? `<span class="na-t">Elevation along the line: not loaded yet (the elevation map downloads on first use).</span>`
+    : `climb <span class="num">+${Math.round(up)} m / −${Math.round(down)} m</span> · elevation ${Math.round(lo)} to ${Math.round(hi)} m <span class="na-t">(best elevation now in view)</span>`}`;
+}
+async function areaStats(poly, box, title) {
+  box.innerHTML = `<p class="hint">Reading every layer inside${title ? ` ${esc(title)}` : ""}…</p>`;
+  try {
+    const r = await post("/api/stats", { poly, ls: Math.round(S.ls) });          // the season as the panel shows it
+    const rows = Object.values(r.layers).filter((v) => v.n).map((v) => `<tr><td>${esc(v.name)}${v.unit ? ` <span class="na-t">${esc(v.unit)}</span>` : ""}${v.cover < 0.99 ? ` <span class="warn-t">(${Math.round(100 * v.cover)} % of the area)</span>` : ""}</td><td class="num">${v.p10}</td><td class="num">${v.p50}</td><td class="num">${v.p90}</td><td class="num">${v.max}</td></tr>`).join("");
+    box.innerHTML = `<table class="tbl stat"><tr><th></th><th>p10</th><th>median</th><th>p90</th><th>max</th></tr>${rows}</table>
+      <p class="hint">${r.points.toLocaleString()} points ${fmtDist(r.spacing_km)} apart over ${fmtArea(r.area_km2)}${r.craters ? ` · ${r.craters.count} craters ≥ 1 km inside (${r.craters.per_1e6_km2.toLocaleString()} per 10⁶ km²)` : ""}.
+      Dust for the season set under Map layers (Ls ${Math.round(S.ls)}°).${r.elevation_missing ? ` <span class="warn-t">${esc(r.elevation_missing)}.</span>` : ""}</p>`;
+    return r;
+  } catch (e) { box.innerHTML = `<p class="bad-t">Statistics failed: ${esc(e.message)}</p>`; return null; }
+}
+$("ruler").addEventListener("click", () => measureToggle());
+$("mlClose").addEventListener("click", () => { S.meas = { active: false, pts: [], closed: false }; clearMarkers("ms"); $("measureL").hidden = true; canvas.classList.remove("measuring"); labelsEl.classList.remove("measuring"); $("ruler").setAttribute("aria-pressed", "false"); rebuildOverlays(); });
+$("mlUndo").addEventListener("click", () => { if (S.meas.closed) S.meas.closed = false; else S.meas.pts.pop(); $("mlStats").innerHTML = ""; measureDraw(); });
+$("mlClear").addEventListener("click", () => { S.meas.pts = []; S.meas.closed = false; $("mlStats").innerHTML = ""; measureToggle(true); measureDraw(); });
+$("mlDone").addEventListener("click", measureFinish);
+$("mlArea").addEventListener("click", () => {
+  if (S.meas.pts.length < 3) { $("mlOut").textContent = "An area needs at least three points."; return; }
+  S.meas.closed = true; measureFinish();
+  areaStats(S.meas.pts, $("mlStats"));
+});
+// drawn with the other overlays (rebuildOverlays calls this)
+function measureLines() {
+  const P = S.meas.pts;
+  if (P.length < 2) return;
+  const ring = S.meas.closed ? [...P, P[0]] : P, pts = [];
+  for (let k = 1; k < ring.length; k++) for (const [a, b] of greatCircle(ring[k - 1], ring[k], Math.max(0.5, S.cam.range / 300))) pts.push([a, b, null]);
+  overlay.add(lineFrom(pts, 0x000000, { depthTest: false, opacity: 0.6 }));
+  overlay.add(lineFrom(pts, 0xffd23c, { depthTest: false, opacity: 0.95 }));
+}
+
+// ------------------------------------------------------------------------------------------------- dossier extras
+function extraSections(d) {
+  return `<section class="sect" id="xRelay"><h3>Earth relay coverage <small>modelled from published orbits</small></h3><p class="hint">Flying MRO, Odyssey, TGO and Mars Express over this latitude…</p></section>
+    ${d?.landing?.ellipse ? `<section class="sect"><h3>Inside the landing ellipse <small>every global layer</small></h3><div id="xEllStats"><button class="btn small" id="btnEllStats">Statistics inside the ellipse</button></div></section>` : ""}
+    <section class="sect"><h3>Weather here in past years <small>MRO MARCI daily maps, Ls ${Math.round(S.ls)}°</small></h3>
+      <div class="row">${[28, 29, 30, 31, 32].map((my) => `<button class="btn small" data-wx="${my}">MY ${my}</button>`).join("")}</div>
+      <p class="hint">Shows the MARCI map of that Mars year at the season set under Map layers (its month of maps, 8 to 15 MB, downloads once). MY 28 had a planet-encircling dust storm from Ls ~262° (late June 2007).</p></section>`;
+}
+const RELAY_CACHE = new Map();        // by half-degree of latitude: the model takes ~0.15 s
+function wireExtraSections() {
+  const f = S.focus;
+  setTimeout(() => {
+    const el = $("xRelay");
+    if (!el || S.focus !== f) return;
+    const k = Math.round(f.lat * 2) / 2;
+    if (!RELAY_CACHE.has(k)) RELAY_CACHE.set(k, relayCoverage(k, { sols: 16, runs: 2, stepS: 20 }));
+    const r = RELAY_CACHE.get(k);
+    el.innerHTML = `<h3>Earth relay coverage <small>modelled from published orbits</small></h3><div class="kv">${r.orbiters.map((o) => `<span>${esc(o.name)}</span><span>${o.passesPerSol.toFixed(1)} passes/sol, ${Math.round(o.minutesPerSol)} min/sol${o.windows.some((w) => w.allDay) ? ", on most orbits" : o.windows.length ? `, ${o.windows.map((w) => `${hhmm(w.fromH)}–${hhmm(w.toH)}`).join(" and ")} LMST` : ", times vary"}${o.uncertain ? ' <span class="na-t">(local time assumed)</span>' : ""}</span>`).join("")}
+      <span>All orbiters</span><span><b>${Math.round(r.minutesPerSol)} min/sol</b> of contact</span></div>
+      <p class="hint">${esc(r.note)} MAVEN is not counted (contact lost December 2025). Polar sites see the polar orbiters on most orbits.</p>`;
+  }, 60);
+  $("btnEllStats")?.addEventListener("click", () => areaStats(S.landing.ellipse, $("xEllStats"), "the landing ellipse"));
+  for (const b of $("dSections").querySelectorAll("[data-wx]")) {
+    b.addEventListener("click", async () => {
+      await loadMarciIndex();
+      S.marci.my = +b.dataset.wx;
+      if (!marciNearest(S.marci.my, S.ls)) S.ls = marciClosestLs(S.marci.my, S.ls);
+      $("baseSel").value = "marci"; S.base = "marci";
+      seasonChanged(true);
+      flyTo(f.lon, f.lat, 3500);
+      toast(`MARCI weather map, MY ${S.marci.my}, Ls ${Math.round(S.ls)}°. Move the season slider (Map layers) or press Play.`, 6000);
+    });
+  }
+}
+
+// ------------------------------------------------------------------------------------------------- KML
+$("btnKml").addEventListener("click", () => {
+  const f = S.focus; if (!f) return;
+  const d = S.dossier, parts = [];
+  const name = f.cand?.name || f.name || "Selected site";
+  parts.push(kml.point(name, f.lon, f.lat, { style: "hab", description: d ? `${d.verdict} · score ${d.score} · ${d.criteria_label}` : "Selected in MarsNav Landing mode" }));
+  if (S.landing?.ellipse) parts.push(kml.polygon(`Landing ellipse (${S.landing.label || $("landerSel").value})`, S.landing.ellipse, { style: "ellipse" }));
+  parts.push(kml.polygon("Exploration zone (100 km)", circle(f.lon, f.lat, 100).map((p) => [p[0], p[1]]), { style: "zone" }));
+  parts.push(kml.polygon("Infrastructure radius (5 km)", circle(f.lon, f.lat, 5).map((p) => [p[0], p[1]]), { style: "zone" }));
+  if (S.iceTarget) { parts.push(kml.point("Nearest water ice (SWIM Ci ≥ 0.5)", S.iceTarget.lon, S.iceTarget.lat)); parts.push(kml.line("To the ice", [[f.lon, f.lat], [S.iceTarget.lon, S.iceTarget.lat]], { style: "alt" })); }
+  if (S.routeResult?.points?.length > 1) parts.push(kml.line(`Traverse (${$("modeSel").value})`, S.routeResult.points.map((p) => [p[0], p[1], 0])));
+  if (S.meas.pts.length >= 2) parts.push(S.meas.closed ? kml.polygon("Measured area", S.meas.pts, { style: "measure" }) : kml.line("Measured line", S.meas.pts, { style: "measure" }));
+  const doc = kml.doc(`MarsNav: ${name}`, parts.join("\n"), { description: `Exported from MarsNav Landing mode on ${new Date().toISOString().slice(0, 10)}. Open in Google Earth Pro, Mars view.` });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([doc], { type: "application/vnd.google-earth.kml+xml" }));
+  a.download = `marsnav_${name.replace(/[^\w-]+/g, "_")}.kml`;
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("KML saved: opens in Google Earth Pro's Mars view.");
+});
+
+// ------------------------------------------------------------------------------------------------- stories
+const STORY = { steps: null, k: -1 };
+// tick (or untick) a layer the way a click would
+function tick(id, on = true) {
+  const cb = document.querySelector(`[data-ovl="${id}"]`);
+  if (!cb || cb.checked === on) return;
+  cb.checked = on;
+  if (on) cb.closest("details")?.setAttribute("open", "");
+  cb.onchange?.();
+}
+const waitMs = (ms) => new Promise((r) => setTimeout(r, ms));
+const LSTORIES = [
+  { id: "storm", title: "The 2007 global dust storm", steps: [
+    { t: "Mars before the storm", x: "MRO's MARCI camera mapped the whole planet every sol. This is Mars year 28 at Ls 222°, mid northern autumn (April 2007): clear air over most of the planet, the dark markings sharp.",
+      go: async () => { await loadMarciIndex(); S.marci.my = 28; S.ls = 222; $("baseSel").value = "marci"; S.base = "marci"; seasonChanged(true); flyTo(-10, 5, 11000); } },
+    { t: "The planet disappears", x: "Ls 280° (mid-July 2007): the storm that began near Ls 262° has wrapped the planet and the markings vanish under the dust. At Meridiani, Opportunity measured an optical depth of about 5 and was put into a minimal mode to survive (Lemmon et al. 2015). This month of maps downloads once (about 8 MB).",
+      go: async () => { S.ls = 280; seasonChanged(true); } },
+    { t: "Same season, a calm year", x: "Swipe: left, MY 28 in the storm; right, MY 29 at the same season (June 2009). Drag the blue line. In the 13 Mars years of the dust record (MY 24-36), storms of this size came in MY 25, 28 and 34.",
+      go: async () => { $("cmpBase").value = "marci"; $("cmpMy").value = "29"; S.cmp.mode = "swipe"; await compareChanged(); } },
+    { t: "What it means for a crew", x: "The Dust layer (Map layers, Science atlas, Atmospheric) maps the optical depth of a dusty year (90th percentile) at this season. Direct sunlight falls as e^-τ: to 37 % at τ 1, 5 % at τ 3. The EVA planner uses the same climatology for solar heating and power.",
+      go: async () => { $("cmpBase").value = ""; await compareChanged(); $("baseSel").value = "viking"; S.base = "viking"; tick("dust90"); seasonChanged(true); } },
+  ] },
+  { id: "hub", title: "Choosing a hub with statistics", steps: [
+    { t: "A candidate", x: "Jezero crater, a NASA landing site with 1 m elevation data. Assess it to see the criteria and the landing ellipse.",
+      go: async () => { selectPoint(77.45, 18.44); flyTo(77.45, 18.44, 600); await waitMs(1500); await assess(); } },
+    { t: "Inside the ellipse", x: "“Statistics inside the ellipse” (dossier) gives the 10th-90th percentile of every global layer inside the landing ellipse: slope, thermal inertia, albedo, dust, the magnetic field.",
+      go: async () => { $("btnEllStats")?.click(); $("xEllStats")?.scrollIntoView({ block: "center" }); } },
+    { t: "Talking to Earth", x: "Earth relay coverage: how many orbiter passes a sol at this latitude and, for MRO and Odyssey, at what local times. The ruler (M) measures any distance or area on the globe.",
+      go: async () => { $("xRelay")?.scrollIntoView({ block: "center" }); } },
+  ] },
+  { id: "ice", title: "Water ice and the magnetic field", steps: [
+    { t: "Where the ice is", x: "Arcadia Planitia: SWIM finds ground consistent with shallow water ice (blue), one of the strongest candidates for a crewed base.",
+      go: async () => { tick("ice"); flyTo(-165, 46, 2600); } },
+    { t: "Ancient magnetism", x: "Mars Global Surveyor's map of the crustal magnetic field: strongest in the southern highlands (Terra Sirenum, Terra Cimmeria). It deflects some solar wind, not cosmic rays.",
+      go: async () => { tick("ice", false); tick("magnetic"); flyTo(175, -40, 9000); } },
+  ] },
+];
+function storyShow(k) {
+  if (!STORY.steps || k < 0 || k >= STORY.steps.length) { $("storyBox").hidden = true; STORY.steps = null; return; }
+  STORY.k = k;
+  const st = STORY.steps[k];
+  $("storyBox").hidden = false;
+  $("storyStep").textContent = `STORY · STEP ${k + 1} OF ${STORY.steps.length}`;
+  $("storyTitle").textContent = st.t; $("storyText").textContent = st.x;
+  $("storyBack").disabled = k === 0;
+  $("storyNext").textContent = k === STORY.steps.length - 1 ? "Finish" : "Next";
+  Promise.resolve(st.go()).catch((e) => console.error(e));
+}
+$("storyNext").addEventListener("click", () => storyShow(STORY.k + 1));
+$("storyBack").addEventListener("click", () => storyShow(STORY.k - 1));
+$("storyEnd").addEventListener("click", () => storyShow(-1));
+// one Guide button (same place as in the planner): the stories on real data, and the help page
+$("btnGuide").addEventListener("click", () => {
+  const m = $("help");
+  const box = m.querySelector(".mbox");
+  if (!m.dataset.orig) m.dataset.orig = box.innerHTML;
+  box.innerHTML = `<h2>Guide</h2><p class="hint">Guided stories on real data: each step sets the globe up and explains what is on screen.
+    The quick tour of the EVA planner is under Guide in the EVA planner.</p>
+    <div class="stories">${LSTORIES.map((s) => `<button class="btn story" data-ls="${s.id}"><b>${esc(s.title)}</b><span>${s.steps.length} steps</span></button>`).join("")}
+    <button class="btn story" data-guide="help"><b>Help and keyboard shortcuts</b><span>What each part of the screen does (also ?)</span></button></div>
+    <div class="row"><button class="btn" id="storiesClose">Close</button></div>`;
+  openDialog("help");
+  $("storiesClose").onclick = () => closeDialog("help");
+  box.querySelector("[data-guide=help]").onclick = showHelp;
+  for (const b of box.querySelectorAll("[data-ls]")) b.onclick = () => { closeDialog("help"); STORY.steps = LSTORIES.find((s) => s.id === b.dataset.ls).steps; storyShow(0); };
+});
+window.MMLandingX = { S, PLAY, LSTORIES, storyShow, measureAdd, areaStats, seasonChanged, compareChanged, loadMarciIndex, marciNearest, dateOfMyLs };
+
+// ------------------------------------------------------------------------------------------------- loading bar
+// "Loading map": a batch starts when tiles begin streaming and ends when none are left; the bar is the share of the
+// batch's tiles that have arrived. Under it, the first-run download of the whole-Mars elevation grid (33 MB, once).
+const ML = { start: 0, base: 0, idleAt: 0, shown: false };
+function updateMapLoad(now) {
+  const box = $("mapLoad");
+  if (!box) return;
+  const pending = loading + queue.size;
+  const dl = S.demDownload;                         // {done, total} while the 33 MB elevation grid downloads
+  if (pending > 0 || dl) {
+    if (!ML.shown) { ML.shown = true; ML.base = loadedTotal; ML.start = now; }
+    ML.idleAt = 0;
+    const got = loadedTotal - ML.base, frac = pending ? got / (got + pending) : 1;
+    $("mapLoadTxt").textContent = S.online === false ? "offline: data saved on this computer"
+      : pending ? `streaming NASA imagery · ${got} of ${got + pending} tiles` : "elevation";
+    $("mapLoadPct").textContent = `${Math.round(100 * frac)} %`;
+    $("mapLoadBar").style.width = `${Math.max(3, 100 * frac)}%`;
+    const d = $("mapLoadDem");
+    if (dl) { d.hidden = false; d.textContent = `First run: downloading the whole-Mars elevation map, ${(dl.done / 1e6).toFixed(1)} of ${(dl.total / 1e6).toFixed(0)} MB (once; relief appears when it is done)`; }
+    else d.hidden = true;
+    box.hidden = false; box.classList.remove("done");
+  } else if (ML.shown) {
+    if (!ML.idleAt) { ML.idleAt = now; $("mapLoadBar").style.width = "100%"; $("mapLoadPct").textContent = "100 %"; $("mapLoadTxt").textContent = "map ready"; }
+    else if (now - ML.idleAt > 700) { box.classList.add("done"); if (now - ML.idleAt > 1100) { box.hidden = true; ML.shown = false; } }
+  }
+}
+
+// ------------------------------------------------------------------------------------------------- loop
+let lastHash = 0, lastScale = 0, lastStat = { drawn: 0, wanted: 0 };
+function frame(now) {
+  requestAnimationFrame(frame);
+  stepFlight(now);
+  placeCamera();
+  lastStat = selectTiles();
+  if (Math.abs(Math.log(S.cam.range / (overlayRange || 1))) > 0.7) rebuildOverlays();
+  labelsEl.classList.toggle("far", S.cam.range > 5200);
+  updateMarkers();
+  if (S.cmp.layer) renderCompare();
+  renderer.render(scene, camera);
+  if (now - lastScale > 120) {
+    lastScale = now;
+    updateScale();
+    const alt = camera.position.length() - R;
+    $("hudAlt").textContent = `alt ${fmtKm(alt)} · z${currentZoom()}`;
+    $("hudLoad").textContent = loading || lastStat.wanted ? `streaming ${loading + queue.size} tiles` : `${loadedTotal} tiles`;
+    updateMapLoad(now);
+  }
+  if (dirty && now - lastHash > 500) { saveHash(); lastHash = now; dirty = false; clearTimeout(covT); covT = setTimeout(loadCoverage, 800); }
+}
+
+const hadHash = readHash();
+resize();
+if (canvas.clientWidth < 820 || window.innerHeight < 820) {       // small screens: the layer list starts folded (header stays)
+  $("layers").classList.add("collapsed"); $("layersToggle").setAttribute("aria-expanded", "false");
+}
+loadNames();
+seasonUi();
+if (S.base === "marci" || S.cmp.base) loadMarciIndex().then(() => { S.cmp.layer = cmpLayer(); compareUi(); seasonChanged(true); });
+compareUi();
+updateLegend();
+loadDatasets().then(() => { loadCandidates(); loadAtlas(); });
+loadHubs().then(() => loadLocal());
+loadScience();
+loadSwx();
+setInterval(loadSwx, 30 * 60 * 1000);
+refreshStatus();
+setInterval(refreshStatus, 5000);
+requestAnimationFrame(frame);
+if (!hadHash) flyTo(20, 20, 11000, 10);
+{ const j = store.get("mm.dsJob"); if (j) api(`/api/job/${j}`).then((x) => { if (x.status === "running") followDsJob(j); else store.set("mm.dsJob", null); }).catch(() => store.set("mm.dsJob", null)); }
+window.MMLanding = { S, tiles, flyTo, selectPoint, assess, elevAt, screenAll };   // for debugging from the console

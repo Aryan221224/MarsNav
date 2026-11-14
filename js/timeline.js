@@ -1,0 +1,170 @@
+// timeline.js - the strip under the map: elevation profile, walkback margin (the worst consumable after the walk
+// home), time left before sunset, shade and station work, against mission elapsed time.
+import { fmtDuration } from "../engine/util.js";
+
+// A track's name at the middle of its band, its scale against the plot at the band's own top and bottom (no value
+// can be read as belonging to the next track). Thin bands show the name only.
+function trackLabel(c, name, top, bot, plotLeft, hi, lo, color) {
+  const keep = c.font, align = c.textAlign;
+  c.fillStyle = color;
+  c.font = "600 11px 'Barlow Condensed', 'Barlow', sans-serif";
+  c.textAlign = "left";
+  c.fillText(name, 6, (top + bot) / 2 + 4);
+  if (bot - top >= 44 && hi != null) {
+    c.font = "10px 'IBM Plex Mono', monospace";
+    c.textAlign = "right";
+    c.globalAlpha = 0.8;
+    c.fillText(hi, plotLeft - 5, top + 9);
+    c.fillText(lo, plotLeft - 5, bot - 2);
+    c.globalAlpha = 1;
+  }
+  c.font = keep; c.textAlign = align;
+}
+
+export class Timeline {
+  constructor(canvas) {
+    this.cv = canvas;
+    this.ctx = canvas.getContext("2d");
+    this.route = null;
+    this.cursor = null;
+    this.now = null;
+    this.relay = [];          // Earth relay windows during the EVA: [{t0, t1, label}] in seconds from departure
+    new ResizeObserver(() => this.draw()).observe(canvas.parentElement);
+    canvas.addEventListener("pointermove", (e) => {
+      if (!this.route) return;
+      const t = this._tOf(e.offsetX);
+      const p = this._ptAt(t);
+      this.cursor = t;
+      this.onHover?.(p);
+      this.draw();
+    });
+    canvas.addEventListener("pointerleave", () => { this.cursor = null; this.onHover?.(null); this.draw(); });
+  }
+
+  set(route) {
+    this.route = route?.ok ? route : null;
+    this.draw();
+  }
+
+  _tOf(x) {
+    const L = 74, R = this.w - 14;
+    return ((x - L) / (R - L)) * (this.route.t || 1);
+  }
+
+  _ptAt(t) {
+    const pts = this.route.pts;
+    let lo = 0, hi = pts.length - 1;
+    while (hi - lo > 1) {
+      const m = (lo + hi) >> 1;
+      if (pts[m].t < t) lo = m; else hi = m;
+    }
+    return pts[hi];
+  }
+
+  draw() {
+    const r = this.cv.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    this.w = r.width;
+    this.h = r.height;
+    this.cv.width = Math.round(r.width * dpr);
+    this.cv.height = Math.round(r.height * dpr);
+    const c = this.ctx;
+    c.setTransform(dpr, 0, 0, dpr, 0, 0);
+    c.fillStyle = "#151c26";
+    c.fillRect(0, 0, this.w, this.h);
+    const css = getComputedStyle(document.documentElement);
+    const text = "#b8c2ce", faint = "#8d9aab", line = "#2a3646";
+    c.font = "12px 'IBM Plex Mono', monospace";
+    if (!this.route) {
+      c.fillStyle = faint;
+      c.fillText("Route profile appears here after planning: elevation, walkback margin, sunset, shade.", 16, 28);
+      return;
+    }
+    const pts = this.route.pts, T = this.route.t || 1;
+    const L = 74, R = this.w - 14;
+    const X = (t) => L + ((R - L) * t) / T;
+    const bands = [[8, 0.42], [0.46, 0.78], [0.8, 0.97]].map(([a, b]) => [this.h * (a < 1 ? a : 0.05), this.h * b]);
+    bands[0][0] = 10;
+    // time axis grid (every 30 min)
+    c.strokeStyle = line;
+    c.lineWidth = 1;
+    c.fillStyle = faint;
+    for (let t = 0; t <= T; t += 1800) {
+      const x = X(t);
+      c.beginPath(); c.moveTo(x, 6); c.lineTo(x, this.h - 4); c.stroke();
+      c.fillText(fmtDuration(t).slice(0, 5), x + 3, this.h - 6);
+    }
+    // Earth relay windows (sun-synchronous orbiters overhead; plannerx.js)
+    for (const w of this.relay || []) {
+      const x0 = X(Math.max(0, w.t0)), x1 = X(Math.min(T, w.t1));
+      if (x1 <= x0) continue;
+      c.fillStyle = "rgba(60,203,255,0.13)"; c.fillRect(x0, 6, Math.max(2, x1 - x0), this.h - 22);
+      c.fillStyle = "#3ccbff"; c.fillRect(x0, 6, Math.max(2, x1 - x0), 3);
+      c.fillText(`${w.label} ↑`, x0 + 2, 19);
+    }
+    // station work bands and shade
+    for (let k = 1; k < pts.length; k++) {
+      if (pts[k].work) { c.fillStyle = "rgba(216,165,122,0.18)"; c.fillRect(X(pts[k].t - pts[k].work), 6, X(pts[k].t) - X(pts[k].t - pts[k].work), this.h - 22); }
+      if (pts[k].shade) { c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(X(pts[k - 1].t), bands[0][0], Math.max(1, X(pts[k].t) - X(pts[k - 1].t)), bands[0][1] - bands[0][0]); }
+    }
+    // --- elevation
+    const el = pts.map((p) => p.elev);
+    let zmin = Math.min(...el), zmax = Math.max(...el);
+    if (zmax - zmin < 20) { zmin -= 10; zmax += 10; }
+    const [e0, e1] = bands[0];
+    const Y = (z) => e1 - ((e1 - e0) * (z - zmin)) / (zmax - zmin);
+    c.beginPath();
+    c.moveTo(X(pts[0].t), e1);
+    for (const p of pts) c.lineTo(X(p.t), Y(p.elev));
+    c.lineTo(X(pts[pts.length - 1].t), e1);
+    c.closePath();
+    c.fillStyle = "rgba(216,165,122,0.28)";
+    c.fill();
+    c.beginPath();
+    pts.forEach((p, k) => (k ? c.lineTo(X(p.t), Y(p.elev)) : c.moveTo(X(p.t), Y(p.elev))));
+    c.strokeStyle = "#d8a57a";
+    c.lineWidth = 1.5;
+    c.stroke();
+    trackLabel(c, "ELEV", e0, e1, L, `${zmax.toFixed(0)}`, `${zmin.toFixed(0)} m`, text);
+    // --- walkback margin (worst consumable), 0-100 %
+    const [m0, m1] = bands[1];
+    const YM = (v) => m1 - (m1 - m0) * Math.max(0, Math.min(1, v));
+    c.strokeStyle = line;
+    c.beginPath(); c.moveTo(L, YM(0.2)); c.lineTo(R, YM(0.2)); c.stroke();
+    let prev = null;
+    for (const p of pts) {
+      const v = Math.min(p.margins.o2, p.margins.co2, p.margins.water, p.margins.batt, p.margins.time / (this.route.timeEndS || 1));
+      const x = X(p.t), y = YM(v);
+      if (prev) {
+        c.strokeStyle = v < 0 ? "#ff7470" : v < 0.2 ? "#ffc629" : "#3ee07e";
+        c.lineWidth = 2;
+        c.beginPath(); c.moveTo(prev[0], prev[1]); c.lineTo(x, y); c.stroke();
+      }
+      prev = [x, y];
+    }
+    trackLabel(c, "MARGIN", m0, m1, L, "100%", "0%", text);
+    // --- sun elevation
+    const [s0, s1] = bands[2];
+    const YS = (e) => s1 - ((s1 - s0) * Math.max(0, Math.min(90, e))) / 90;
+    c.beginPath();
+    pts.forEach((p, k) => (k ? c.lineTo(X(p.t), YS(p.sunEl)) : c.moveTo(X(p.t), YS(p.sunEl))));
+    c.strokeStyle = "#f2f5f8";
+    c.lineWidth = 1;
+    c.stroke();
+    trackLabel(c, "SUN", s0, s1, L, "90°", "0°", text);
+    // cursors
+    const mark = (t, col) => { const x = X(t); c.strokeStyle = col; c.lineWidth = 1.5; c.beginPath(); c.moveTo(x, 6); c.lineTo(x, this.h - 18); c.stroke(); };
+    if (this.now != null) mark(this.now, "#3ee07e");
+    if (this.cursor != null) {
+      mark(this.cursor, "#f2f5f8");
+      const p = this._ptAt(this.cursor);
+      const m = Math.min(p.margins.o2, p.margins.co2, p.margins.water, p.margins.batt);
+      const s = `MET ${fmtDuration(p.t)}  ${(p.dist / 1000).toFixed(2)} km  ${p.elev.toFixed(0)} m  grade ${p.grade.toFixed(1)}°  margin ${(100 * m).toFixed(0)}%  sun ${p.sunEl.toFixed(0)}°${p.shade ? " SHADE" : ""}`;
+      const x = Math.min(this.w - c.measureText(s).width - 10, X(this.cursor) + 8);
+      c.fillStyle = "rgba(11,15,20,0.92)";
+      c.fillRect(x - 4, 8, c.measureText(s).width + 8, 18);
+      c.fillStyle = "#f2f5f8";
+      c.fillText(s, x, 21);
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+ "what": "Mars crustal magnetic field at 400 +/- 30 km altitude (MGS MAG/ER, night-side medians in 1 x 1 deg bins)",
+ "cite": "Connerney J.E.P. et al. 2001, Geophys. Res. Lett. 28, 4015-4018, doi:10.1029/2001GL013619 (NASA GSFC); ESRI grids by USGS Astrogeology (T. Hare)",
+ "url": "https://mgs-mager.gsfc.nasa.gov/publications/grl_28_connerney/data/grl_28_connerney_data.html",
+ "source_zip": "https://asc-pds-services.s3.us-west-2.amazonaws.com/pigpen/mars/magnetic/mars_magnetic_grids_meters.zip",
+ "sha256": "265eb68850cccc2c913ba0b0b502b4e443786d21b90dc92e72c015086c8099c8",
+ "licence": "public domain (NASA)",
+ "built": "2026-11-13",
+ "tool": "tools/build_magnetic.py",
+ "file": "magnetic_mgs.bin.gz",
+ "dtype": "int16",
+ "scale_nT": 0.1,
+ "planes": [
+  "br",
+  "bt",
+  "bp"
+ ],
+ "shape": [
+  3,
+  180,
+  360
+ ],
+ "grid": {
+  "lat0": 89.5,
+  "lon0": -179.5,
+  "step_deg": 1.0,
+  "note": "cell centres, rows from 89.5 N, columns from 179.5 W"
+ },
+ "range_nT": {
+  "br": [
+   -130.0,
+   221.1
+  ],
+  "bt": [
+   -176.9,
+   160.6
+  ],
+  "bp": [
+   -81.8,
+   83.0
+  ]
+ },
+ "check": {
+  "br_171.5E_54.5S": 138.271,
+  "br_200.5E_45.5N": -7.367
+ }
+}

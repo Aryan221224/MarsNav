@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MarsNav · Landing mode</title>
+<meta name="description" content="Choose where the crew lands and sets up the hub: every candidate on Mars screened against NASA's human landing-site criteria on real NASA / USGS data.">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="logo-192.png">
+<link rel="stylesheet" href="css/landing.css">
+<link rel="stylesheet" href="css/place.css">
+<link rel="stylesheet" href="css/theme.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img class="logo" src="logo-96.png" width="34" height="34" alt="">
+    <div><div class="name">MARSNAV</div><div class="sub">Hub site selection</div></div>
+  </div>
+  <nav class="modsw" aria-label="Module"><div class="seg2">
+    <a href="landing.html" aria-current="page" title="Landing mode: choose where the crew lands and sets up the hub">Landing</a>
+    <a href="index.html" title="EVA planner: plan, fly and review a Marswalk">EVA planner</a>
+  </div></nav>
+  <form class="search" id="searchForm" autocomplete="off" role="search">
+    <input id="searchIn" type="search" placeholder="Search places, candidates, or type lat, lon   ( / )" aria-label="Search Mars places, candidate sites or coordinates">
+    <div class="results" id="searchRes" hidden></div>
+  </form>
+  <div class="seg" role="radiogroup" aria-label="Criteria set">
+    <button role="radio" aria-checked="true" data-crit="hls2" title="NASA Human Landing Sites / Exploration Zones workshop criteria (2015)">NASA HLS 2015</button>
+    <button role="radio" aria-checked="false" data-crit="starship" title="SpaceX Starship candidate-site study criteria (Golombek et al. 2021)">Starship 2021</button>
+  </div>
+  <div class="tops">
+    <span class="pill" id="netPill" title="Connection to the NASA / USGS data servers">…</span>
+    <button class="pill" id="localPill" title="Local mode: every dataset on this computer, no internet needed (as on Mars)">LOCAL MODE</button>
+    <span class="pill" id="dsPill" title="Science layers installed on this computer">…</span>
+    <button class="pill" id="swxPill" title="Space weather at Mars from NASA's DONKI: CME arrivals, solar particle events, flares">SPACE WX …</button>
+    <button class="btn ghost guide" id="btnGuide" title="Guided stories on real data, and help">Guide</button>
+    <button class="btn ghost icon" id="btnHelp" title="Help and keyboard shortcuts (?)" aria-label="Help">?</button>
+  </div>
+</header>
+
+<main>
+  <!-- ============================================================ left: candidates and mission -->
+  <aside class="rail left" id="left" aria-label="Candidates">
+    <section class="card mission">
+      <div class="row">
+        <label class="grow"><span class="lbl">Lander</span>
+          <select id="landerSel">
+            <option value="human" selected data-long="Human-class precision lander" title="Human-class precision lander: 150 m landing ellipse">Human-class · 150 m</option>
+            <option value="m2020" data-long="Mars 2020-class lander with terrain-relative navigation" title="Mars 2020-class with terrain-relative navigation (TRN): 7.7 × 6.6 km">Mars 2020 · 7.7 × 6.6 km</option>
+            <option value="msl" data-long="MSL-class guided entry" title="MSL-class guided entry: 20 × 7 km">MSL · 20 × 7 km</option>
+            <option value="mer" data-long="MER-class lander" title="MER-class: 150 × 20 km">MER · 150 × 20 km</option>
+            <option value="viking" data-long="Viking-class ballistic entry" title="Viking-class ballistic entry: 300 × 100 km">Viking · 300 × 100 km</option>
+          </select></label>
+        <label class="az"><span class="lbl">Approach</span><span class="azbox"><input id="landAz" type="number" min="0" max="359" step="5" value="90" aria-label="Approach azimuth, degrees"><i>°</i></span></label>
+      </div>
+    </section>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="cand">Candidates</button>
+      <button role="tab" aria-selected="false" data-tab="sci" title="Science objectives and every Mars mission, past, present and future">Science</button>
+      <button role="tab" aria-selected="false" data-tab="hubs">Hubs</button>
+      <button role="tab" aria-selected="false" data-tab="trav">Traverse</button>
+      <button role="tab" aria-selected="false" data-tab="data">Data</button>
+    </nav>
+
+    <section class="tabpane" data-pane="cand">
+      <div class="chips" id="candChips" role="group" aria-label="Candidate lists">
+        <button class="chip on" data-set="all">All</button>
+        <button class="chip" data-set="ez" title="NASA 2015 Exploration Zone workshop proposals">NASA EZ <b id="nEz">0</b></button>
+        <button class="chip" data-set="starship" title="SpaceX Starship candidate sites (Golombek et al. 2021)">Starship <b id="nSs">0</b></button>
+        <button class="chip" data-set="heritage" title="Where spacecraft have landed">Heritage <b id="nHe">0</b></button>
+      </div>
+      <div class="row">
+        <input id="candFilter" type="search" class="grow" placeholder="Filter by name or proposer" aria-label="Filter candidates">
+        <select id="candSort" aria-label="Sort candidates"><option value="score">Score</option><option value="name">Name</option><option value="lat">Latitude</option></select>
+      </div>
+      <div class="row">
+        <button class="btn accent grow" id="btnScreen" title="Rank every candidate in the list on the global data (seconds)">Screen all candidates</button>
+      </div>
+      <div class="hint" id="screenNote">Screening ranks the list on latitude, elevation, dust, water ice and craters. Open a candidate for the full landing assessment.</div>
+      <ol class="list" id="candList" aria-label="Candidate sites"></ol>
+    </section>
+
+    <section class="tabpane" data-pane="sci" hidden>
+      <div class="chips" id="sciChips" role="group" aria-label="Science views">
+        <button class="chip on" data-sci="obj">Objectives</button>
+        <button class="chip" data-sci="mis" title="Past, active and future missions">Missions <b id="nMis">0</b></button>
+      </div>
+      <div id="sciObj">
+        <label><span class="lbl">Science objective</span><select id="objSel" aria-label="Science objective"></select></label>
+        <div id="objCard" class="objcard"></div>
+        <div class="row">
+          <button class="btn" id="btnObjLayers" title="Turn on the map layers that show this objective">Show its layers</button>
+          <button class="btn accent grow" id="btnObjRank" title="Score every candidate site and hub by the evidence within 100 km">Rank sites for it</button>
+        </div>
+        <ol class="list" id="objRank" aria-label="Sites ranked for the objective"></ol>
+      </div>
+      <div id="sciMis" hidden>
+        <div class="chips" id="misChips" role="group" aria-label="Mission status">
+          <button class="chip on" data-mis="all">All</button><button class="chip" data-mis="active">Active</button>
+          <button class="chip" data-mis="future">En route / planned</button><button class="chip" data-mis="past">Past</button>
+        </div>
+        <ol class="list" id="misList" aria-label="Mars missions"></ol>
+        <p class="hint" id="misNote"></p>
+      </div>
+    </section>
+
+    <section class="tabpane" data-pane="hubs" hidden>
+      <p class="hint">Hubs you have built. Each one is a full EVA site in the planner (terrain, hazards, imagery, weather).</p>
+      <ol class="list" id="hubList"></ol>
+    </section>
+
+    <section class="tabpane" data-pane="trav" hidden>
+      <p class="hint">Plan a long traverse from the hub (pressurised rover, robotic rover or on foot): the least-cost path follows the real terrain within the vehicle's slope limit. Click the planet, then “Add point”.</p>
+      <ol id="routePts" class="pts"></ol>
+      <div class="row">
+        <button class="btn" id="btnAddRoute" disabled>Add selected point</button>
+        <label class="grow"><select id="modeSel" aria-label="Traveller">
+          <option value="crewed_rover">Crewed pressurised rover</option>
+          <option value="robotic_rover">Robotic rover</option>
+          <option value="walk">Suited walk</option>
+        </select></label>
+      </div>
+      <div class="row"><button class="btn accent grow" id="btnRoute" disabled>Plan traverse</button><button class="btn" id="btnRouteClear">Clear</button></div>
+      <div id="routeOut" class="out"></div>
+      <canvas id="profile" width="560" height="150" hidden></canvas>
+    </section>
+
+    <section class="tabpane" data-pane="data" hidden>
+      <div id="dsList" class="dslist"></div>
+      <button class="btn accent" id="btnInstall" hidden>Install science layers</button>
+      <div id="dsJob" class="out"></div>
+      <h3 class="lbl">Offline</h3>
+      <p class="hint">For a complete copy of the data and Mars mode (no internet at all), open <button class="btn small" id="btnOpenLocal">Local mode</button>. Everything you look at is also cached (up to 20 GB); the button below saves the current view.</p>
+      <div class="row">
+        <label><span class="lbl">Down to zoom</span><select id="preZ"><option>8</option><option selected>10</option><option>11</option><option>12</option></select></label>
+        <button class="btn" id="btnPrecache">Download this view</button>
+      </div>
+      <div id="preOut" class="out"></div>
+      <div id="cacheOut" class="hint"></div>
+      <h3 class="lbl">Sources</h3>
+      <div id="srcOut" class="hint"></div>
+    </section>
+  </aside>
+
+  <!-- ============================================================ centre: the planet -->
+  <div id="stage">
+    <canvas id="globe" aria-label="Mars globe"></canvas>
+    <canvas id="cmpCanvas" hidden aria-hidden="true"></canvas>
+    <div id="cmpHandle" hidden><i></i><span id="cmpTagA"></span><span id="cmpTagB"></span></div>
+    <div id="labels"></div>
+    <div id="banner" hidden></div>
+
+    <div id="layers" class="float">
+      <button class="fhead" id="layersToggle" aria-expanded="true"><span class="lbl">Map layers</span><i>▾</i></button>
+      <div class="fbody" id="layersBody">
+        <label><span class="lbl">Base imagery</span>
+          <select id="baseSel">
+            <option value="best">Best available (colour + CTX 5 m / HiRISE)</option>
+            <option value="ctx">CTX global mosaic, 5 m</option>
+            <option value="themis_night">THEMIS night IR (rocky = bright)</option>
+            <option value="themis_day">THEMIS day IR, 100 m</option>
+            <option value="viking">Viking colour mosaic, 232 m</option>
+            <option value="mola">MOLA colour elevation</option>
+            <option value="hrsc_shade">HRSC + MOLA colour relief, 200 m (Mars Express)</option>
+            <option value="marci">MARCI daily weather map (MRO, 2006-14)</option>
+          </select></label>
+        <div class="seasonbox" id="seasonBox">
+          <label><span class="lbl">Season <b class="num" id="lsV">Ls 250°</b> <small id="lsWord"></small></span>
+            <input type="range" id="lsR" min="0" max="359" step="1" value="250" aria-label="Season, solar longitude Ls"></label>
+          <label id="marciRow" hidden><span class="lbl">Mars year</span><select id="marciMy" aria-label="Mars year of the MARCI map">
+              <option value="28" title="2006-08: the 2007 global dust storm">MY 28 · 2006-08, the 2007 global dust storm</option><option value="29" title="2008-10">MY 29 · 2008-10</option>
+              <option value="30" title="2010-12">MY 30 · 2010-12</option><option value="31" title="2012-13">MY 31 · 2012-13</option><option value="32" title="2013-14, to Ls 110">MY 32 · 2013-14 (to Ls 110°)</option></select></label>
+          <div class="row playrow">
+            <span class="lbl">Animate</span>
+            <select id="playStep" aria-label="Animation step" title="Step per frame of Play and GIF"><option value="1">1 sol</option><option value="2">5 sols</option><option value="3">15 sols</option></select>
+            <button class="btn small" id="marciPlay" title="Animate: sol by sol on the MARCI weather map, otherwise through the season (Space)">Play</button>
+            <button class="btn small" id="marciGif" title="Record 30 steps of the animation as a GIF">GIF</button>
+          </div>
+          <div id="marciOut" class="hint"></div>
+        </div>
+        <label><span class="lbl">Overlay strength <b class="num" id="opV">100 %</b></span><input type="range" id="opR" min="10" max="100" step="5" value="100" aria-label="Overlay strength"></label>
+        <div class="cmpbox">
+          <label><span class="lbl">Compare with</span><select id="cmpBase" aria-label="Second map to compare">
+            <option value="">Off</option>
+            <option value="best">Best available imagery</option>
+            <option value="ctx">CTX global mosaic, 5 m</option>
+            <option value="themis_night">THEMIS night IR</option>
+            <option value="themis_day">THEMIS day IR</option>
+            <option value="viking">Viking colour mosaic</option>
+            <option value="mola">MOLA colour elevation</option>
+            <option value="hrsc_shade">HRSC + MOLA colour relief</option>
+            <option value="marci">MARCI weather map, same season</option>
+          </select></label>
+          <div class="row" id="cmpRow" hidden>
+            <label class="grow" id="cmpMyL" hidden><span class="lbl">Its Mars year</span><select id="cmpMy"><option>28</option><option selected>29</option><option>30</option><option>31</option><option>32</option></select></label>
+            <div class="seg2 cmpmode" id="cmpModeL"><button class="btn small" data-cm="swipe" aria-pressed="true">Swipe</button><button class="btn small" data-cm="spy" aria-pressed="false">Spy</button></div>
+          </div>
+        </div>
+        <div class="ovl">
+          <label class="chk"><input type="checkbox" data-ovl="safety"><i class="sw" style="--c:#3ee07e"></i>Landing safety (lander)</label>
+          <label class="chk"><input type="checkbox" data-ovl="ice"><i class="sw" style="--c:#2a7de0"></i>Water ice (SWIM)
+            <select id="iceDepth" aria-label="Ice depth"><option value="ice01">0–1 m</option><option value="ice15" selected>1–5 m</option><option value="ice5">&gt;5 m</option></select></label>
+          <label class="chk"><input type="checkbox" data-ovl="ti"><i class="sw" style="--c:#e6a03c"></i>Thermal inertia / dust (TES)</label>
+          <label class="chk"><input type="checkbox" data-ovl="grs"><i class="sw" style="--c:#4a90e0"></i>Near-surface water (GRS)</label>
+          <label class="chk"><input type="checkbox" data-ovl="geology"><i class="sw" style="--c:#b07ad8"></i>Geologic map (USGS)</label>
+          <label class="chk"><input type="checkbox" data-ovl="craters"><i class="sw ring" style="--c:#ffc629"></i>Craters ≥ 1 km</label>
+          <hr>
+          <label class="chk"><input type="checkbox" id="ezChk" checked><i class="sw ring" style="--c:#3ccbff"></i>Candidate sites</label>
+          <label class="chk"><input type="checkbox" id="zoneChk" checked><i class="sw ring" style="--c:#d8a57a"></i>Exploration zone (100 km)</label>
+          <label class="chk"><input type="checkbox" id="covChk"><i class="sw ring" style="--c:#3ee07e"></i>HiRISE / CTX elevation footprints</label>
+          <label class="chk"><input type="checkbox" id="namesChk" checked><i class="sw" style="--c:#e9dccd"></i>Place names</label>
+        </div>
+        <div class="atlas" id="atlasBox" aria-label="Science atlas"></div>
+        <label><span class="lbl">Relief × <b id="exagV">1</b></span><input type="range" id="exag" min="1" max="20" step="1" value="1"></label>
+      </div>
+    </div>
+
+    <div id="legend" class="float" hidden></div>
+
+    <div id="ctrls" class="float">
+      <button id="zIn" title="Zoom in (+)" aria-label="Zoom in">+</button>
+      <button id="zOut" title="Zoom out (−)" aria-label="Zoom out">−</button>
+      <button id="north" title="North up, look straight down (N)" aria-label="North up"><span id="needle">N</span></button>
+      <button id="tilt" title="Tilt the view (PgUp)" aria-label="Tilt">⟂</button>
+      <button id="ruler" title="Measure distances and areas, with statistics of every layer inside (M)" aria-label="Measure" aria-pressed="false"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M3 17 17 3l4 4L7 21z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 13l2 2M10 10l2 2M13 7l2 2" stroke="currentColor" stroke-width="1.8"/></svg></button>
+    </div>
+    <div id="measureL" class="float measure" hidden role="dialog" aria-label="Measure">
+      <div class="mhead"><b>Measure</b><button class="btn ghost icon" id="mlClose" aria-label="Close">×</button></div>
+      <div id="mlOut" class="hint">Click the planet to add points; double-click to finish.</div>
+      <div class="row">
+        <button class="btn small" id="mlUndo">Undo</button>
+        <button class="btn small" id="mlArea" title="Close the shape: its area and statistics of every layer inside">Area + statistics</button>
+        <button class="btn small" id="mlDone">Finish</button>
+        <button class="btn small" id="mlClear">Clear</button>
+      </div>
+      <div id="mlStats"></div>
+    </div>
+    <div id="storyBox" class="float story" hidden role="dialog" aria-live="polite">
+      <div class="tstep" id="storyStep"></div>
+      <b id="storyTitle"></b>
+      <p id="storyText"></p>
+      <div class="row"><button class="btn small" id="storyBack">Back</button><button class="btn small accent" id="storyNext">Next</button><button class="btn small" id="storyEnd">End</button></div>
+    </div>
+
+    <div id="hud">
+      <span id="hudPos" class="num">--</span>
+      <span class="scale"><i id="scaleBar"></i><span id="scaleTxt" class="num"></span></span>
+      <span id="hudAlt" class="num">--</span>
+      <span id="hudLoad" class="num"></span>
+    </div>
+    <div id="lane">
+      <div id="toast" role="status" aria-live="polite" hidden></div>
+      <div id="mapLoad" role="status" aria-live="polite" hidden>
+        <div class="ml-row"><span class="ml-spin" aria-hidden="true"></span><b>Loading map</b><span id="mapLoadTxt">streaming NASA imagery</span><span id="mapLoadPct" class="num"></span></div>
+        <div class="ml-bar"><i id="mapLoadBar"></i></div>
+        <div id="mapLoadDem" class="ml-sub" hidden></div>
+      </div>
+    </div>
+    <div id="offline" hidden>
+      <h2>Landing mode needs the MarsNav server</h2>
+      <p id="offlineLocal">Start <b>MarsNav.exe</b> and open this page from the address it shows (http://127.0.0.1:8765/landing.html). The server streams, caches and processes the NASA / USGS data.</p>
+      <div id="offlineHosted" hidden>
+        <p>This is the <b>web demo</b>. The EVA planner, the visor HUD and the rover drive window run here in your browser, on the same real terrain as the desktop app.</p>
+        <p>Landing mode streams and processes NASA / USGS data for any place on Mars, so it runs in the desktop app (Windows, or any computer with Python).</p>
+        <p class="offline-links"><a class="btn accent" href="index.html">Open the EVA planner</a>
+          <a class="btn" href="https://github.com/Aryan221224/MarsNav/releases/latest" target="_blank" rel="noopener">Download for Windows</a>
+          <a class="btn" href="https://youtu.be/n4fgprexx3E" target="_blank" rel="noopener">Watch the 30 s demo</a></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ right: site dossier -->
+  <aside class="rail right" id="dossier" aria-label="Site dossier">
+    <div id="dEmpty" class="empty">
+      <h2>Choose the landing site</h2>
+      <ol class="steps">
+        <li><b>Find</b> a candidate on the left, search a place, or click anywhere on Mars.</li>
+        <li><b>Assess</b>: engineering limits, landing ellipse, surface, water ice, craters, environment.</li>
+        <li><b>Refine</b>: turn on the safety map, zoom in, click green ground; move to the nearest safe spot.</li>
+        <li><b>Commit the hub</b>: builds the EVA site at 1–20 m resolution for mission planning.</li>
+      </ol>
+      <p class="hint">Criteria follow NASA's 2015 Human Landing Sites call, or the 2021 Starship study (top bar).</p>
+    </div>
+    <div id="dBody" hidden>
+      <header class="dhead">
+        <div class="dtitle">
+          <div class="kind" id="dKind">Selected point</div>
+          <h2 id="dName">—</h2>
+          <button class="coords num" id="dCoords" title="Copy coordinates">—</button>
+        </div>
+        <div class="gauge" id="dGauge" aria-label="Score"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" class="gbg"/><circle cx="22" cy="22" r="18" class="gfg" id="gArc"/></svg><b id="dScore">–</b></div>
+      </header>
+      <div class="verdictbar" id="dVerdict">Not assessed yet</div>
+      <div class="actions">
+        <button class="btn accent" id="btnAssess">Assess landing site</button>
+        <button class="btn" id="btnSafe" hidden>Move to nearest safe spot</button>
+        <button class="btn" id="btnHub" disabled>Set as hub…</button>
+        <button class="btn ghost" id="btnReport" disabled title="Printable dossier (save as PDF)">Report</button>
+        <button class="btn ghost" id="btnJson" disabled title="Download every data layer at this place (and the dossier, once assessed) as JSON">JSON</button>
+        <button class="btn ghost" id="btnCrew" title="This place on the crew displays: helmet visor, rover dashboard and wrist cuff">Crew displays</button>
+        <button class="btn ghost" id="btnKml" disabled title="The site, its landing ellipse, exploration zone, ice target, traverse and measurements for Google Earth (Mars view)">KML</button>
+      </div>
+      <section class="card hubcard" id="hubCard" hidden>
+        <h3 class="lbl">Commit the hub</h3>
+        <p class="hint">Builds a full EVA site centred on the hub: the best elevation here (HiRISE 1 m / CTX 20 m where they exist), hazards, traversability, imagery and weather, and places the habitat on lander-safe ground. Takes a few minutes.</p>
+        <label><span class="lbl">Hub name</span><input id="siteName" type="text" placeholder="e.g. Arcadia Base 1"></label>
+        <div class="row">
+          <label><span class="lbl">Site size</span><select id="siteKm"><option value="6">6 km</option><option value="10" selected>10 km</option><option value="16">16 km</option><option value="24">24 km</option></select></label>
+          <label class="grow"><span class="lbl">Lander</span><select id="siteLander"><option value="human" selected>Human-class (150 m)</option><option value="m2020">Mars 2020 + TRN</option><option value="msl">MSL</option></select></label>
+        </div>
+        <div class="row"><button class="btn accent grow" id="btnSiteGo">Build hub site</button><button class="btn" id="btnSiteCancel">Cancel</button></div>
+        <pre id="siteLog" class="log" hidden></pre>
+        <div id="siteDone"></div>
+      </section>
+      <div id="dProgress" class="progress" hidden><i></i><span>Assessing…</span></div>
+      <div id="dSections"></div>
+      <div id="dPlace"></div>
+    </div>
+  </aside>
+</main>
+
+<div id="localModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="localTitle">
+  <div class="mbox wide">
+    <header class="lhead">
+      <div>
+        <h2 id="localTitle">Local mode</h2>
+        <p class="hint">On Mars there is no internet: the crew is 3 to 22 light-minutes from Earth. Local mode puts every dataset on this computer at the resolution it was published at, then <b>Mars mode</b> cuts the app off from the internet. Everything keeps working from the local copies, and the panel counts every request it refused.</p>
+      </div>
+      <button class="btn ghost icon" id="localClose" aria-label="Close">×</button>
+    </header>
+    <section class="marsbar">
+      <label class="switch" title="Mars mode: the app sends nothing to the internet and uses only the data on this computer">
+        <input type="checkbox" id="marsChk"><i></i><span><b>Mars mode</b> · no Earth link</span>
+      </label>
+      <div class="mstats" id="marsStats"></div>
+    </section>
+    <div class="lgrid">
+      <section>
+        <h3 class="lbl">Whole planet · native resolution</h3>
+        <table class="tbl ltbl" id="globalTbl"></table>
+      </section>
+      <section>
+        <h3 class="lbl">Exploration zones · every high-resolution product</h3>
+        <p class="hint">Around each landing site or hub: every HiRISE and CTX elevation model and orthoimage that touches the zone (complete files), the CTX mosaic at 5 m, THEMIS infrared, and pre-rendered map tiles.</p>
+        <div class="row">
+          <button class="btn" id="zoneAddSel" title="Add the site selected on the globe">Add selected site</button>
+          <label class="zr"><span class="lbl">Radius</span><select id="zoneRadius"><option value="10">10 km</option><option value="25" selected>25 km</option><option value="50">50 km</option><option value="100">100 km (whole zone)</option></select></label>
+          <button class="btn ghost" id="zoneAddHubs">Add all hubs</button>
+        </div>
+        <ol class="list zlist" id="zoneList"></ol>
+        <div class="parts" id="zoneParts"></div>
+      </section>
+    </div>
+    <section class="lfoot">
+      <div id="localEst"></div>
+      <div class="row">
+        <button class="btn" id="btnEstimate">Measure sizes</button>
+        <button class="btn accent" id="btnLocalGo">Download to this computer</button>
+        <button class="btn" id="btnLocalCancel" hidden>Stop</button>
+      </div>
+      <div id="localProg" hidden>
+        <div class="bar big"><i id="lpBar"></i></div>
+        <div class="lpline"><span id="lpTxt">Starting…</span><span id="lpRate" class="num"></span></div>
+        <div class="bar"><i id="lpItemBar"></i></div>
+        <div class="lpline hint"><span id="lpItem"></span><span id="lpItemTxt" class="num"></span></div>
+        <pre class="log" id="lpLog"></pre>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="swxModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="swxTitle">
+  <div class="mbox wide">
+    <header class="lhead"><div><h2 id="swxTitle">Space weather at Mars</h2><p class="hint" id="swxSub"></p></div>
+      <button class="btn ghost icon" id="swxClose" aria-label="Close">×</button></header>
+    <div id="swxBody"></div>
+    <div class="row"><button class="btn" id="swxRefresh">Fetch the latest from NASA DONKI</button><span class="hint" id="swxJob"></span></div>
+  </div>
+</div>
+
+<div id="help" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="mbox">
+    <h2 id="helpTitle">Landing mode</h2>
+    <p>Pick the place where the crew lands and sets up the hub, then build it as an EVA site. The globe streams real NASA / USGS data at whatever resolution exists at each place, down to 25 cm HiRISE imagery.</p>
+    <table class="keys">
+      <tr><td>Drag</td><td>move</td><td>Wheel / + −</td><td>zoom</td></tr>
+      <tr><td>Right-drag / Shift+drag</td><td>tilt and turn</td><td>Double-click</td><td>fly there</td></tr>
+      <tr><td>Click</td><td>select a point</td><td>N</td><td>north up</td></tr>
+      <tr><td>Arrows</td><td>pan</td><td>Q / E</td><td>turn</td></tr>
+      <tr><td>/</td><td>search</td><td>A</td><td>assess selected</td></tr>
+      <tr><td>L</td><td>toggle layers</td><td>Esc</td><td>close</td></tr>
+      <tr><td>M</td><td>measure (ruler)</td><td>Space</td><td>play the season</td></tr>
+    </table>
+    <p class="hint">Scores and verdicts are a first screen from global data. A crewed site still needs HiRISE imaging and 1 m elevation over the landing ellipse before commitment; the dossier says where that exists.</p>
+    <div class="row"><button class="btn accent" id="helpClose">Close</button></div>
+  </div>
+</div>
+
+<script src="js/desktop.js"></script>
+<script type="module" src="js/landing.js"></script>
+</body>
+</html>
