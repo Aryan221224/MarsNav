@@ -46,11 +46,11 @@
       <div class="row">
         <label class="grow"><span class="lbl">Lander</span>
           <select id="landerSel">
-            <option value="human" selected>Human-class precision lander · 150 m</option>
-            <option value="m2020">Mars 2020-class + TRN · 7.7 × 6.6 km</option>
-            <option value="msl">MSL-class guided entry · 20 × 7 km</option>
-            <option value="mer">MER-class · 150 × 20 km</option>
-            <option value="viking">Viking-class ballistic · 300 × 100 km</option>
+            <option value="human" selected data-long="Human-class precision lander" title="Human-class precision lander: 150 m landing ellipse">Human-class · 150 m</option>
+            <option value="m2020" data-long="Mars 2020-class lander with terrain-relative navigation" title="Mars 2020-class with terrain-relative navigation (TRN): 7.7 × 6.6 km">Mars 2020 · 7.7 × 6.6 km</option>
+            <option value="msl" data-long="MSL-class guided entry" title="MSL-class guided entry: 20 × 7 km">MSL · 20 × 7 km</option>
+            <option value="mer" data-long="MER-class lander" title="MER-class: 150 × 20 km">MER · 150 × 20 km</option>
+            <option value="viking" data-long="Viking-class ballistic entry" title="Viking-class ballistic entry: 300 × 100 km">Viking · 300 × 100 km</option>
           </select></label>
         <label class="az"><span class="lbl">Approach</span><span class="azbox"><input id="landAz" type="number" min="0" max="359" step="5" value="90" aria-label="Approach azimuth, degrees"><i>°</i></span></label>
       </div>
@@ -250,12 +250,14 @@
       <span id="hudAlt" class="num">--</span>
       <span id="hudLoad" class="num"></span>
     </div>
-    <div id="mapLoad" role="status" aria-live="polite" hidden>
-      <div class="ml-row"><span class="ml-spin" aria-hidden="true"></span><b>Loading map</b><span id="mapLoadTxt">streaming NASA imagery</span><span id="mapLoadPct" class="num"></span></div>
-      <div class="ml-bar"><i id="mapLoadBar"></i></div>
-      <div id="mapLoadDem" class="ml-sub" hidden></div>
+    <div id="lane">
+      <div id="toast" role="status" aria-live="polite" hidden></div>
+      <div id="mapLoad" role="status" aria-live="polite" hidden>
+        <div class="ml-row"><span class="ml-spin" aria-hidden="true"></span><b>Loading map</b><span id="mapLoadTxt">streaming NASA imagery</span><span id="mapLoadPct" class="num"></span></div>
+        <div class="ml-bar"><i id="mapLoadBar"></i></div>
+        <div id="mapLoadDem" class="ml-sub" hidden></div>
+      </div>
     </div>
-    <div id="toast" role="status" aria-live="polite" hidden></div>
     <div id="offline" hidden>
       <h2>Landing mode needs the MarsNav server</h2>
       <p>Start <b>MarsNav.exe</b> and open this page from the address it shows (http://127.0.0.1:8765/landing.html). The server streams, caches and processes the NASA / USGS data.</p>
@@ -290,11 +292,9 @@
         <button class="btn" id="btnHub" disabled>Set as hub…</button>
         <button class="btn ghost" id="btnReport" disabled title="Printable dossier (save as PDF)">Report</button>
         <button class="btn ghost" id="btnJson" disabled title="Download every data layer at this place (and the dossier, once assessed) as JSON">JSON</button>
-        <button class="btn ghost" id="btnCrew" title="This place on the crew displays: helmet visor HUD, rover dashboard and wrist cuff">HUD</button>
+        <button class="btn ghost" id="btnCrew" title="This place on the crew displays: helmet visor, rover dashboard and wrist cuff">Crew displays</button>
         <button class="btn ghost" id="btnKml" disabled title="The site, its landing ellipse, exploration zone, ice target, traverse and measurements for Google Earth (Mars view)">KML</button>
       </div>
-      <div id="dProgress" class="progress" hidden><i></i><span>Assessing…</span></div>
-      <div id="dSections"></div>
       <section class="card hubcard" id="hubCard" hidden>
         <h3 class="lbl">Commit the hub</h3>
         <p class="hint">Builds a full EVA site centred on the hub: the best elevation here (HiRISE 1 m / CTX 20 m where they exist), hazards, traversability, imagery and weather, and places the habitat on lander-safe ground. Takes a few minutes.</p>
@@ -307,6 +307,8 @@
         <pre id="siteLog" class="log" hidden></pre>
         <div id="siteDone"></div>
       </section>
+      <div id="dProgress" class="progress" hidden><i></i><span>Assessing…</span></div>
+      <div id="dSections"></div>
       <div id="dPlace"></div>
     </div>
   </aside>

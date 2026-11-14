@@ -449,7 +449,8 @@ function declutter(far) {
   const vis = markers.filter((m) => m.el.style.display !== "none");
   const pri = (m) => (m.el.classList.contains("sel") ? 10 : 0) + (LABEL_PRI[m.kind] ?? 2);
   vis.sort((a, b) => pri(b) - pri(a));
-  const placed = [];
+  // every visible marker's dot is an obstacle: a label never covers another marker (its own dot sits just below it)
+  const placed = vis.map((m) => [m.x - 5, m.y - 10, 10, 10]);
   for (const m of vis) {
     const textShown = m.el.classList.contains("sel") || !(far && ["ez", "starship", "heritage", "hub"].includes(m.kind));
     if (!textShown) { m.el.classList.remove("nolbl"); continue; }
@@ -609,7 +610,10 @@ canvas.addEventListener("wheel", (e) => {
 }, { passive: false });
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && S.meas.active) { measureFinish(); return; }
-  if (e.key === "Escape") { $("help").hidden = true; $("localModal").hidden = true; $("searchRes").hidden = true; if (document.activeElement?.blur) document.activeElement.blur(); return; }
+  if (e.key === "Escape") {
+    if (closeTopDialog()) return;
+    $("searchRes").hidden = true; if (document.activeElement?.blur) document.activeElement.blur(); return;
+  }
   if (e.target.closest("input, select, textarea")) return;
   if (e.key === "/") { e.preventDefault(); $("searchIn").focus(); return; }
   if (e.key === "?") { showHelp(); return; }
@@ -725,17 +729,39 @@ function showTab(name) {
   for (const p of document.querySelectorAll(".tabpane")) p.hidden = p.dataset.pane !== name;
 }
 for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => showTab(b.dataset.tab);
+// ------------------------------------------------------------------------------------------------- dialogs
+// Every dialog (help and the guide, Local mode, space weather) opens and closes the same way: its close button,
+// Escape or a click outside closes it, and the keyboard focus goes back to the control that opened it.
+const DIALOGS = ["help", "localModal", "swxModal"];
+const dlgOpener = new Map();
+function openDialog(id, opener) {
+  const d = $(id);
+  if (d.hidden) dlgOpener.set(id, opener || document.activeElement); // re-opening in place keeps the first opener
+  d.hidden = false;
+  d.querySelector("button, [href], input, select, textarea")?.focus({ preventScroll: true });
+}
+function closeDialog(id) {
+  const d = $(id);
+  if (d.hidden) return false;
+  d.hidden = true;
+  if (id === "help") restoreHelp();
+  const o = dlgOpener.get(id);
+  dlgOpener.delete(id);
+  if (o?.isConnected && o.focus) o.focus({ preventScroll: true });
+  return true;
+}
+function closeTopDialog() { return DIALOGS.some((id) => closeDialog(id)); }
+for (const id of DIALOGS) $(id).addEventListener("click", (e) => { if (e.target === $(id)) closeDialog(id); });
 // the help dialog also hosts the Guide chooser: put the help page back before showing help
 function restoreHelp() {
   const m = $("help");
   if (!m.dataset.orig) return;
   m.querySelector(".mbox").innerHTML = m.dataset.orig;
-  $("helpClose").onclick = () => { m.hidden = true; };
+  $("helpClose").onclick = () => closeDialog("help");
 }
-function showHelp() { restoreHelp(); $("help").hidden = false; }
+function showHelp() { restoreHelp(); openDialog("help"); }
 $("btnHelp").onclick = showHelp;
-$("helpClose").onclick = () => { $("help").hidden = true; };
-$("help").addEventListener("click", (e) => { if (e.target === $("help")) $("help").hidden = true; });
+$("helpClose").onclick = () => closeDialog("help");
 $("layersToggle").onclick = () => {
   const c = $("layers").classList.toggle("collapsed");
   $("layersToggle").setAttribute("aria-expanded", String(!c));
@@ -789,7 +815,7 @@ function legendHtml(key, L) {
   if (L.classes) {
     const sw = L.classes.map((c) => `<i style="background:rgba(${c.rgba[0]},${c.rgba[1]},${c.rgba[2]},${Math.min(1, c.rgba[3] * 1.8)})"></i><span>${esc(c.label)}</span>`).join("");
     if (key !== "safety") return `<div class="lg"><b>${esc(L.title)}</b><div class="cls">${sw}</div>${note}</div>`;
-    return `<div class="lg"><b>${esc(L.title)} · ${esc($("landerSel").selectedOptions[0].text.split("·")[0].trim())}</b><div class="cls">${sw}</div>
+    return `<div class="lg"><b>${esc(L.title)} · ${esc(landerName())}</b><div class="cls">${sw}</div>
       <p>Resolution follows your zoom; over HiRISE footprints it reaches lander scale (1–2 m).</p></div>`;
   }
   if (L.ticks?.length) {
@@ -822,6 +848,8 @@ function missionChanged() {
   if (S.dossier) reassessT = setTimeout(assess, 350);
 }
 $("landerSel").onchange = missionChanged;
+// the lander menu shows short names (they fit narrow screens); sentences use the full name
+function landerName() { const o = $("landerSel").selectedOptions[0]; return o.dataset.long || o.text.split("·")[0].trim(); }
 $("landAz").onchange = missionChanged;
 for (const b of document.querySelectorAll(".seg button[data-crit]")) {
   b.onclick = () => {
@@ -981,6 +1009,7 @@ function selectPoint(lon, lat, cand = null) {
   setGauge(null, null);
   setVerdict(null, "Reading the global data…");
   $("btnAssess").disabled = false; $("btnAssess").textContent = "Assess landing site";
+  setPrimary("btnAssess");
   $("btnSafe").hidden = true;
   $("btnHub").disabled = true; $("btnHub").textContent = "Set as hub…";
   $("btnReport").disabled = true; $("btnJson").disabled = true; $("btnKml").disabled = false;
@@ -1104,7 +1133,7 @@ async function assess() {
   const tok = selToken;
   const lander = $("landerSel").value, az = ((+$("landAz").value || 0) % 360 + 360) % 360;
   $("dProgress").hidden = false; $("btnAssess").disabled = true;
-  $("dProgress").querySelector("span").textContent = `Assessing for ${$("landerSel").selectedOptions[0].text.split("·")[0].trim()}: elevation mosaic over the landing ellipse, water ice, craters, dust…`;
+  $("dProgress").querySelector("span").textContent = `Assessing for a ${landerName()}: elevation mosaic over the landing ellipse, water ice, craters, dust…`;
   try {
     const d = await api(`/api/assess?lon=${f.lon}&lat=${f.lat}&lander=${lander}&az=${az}&crit=${S.crit}`);
     if (tok !== selToken) return;
@@ -1135,6 +1164,25 @@ function meter(label, v) {
   const col = x >= 0.5 ? "var(--info)" : x >= 0 ? "#7fc4ff99" : "var(--nogo)";
   return `<div class="meter" title="SWIM ice consistency Ci: +1 every dataset agrees with ice, 0 ambiguous, -1 inconsistent. Tick: 0.5"><span>${label}</span><span class="tr"><i style="left:${left}%;width:${w}%;background:${col}"></i><b></b></span><span class="n">${x >= 0 ? "+" : ""}${x.toFixed(2)}</span></div>`;
 }
+// one highlighted (accent) action in the dossier at a time: the next step
+function setPrimary(id) { for (const b of ["btnAssess", "btnSafe", "btnHub"]) $(b).classList.toggle("accent", b === id); }
+// a row of section links at the top of a long dossier; each jumps to its part
+const DINDEX = [["Criteria", "Criteria"], ["Landing ellipse", "Landing"], ["Water and resources", "Water"], ["Environment", "Environment"],
+  ["Earth relay coverage", "Relay"], ["Weather here in past years", "Weather"]];
+function dossierIndex() {
+  const heads = [...$("dSections").querySelectorAll("section.sect > h3")];
+  const links = DINDEX.map(([h, lbl]) => [heads.find((e) => e.firstChild?.textContent.trim().startsWith(h))?.parentElement, lbl]).filter(([sec]) => sec);
+  links.push([$("dPlace"), "All data"]);
+  const nav = document.createElement("nav");
+  nav.className = "dindex"; nav.setAttribute("aria-label", "Dossier sections");
+  for (const [sec, lbl] of links) {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = lbl;
+    b.onclick = () => sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    nav.appendChild(b);
+  }
+  $("dSections").prepend(nav);
+}
 function renderDossier(d) {
   setGauge(d.score, d.verdict);
   const c = d.counts || {};
@@ -1146,6 +1194,8 @@ function renderDossier(d) {
   const moveSafe = sf.target_class && sf.target_class !== "safe" && ns && ns.dist_m > 5 && ns.dist_m < 20000;
   $("btnSafe").hidden = !moveSafe;
   if (moveSafe) $("btnSafe").textContent = `Move to nearest safe spot (${fmtKm(ns.dist_m / 1000)})`;
+  // the next step is the highlighted button: commit the hub; for a no-go site, moving to safe ground if there is any
+  setPrimary(d.verdict !== "NO-GO" ? "btnHub" : moveSafe ? "btnSafe" : null);
 
   const sect = [];
   // criteria
@@ -1263,6 +1313,7 @@ function renderDossier(d) {
   </ul></section>`);
 
   $("dSections").innerHTML = sect.join("") + extraSections(d);
+  dossierIndex();
   renderPlace();
   wireExtraSections();
   // wire the buttons made above
@@ -1319,7 +1370,8 @@ $("btnHub").onclick = () => {
     : d.verdict === "CAUTION" ? `Assessed CAUTION (score ${d.score}): see the amber criteria before committing.`
       : `Assessed NO-GO for ${d.criteria_label}. Build it only for study; the crew should not land here.`;
   card.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  $("siteName").focus();
+  $("siteName").focus({ preventScroll: true });
+  $("siteName").select();
 };
 $("btnSiteCancel").onclick = () => { $("hubCard").hidden = true; };
 $("btnSiteGo").onclick = async () => {
@@ -1621,11 +1673,10 @@ function renderLocalPill() {
   }
   rebuildOverlays();
 }
-function openLocal() { $("localModal").hidden = false; renderLocal(); loadLocal(); }
+function openLocal() { openDialog("localModal"); renderLocal(); loadLocal(); }
 $("localPill").onclick = openLocal;
 $("btnOpenLocal").onclick = openLocal;
-$("localClose").onclick = () => { $("localModal").hidden = true; };
-$("localModal").addEventListener("click", (e) => { if (e.target === $("localModal")) $("localModal").hidden = true; });
+$("localClose").onclick = () => closeDialog("localModal");
 
 function renderLocal() {
   const L = S.local; if (!L) { $("globalTbl").innerHTML = `<tr><td class="hint">Reading what is on this computer…</td></tr>`; return; }
@@ -1755,6 +1806,10 @@ $("marsChk").onchange = async () => {
 };
 
 // ------------------------------------------------------------------------------------------------- search
+// the search hint fits the box: a shorter one where the top bar is narrow
+const SEARCH_HINT = ["Search places, candidates, or type lat, lon   ( / )", "Search places, sites, lat lon  ( / )"];
+function searchHint() { $("searchIn").placeholder = SEARCH_HINT[$("searchIn").clientWidth < 380 ? 1 : 0]; }
+new ResizeObserver(searchHint).observe($("searchIn"));
 let searchT = 0;
 $("searchIn").addEventListener("input", () => { clearTimeout(searchT); searchT = setTimeout(runSearch, 180); });
 $("searchForm").addEventListener("submit", (e) => { e.preventDefault(); const b = $("searchRes").querySelector("button:not([disabled])"); if (b && !$("searchRes").hidden) b.click(); else runSearch(true); });
@@ -1786,14 +1841,22 @@ async function runSearch(submit = false) {
   const ql = q.toLowerCase();
   const local = S.cand.filter((c) => c.name.toLowerCase().includes(ql) || (c.proposer || "").toLowerCase().includes(ql)).slice(0, 8);
   const hubs = S.sites.filter((s) => (s.name || s.id).toLowerCase().includes(ql)).slice(0, 4);
+  // hubs and candidates are on this computer: show them at once; IAU place names come from the server and are added
+  // when they arrive, with a "searching" row meanwhile
+  box.innerHTML = "";
+  const group = (title) => { const d = document.createElement("div"); d.className = "grp"; d.textContent = title; box.appendChild(d); return d; };
+  const item = (html, fn) => { const b = document.createElement("button"); b.innerHTML = html; b.onclick = () => { box.hidden = true; fn(); }; box.appendChild(b); return b; };
+  if (hubs.length) { group("Hubs"); for (const s of hubs) item(`▲ ${esc(s.name || s.id)}<small>built EVA site</small>`, () => openCandidate({ id: `hub:${s.id}`, siteId: s.id, kind: "hub", name: s.name || s.id, lon: s.center.lon, lat: s.center.lat })); }
+  if (local.length) { group("Candidate sites"); for (const c of local) item(`${esc(c.name)}<small>${TAG[c.kind]} · ${fmtLL(c.lat, c.lon, 1)}${c.proposer ? ` · ${esc(c.proposer)}` : ""}</small>`, () => { $("searchIn").value = c.name; openCandidate(c); }); }
+  const wait = document.createElement("div");
+  wait.className = "pending";
+  wait.textContent = "Searching IAU place names…";
+  box.appendChild(wait);
+  box.hidden = false;
   let iau = [];
   try { iau = (await api(`/api/search?q=${encodeURIComponent(q)}&limit=12`)).results; } catch { /* names offline */ }
   if (seq !== searchSeq) return;
-  box.innerHTML = "";
-  const group = (title) => { const d = document.createElement("div"); d.className = "grp"; d.textContent = title; box.appendChild(d); };
-  const item = (html, fn) => { const b = document.createElement("button"); b.innerHTML = html; b.onclick = () => { box.hidden = true; fn(); }; box.appendChild(b); };
-  if (hubs.length) { group("Hubs"); for (const s of hubs) item(`▲ ${esc(s.name || s.id)}<small>built EVA site</small>`, () => openCandidate({ id: `hub:${s.id}`, siteId: s.id, kind: "hub", name: s.name || s.id, lon: s.center.lon, lat: s.center.lat })); }
-  if (local.length) { group("Candidate sites"); for (const c of local) item(`${esc(c.name)}<small>${TAG[c.kind]} · ${fmtLL(c.lat, c.lon, 1)}${c.proposer ? ` · ${esc(c.proposer)}` : ""}</small>`, () => { $("searchIn").value = c.name; openCandidate(c); }); }
+  wait.remove();
   if (iau.length) {
     group("IAU place names");
     for (const r of iau) {
@@ -2057,9 +2120,8 @@ function renderSwx() {
     ${fl.length ? `<table class="tbl">${fl.slice(0, 6).map((x) => `<tr><td>${esc(x.peak_utc)}</td><td>${esc(x.class)}</td><td>${esc(x.source || "")}</td></tr>`).join("")}</table>` : `<p class="hint">None in the window.</p>`}
     <p class="hint">${esc(w.basis || "")}</p>`;
 }
-$("swxPill").onclick = () => { renderSwx(); $("swxModal").hidden = false; };
-$("swxClose").onclick = () => { $("swxModal").hidden = true; };
-$("swxModal").addEventListener("click", (e) => { if (e.target === $("swxModal")) $("swxModal").hidden = true; });
+$("swxPill").onclick = () => { renderSwx(); openDialog("swxModal"); };
+$("swxClose").onclick = () => closeDialog("swxModal");
 $("swxRefresh").onclick = async () => {
   $("swxJob").textContent = "Asking NASA DONKI…";
   try {
@@ -2568,10 +2630,10 @@ $("btnGuide").addEventListener("click", () => {
     <div class="stories">${LSTORIES.map((s) => `<button class="btn story" data-ls="${s.id}"><b>${esc(s.title)}</b><span>${s.steps.length} steps</span></button>`).join("")}
     <button class="btn story" data-guide="help"><b>Help and keyboard shortcuts</b><span>What each part of the screen does (also ?)</span></button></div>
     <div class="row"><button class="btn" id="storiesClose">Close</button></div>`;
-  m.hidden = false;
-  $("storiesClose").onclick = () => { m.hidden = true; restoreHelp(); };
+  openDialog("help");
+  $("storiesClose").onclick = () => closeDialog("help");
   box.querySelector("[data-guide=help]").onclick = showHelp;
-  for (const b of box.querySelectorAll("[data-ls]")) b.onclick = () => { m.hidden = true; restoreHelp(); STORY.steps = LSTORIES.find((s) => s.id === b.dataset.ls).steps; storyShow(0); };
+  for (const b of box.querySelectorAll("[data-ls]")) b.onclick = () => { closeDialog("help"); STORY.steps = LSTORIES.find((s) => s.id === b.dataset.ls).steps; storyShow(0); };
 });
 window.MMLandingX = { S, PLAY, LSTORIES, storyShow, measureAdd, areaStats, seasonChanged, compareChanged, loadMarciIndex, marciNearest, dateOfMyLs };
 

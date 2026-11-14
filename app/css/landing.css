@@ -37,6 +37,7 @@ h3.lbl { color: var(--accent); font-size: 13px; margin: 14px 0 6px; }
 .results button { display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; padding: 7px 12px; background: none; border: 0; border-bottom: 1px solid var(--line); cursor: pointer; }
 .results button:hover, .results button:focus { background: var(--surface-3); }
 .results small { color: var(--text-faint); white-space: nowrap; }
+.results .pending { padding: 7px 12px; color: var(--text-faint); font-style: italic; }
 .results .grp { padding: 5px 12px; font-family: var(--font-label); text-transform: uppercase; letter-spacing: .07em; font-size: 11.5px; color: var(--accent); background: var(--surface); }
 .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: var(--r); overflow: hidden; flex: 0 0 auto; }
 .seg { border-radius: 4px; }
@@ -131,7 +132,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .mk.dim { opacity: .55; }
 
 .float { position: absolute; background: #0b0f14e6; border: 1px solid var(--line-2); border-radius: var(--r); box-shadow: var(--shadow); backdrop-filter: blur(6px); }
-#layers { top: 12px; left: 12px; width: 292px; max-height: calc(100% - 90px); overflow: auto; z-index: 3; }
+#layers { top: 12px; left: 12px; width: 292px; max-height: calc(100% - 90px); overflow: auto; z-index: 5; } /* an open layers panel sits above the banner */
 .fhead { display: flex; justify-content: space-between; align-items: center; width: 100%; background: none; border: 0; padding: 8px 12px; cursor: pointer; }
 .fhead i { font-style: normal; color: var(--text-faint); transition: transform .2s; }
 #layers.collapsed .fhead i { transform: rotate(-90deg); }
@@ -160,8 +161,11 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .scale i { display: block; height: 6px; border: 2px solid var(--text); border-top: 0; width: 100px; }
 #hudLoad { margin-left: auto; }
 /* the map loading bar: what is streaming, how far it has got, and the first-run elevation download */
-#mapLoad { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); width: min(460px, 70%); padding: 9px 14px 10px;
-  background: #121a24f2; border: 1px solid var(--line-2); border-radius: var(--r); box-shadow: var(--shadow); z-index: 5; pointer-events: none;
+/* bottom-centre lane: messages stacked above the map-loading bar, so neither covers the other or the science banner */
+#lane { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); width: min(560px, calc(100% - 128px)); display: flex; flex-direction: column;
+  align-items: center; gap: 8px; z-index: 6; pointer-events: none; }
+#mapLoad { width: min(460px, 100%); padding: 9px 14px 10px;
+  background: #121a24f2; border: 1px solid var(--line-2); border-radius: var(--r); box-shadow: var(--shadow); pointer-events: none;
   font-size: 13px; color: var(--text-dim); transition: opacity .35s; }
 #mapLoad.done { opacity: 0; }
 #mapLoad .ml-row { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
@@ -173,7 +177,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 #mapLoad .ml-sub { margin-top: 6px; font-size: 12px; }
 #mapLoad .ml-spin { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #ffffff33; border-top-color: var(--accent, #e8b48a); animation: mlspin .8s linear infinite; flex: 0 0 auto; }
 @keyframes mlspin { to { transform: rotate(360deg); } }
-#toast { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); padding: 8px 14px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--r); max-width: 60%; z-index: 6; box-shadow: var(--shadow); }
+#toast { padding: 8px 14px; background: var(--surface-2); border: 1px solid var(--line-2); border-radius: var(--r); max-width: 100%; box-shadow: var(--shadow); pointer-events: auto; }
 #banner { position: absolute; top: 12px; left: 318px; right: 12px; display: flex; gap: 12px; align-items: center; padding: 8px 12px; background: #1c2531f0; border: 1px solid var(--caution); border-radius: var(--r); z-index: 4; font-size: 13.5px; box-shadow: var(--shadow); }
 #banner .grow { min-width: 0; }
 #offline { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 40px; background: #0b0f14ee; z-index: 10; }
@@ -201,12 +205,19 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .verdictbar small { display: block; font-family: var(--font-ui); text-transform: none; letter-spacing: 0; font-weight: 400; font-size: 12.5px; color: var(--text-dim); margin-top: 2px; }
 .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px 16px; }
 .actions .btn { justify-content: center; text-align: center; }
-#btnHub { order: 1; } #btnSafe { grid-column: 1 / -1; order: 2; } #btnReport { order: 3; } #btnJson { order: 4; }
-#btnReport, #btnJson { padding: 5px 10px; font-size: 13px; }
+/* the steps first (assess, commit the hub, move to safe ground), then the outputs (report, JSON, crew displays, KML) */
+#btnHub { order: 1; } #btnSafe { grid-column: 1 / -1; order: 2; } #btnReport { order: 3; } #btnJson { order: 4; } #btnCrew { order: 5; } #btnKml { order: 6; }
+#btnReport, #btnJson, #btnCrew, #btnKml { padding: 5px 10px; font-size: 13px; }
 .progress { margin: 0 16px 10px; display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-faint); }
 .progress i { display: block; height: 3px; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 50% 100%; background-repeat: no-repeat; animation: slide 1.2s linear infinite; }
 @keyframes slide { from { background-position: -50% 0; } to { background-position: 150% 0; } }
 .sect { border-top: 1px solid var(--line); padding: 10px 16px 12px; }
+/* dossier section index: stays at the top of the rail while the dossier scrolls; targets clear it */
+.dindex { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; gap: 4px 6px; padding: 8px 16px; background: var(--surface); border-top: 1px solid var(--line); }
+.dindex button { background: none; border: 1px solid var(--line-2); border-radius: var(--r); color: var(--text-dim); padding: 2px 8px; font-family: var(--font-label);
+  font-size: 12px; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.dindex button:hover { color: var(--text); border-color: var(--accent); }
+#dSections .sect, #dPlace { scroll-margin-top: 64px; }
 .sect > h3 { margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; font-family: var(--font-label); text-transform: uppercase; letter-spacing: .07em; font-size: 13px; color: var(--accent); }
 .sect > h3 small { font-family: var(--font-ui); text-transform: none; letter-spacing: 0; color: var(--text-faint); font-weight: 400; font-size: 12px; }
 .crit { display: grid; grid-template-columns: 12px 1fr; gap: 1px 9px; padding: 6px 0; border-bottom: 1px solid var(--line); }
@@ -249,7 +260,7 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
   .rail.left { width: 100%; max-height: 42vh; border-right: 0; border-top: 1px solid var(--line); }
   .rail.right { width: 100%; }
   .seg { display: none; }
-  #layers { width: 240px; } #banner { left: 12px; top: auto; bottom: 52px; }
+  #layers { width: 240px; }
 }
 
 /* candidate markers: labels hidden when far out (dots only), dot colour = screen verdict, selected one highlighted */
@@ -265,11 +276,11 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .dclose { display: none; }
 @media (max-width: 1180px) { .dclose { display: block; position: absolute; right: 8px; top: 8px; z-index: 3; } }
 
-/* the banner moves below the layers panel when the globe area is narrow */
-@container stage (max-width: 760px) { #banner { left: 12px; right: 12px; top: auto; bottom: 44px; } }
+/* the banner moves under the layers header when the globe area is narrow (the bottom-centre lane stays free) */
+@container stage (max-width: 760px) { #banner { left: 12px; right: 12px; top: 56px; bottom: auto; } }
 #labels.far .mk.hub { font-size: 0; }
 .ds .h > span:last-child { white-space: nowrap; }
-@container stage (max-width: 760px) { #banner { right: 64px; } #hudLoad { display: none; } }
+@container stage (max-width: 760px) { #hudLoad { display: none; } }
 #hud > span { white-space: nowrap; }
 
 /* ------------------------------------------------------------ Local mode */
