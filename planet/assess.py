@@ -15,12 +15,14 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 
 import numpy as np
 
 from . import datasets, landing, megdr, names
 from .config import PATHS
+from .text import sym
 
 CRITERIA = {
     "hls2": {"label": "NASA Human Landing Sites (2015)", "lat": 50.0, "lat_caution": 40.0, "elev_m": 2000.0, "elev_good_m": -1000.0,
@@ -86,7 +88,8 @@ def environment(lat: float, elev_m: float | None) -> dict:
 # ------------------------------------------------------------------ criteria
 
 def _row(rid, group, label, value, limit, status, source, note=""):
-    return {"id": rid, "group": group, "label": label, "value": value, "limit": limit, "status": status, "source": source, "note": note}
+    return {"id": rid, "group": group, "label": sym(label), "value": sym(value), "limit": sym(limit), "status": status,
+            "source": sym(source), "note": sym(note)}
 
 
 def evaluate(lat, lon, elev_m, D, crat, ice, L, crit="hls2"):
@@ -116,10 +119,8 @@ def evaluate(lat, lon, elev_m, D, crat, ice, L, crit="hls2"):
         chk = {c["id"]: c for c in L.get("checks", [])}
         km = chk.get("kmslope")
         if km:
-            try:
-                smax = float(str(km["value"]).split()[0])
-            except ValueError:
-                smax = float("nan")
+            m = re.match(r"\s*([-+]?\d+(?:\.\d+)?)", str(km["value"]))      # "3.2° max" or "3.2 deg max"
+            smax = float(m.group(1)) if m else float("nan")
             rows.append(_row("slope", "Landing", f"Generally level landing area (slopes under {C['slope_deg']:.0f} deg)",
                              km["value"], f"<= {C['slope_deg']:.0f} deg",
                              "go" if smax <= C["slope_deg"] * 0.6 else "caution" if smax <= C["slope_deg"] else "nogo" if smax > 20 else "caution",

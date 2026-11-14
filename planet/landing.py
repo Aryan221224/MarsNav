@@ -15,6 +15,7 @@ import numpy as np
 
 from . import catalog, dem
 from .config import R_MARS
+from .text import sym
 from .tiling import tile_deg
 
 LANDERS = {
@@ -105,6 +106,8 @@ def assess(lon: float, lat: float, lander: str = "m2020", az_deg: float = 90.0) 
          "ok": (max(cov_c, cov_h) > 0.9) if L["trn"] else None},
         {"id": "hazard1m", "label": "Lander-scale hazards verifiable (1 m HiRISE DTMs)", "value": f"{100 * cov_h:.0f} % of the ellipse", "ok": cov_h > 0.5 or None},
     ]
+    for c in checks:                                      # what people read: degree and inequality signs
+        c["label"], c["value"] = sym(c["label"]), sym(c["value"])
     # the safety classes over the ellipse (planet/safety.py): how much of it is safe, and the nearest safe spot for a hub
     from . import safety
     fin = min((m.get("finest_m", 3705) for m in metas), default=3705)

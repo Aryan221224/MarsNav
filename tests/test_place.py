@@ -149,3 +149,26 @@ def test_thermal_inertia_class_knows_polar_ice():
     assert datasets.ti_class(1500.0, 20.0) == "rocky or bedrock"         # the same value at low latitude is rock
     assert datasets.ti_class(250.0, 80.0) == "sand, duricrust or mixed rock"
     assert datasets.ti_class(None) == "unknown"
+
+
+def test_dossier_text_uses_symbols():
+    """Text shown to people uses °, ≤, ≥ and ±, not the ASCII stand-ins 'deg', '<=', '>=' and '+-'."""
+    from planet import assess
+    L = {"safety": {"ellipse": {"safe": 0.9, "hazard": 0.05}, "target_class": "safe", "baseline_m": 3705, "verified": False},
+         "checks": [{"id": "kmslope", "value": "3.2 deg max", "ok": True}, {"id": "trnmap", "value": "95 % of the ellipse", "ok": True},
+                    {"id": "hazard1m", "value": "0 % of the ellipse", "ok": False}]}
+    D = {"ti": {"value": 210.0}, "grs_h2o_wt": 6.0}
+    crat = {"inside": None, "count": 2, "count_5km": 0, "radius_km": 10}
+    rows = assess.evaluate(-13.0, 175.0, -1360.0, D, crat, None, L, "hls2")
+    text = " ".join(str(r[k]) for r in rows for k in ("label", "value", "limit", "source", "note"))
+    for bad in (" deg", "<=", ">=", "+-"):
+        assert bad not in text, (bad, text)
+    assert "≤ 50°" in text and "-13.00°" in text and "3.2° max" in text
+    assert [r["status"] for r in rows if r["id"] == "slope"] == ["go"]          # the value is still read as a number
+
+
+def test_slope_value_with_a_degree_sign_is_still_read_as_a_number():
+    from planet import assess
+    L = {"safety": {"ellipse": {"safe": 0.9}, "target_class": "safe"}, "checks": [{"id": "kmslope", "value": "3.2° max", "ok": True}]}
+    rows = assess.evaluate(18.4, 77.5, -2500.0, {}, None, None, L, "hls2")
+    assert [r["status"] for r in rows if r["id"] == "slope"] == ["go"]
