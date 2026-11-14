@@ -1,0 +1,76 @@
+{
+ "generated_from": [
+  "validation/results/validation.json",
+  "validation/results/closed_loop.json",
+  "validation/results/shielding_murray_buttes.json"
+ ],
+ "clock": {
+  "samples": 5616,
+  "sols": 117,
+  "sza_sd_deg": 0.086,
+  "sza_mean_deg": 0.001,
+  "sza_mean_ci95_deg": [
+   -0.0013,
+   0.0032
+  ]
+ },
+ "slope": {
+  "k": 356,
+  "n": 480,
+  "pct": 74.2,
+  "ci95_pct": [
+   70.1,
+   77.9
+  ],
+  "r": 0.72
+ },
+ "false_nogo": {
+  "k": 12,
+  "n": 703,
+  "pct": 1.7,
+  "ci95_pct": [
+   1,
+   3
+  ]
+ },
+ "detour": {
+  "k": 21,
+  "n": 30,
+  "pct": 70,
+  "ci95_pct": [
+   52.1,
+   83.3
+  ]
+ },
+ "closed_loop": {
+  "runs": 40,
+  "closed_dips": 0,
+  "open_dips": 31,
+  "closed_ci95_pct": [
+   0,
+   8.8
+  ],
+  "open_ci95_pct": [
+   61.5,
+   89.2
+  ],
+  "sign_test_p": 9.313225746154776e-10
+ },
+ "shielding": {
+  "measured_change_pct": -4,
+  "blocked_sky_pct": 19,
+  "model_range_pct": [
+   -2.56,
+   -9.94
+  ],
+  "model_range_no_albedo_pct": [
+   -5.87,
+   -15.13
+  ],
+  "orbital_blocked_sky_within_24m_pct": [
+   4.9,
+   16.1
+  ],
+  "ref_factor": 1.0062
+ }
+}

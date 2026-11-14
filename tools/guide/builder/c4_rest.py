@@ -45,7 +45,7 @@ table([["Layer", "Built with"],
         "the science atlas, missions and objectives, space weather, and the lookup of every layer at a point."],
        ["Data pipeline", "Python with numpy, scipy, rasterio / GDAL and Pillow (pipeline/): download with SHA-256 checks, "
         "terrain statistics, hazard layers, imagery, weather fit."],
-       ["Verification", "Node's test runner (85 engine, closed-loop and map-tool tests), pytest (76 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests), "
+       ["Verification", "Node's test runner (101 engine, closed-loop, shielding, map-tool and headline-number tests), pytest (81 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests), "
         "validation scripts against Perseverance data, an end-to-end server self-test, and on every change a Windows build that is "
         "started and checked before it is published (GitHub Actions)."]],
       [1.45 * inch, CW - 1.45 * inch])
@@ -164,7 +164,7 @@ table([["The challenge asks for", "MarsNav"],
        ["“at least three kinds of data”: optical, thermal, spectral, topographic, geophysical, atmospheric, radiation, chemical", "All eight: HiRISE, CTX and Viking images; TES and THEMIS thermal; CRISM, OMEGA and TES minerals; MOLA, HRSC, CTX and HiRISE elevation; MRO gravity; air pressure; cosmic-ray dose; GRS elements (Chapter 6)."],
        ["“data from multiple NASA science missions”, past and future", "MRO, MGS, Mars Odyssey, Mars Express, Mars 2020, MSL, Viking and Apollo data in the map, and a catalogue of 31 missions past, present and future."],
        ["science goals and a location: the boxwork at Mount Sharp", "Seven science objectives that rank every site, and the Mount Sharp boxwork as a full EVA site with Curiosity's drill sites (Chapters 6, 13)."],
-       ["space weather", "NASA DONKI CME arrivals at Mars, particle events, flares and an EVA advisory; dose by altitude on every route."],
+       ["space weather", "NASA DONKI CME arrivals at Mars, particle events, flares and an EVA advisory; dose by altitude and terrain shielding on every route."],
        ["“details of their routes and destinations”", "Guidance legs, station procedures, target provenance, the rover's own photographs of each stop, the cue card, GeoJSON."],
        ["“updates on current conditions”", "Live Mars clock, sun and shade along the route, dust, radio line of sight, position error, space weather, and live suit telemetry with learned rates."],
        ["“complete their mission quickly and safely”", "Five named routes under hard limits, walk-home margins everywhere, caution and warning, automatic return."],
@@ -273,7 +273,7 @@ H2("Data and software limits")
 bullets(["1 m HiRISE coverage is 75 % of the Jezero operations area with all seven DTMs (64 % with the default four). Elsewhere "
          "the map is 20 m-based, and boulders or scarps smaller than about 20 m are not in it; route cards say so.",
          "The weather model is a fit to sampled MEDA records: typical conditions, not a forecast. Dust storms enter through τ.",
-         "Radiation uses the Curiosity RAD surface average; solar particle events are a contingency, not a modelled dose.",
+         "Radiation uses the Curiosity RAD surface average, scaled by altitude and by terrain shielding from 40 m horizons (which under-state shelter right next to cliffs); solar particle events are a contingency, not a modelled dose.",
          "The closed loop has run against NASA's TSS2027 server, not flight hardware; the campaign measures the loop's logic "
          "with a shared simulator.",
          "The path search keeps up to four labels per grid cell (near-optimal across five criteria); returned routes are "

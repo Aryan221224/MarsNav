@@ -44,6 +44,11 @@ jobs:
       # clean machine does not have; the closed-loop campaign is self-contained
       - name: Closed-loop campaign (40 paired EVAs)
         run: node validation/closed_loop_campaign.mjs
+      - name: Headline numbers reproduce from the re-run campaign
+        # the campaign just rewrote validation/results/closed_loop.json: the README's figures must still follow from it
+        run: node --test tests/headline_numbers.test.mjs
+      - name: Web demo files are all inside app/
+        run: node tools/check_web_demo_files.mjs
 
   build:
     name: Build MarsNav.exe

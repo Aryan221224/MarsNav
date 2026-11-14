@@ -11,6 +11,7 @@
 </p>
 
 <p align="center">
+  <a href="https://aryan221224.github.io/MarsNav/"><b>Try it in your browser</b></a> ·
   <a href="https://youtu.be/n4fgprexx3E"><b>Demo video (30 s)</b></a> ·
   <a href="MarsNav_User_Guide.pdf"><b>User guide (PDF, 86 pages)</b></a> ·
   <a href="#run-it">Run it</a> ·
@@ -27,7 +28,7 @@ MarsNav answers both questions with one safety logic, from choosing the landing 
 - **Landing mode** streams the whole of Mars and screens 66 candidate sites against NASA's 2015 human landing-site criteria (or the 2021 Starship study), with a full dossier per site: landing ellipse, surface, water ice, craters, radiation and sunlight. The chosen site becomes a hub and a full EVA site at 1 to 20 m resolution.
 - **The EVA planner** checks hard limits first (slope, cliffs, soft soil, keep-outs, daylight, the walk home) and then plans five named routes. It flies the EVA against suit telemetry in NASA's SUITS format, learns how hard the crew is really working, re-plans from where they actually are, and turns the crew home before the margin is gone.
 - **A whole-Mars science atlas** for choosing what to study and where: minerals (CRISM, OMEGA, TES), chemistry (Mars Odyssey GRS), gravity (MRO), ice landforms, present-day activity and Special Regions, air pressure, cosmic-ray dose and sunlight, with seven science objectives that rank every candidate site, and 31 Mars missions from Viking to the ones still on the way.
-- **Space weather** from NASA's DONKI (CME arrivals at Mars, particle events, flares) with an EVA advisory, and a route dose that follows the altitude.
+- **Space weather and radiation** from NASA's DONKI (CME arrivals at Mars, particle events, flares) with an EVA advisory, and a route dose that follows the altitude and the terrain: hills and walls that hide part of the sky cut the cosmic-ray dose, modelled with Curiosity RAD's measured angular spread and checked against RAD's own reading by the Murray Buttes. A map layer shows where the cover is; in a solar particle event the warning gives the walk home first and says what the terrain can and cannot do.
 - **Everything at any place.** Click any point on Mars, on the globe or on a built site, and every layer MarsNav holds is there at once: chart quadrangle and names, the local time and sun, air pressure, whether liquid water can exist, cosmic-ray dose, gravity, sunlight, ground, dust, roughness, geology, craters, ice at three depths, minerals and elements, science features and objectives, missions nearby and the best elevation data.
 - **Crew displays** for the same EVA: a helmet-visor HUD over the terrain in 3D from the crew's eyes, a rover dashboard and a wrist cuff, with the rover's own photographs of each stop and the facts about the ground the crew is on. Any place on Mars can be opened on them as a survey. The challenge's own example, **Curiosity's boxwork on Mount Sharp**, is a full EVA site.
 - **Local mode and Mars mode** put every dataset on the computer at native resolution and then cut the app off from the internet, as it would run on Mars. Every refused request is counted on screen.
@@ -75,25 +76,28 @@ The first time you open Landing mode the globe streams NASA imagery and elevatio
 
 No Python, no installer and no admin rights are needed. The window uses Microsoft Edge WebView2, which is part of Windows 10 and 11. For a two-minute tour, press **Guide** in the top bar, then **Quick tour**; the [user guide](MarsNav_User_Guide.pdf) walks through every feature with screenshots.
 
+**In a browser, nothing to install:** [aryan221224.github.io/MarsNav](https://aryan221224.github.io/MarsNav/) runs the EVA planner, the visor HUD and the drive window on the real Jezero terrain (published from `app/` by `.github/workflows/pages.yml`; Landing mode needs the desktop app, which streams and processes the NASA / USGS data).
+
 **Any OS, EVA planner only:** `python3 -m http.server 8765 --directory app`, then open `http://localhost:8765`.
 
 ## Checked against Perseverance
 
-Every result is reported, including the one that did not go our way. Figures re-run on 26 October 2026.
+Every result is reported, including the ones that did not go our way. Each figure and its 95 % interval is read from [`validation/results/headline.json`](validation/results/headline.json) (written by `validation/headline_stats.mjs` from the validation outputs), and `tests/headline_numbers.test.mjs` fails if this table, the submission text or the result files disagree.
 
 | Check | Result |
 |---|---|
-| Mars clock vs Perseverance MEDA sun geometry | Solar zenith angle error 0.001 ± 0.086° over 5,616 samples on 117 sols |
-| Terrain vs the rover | Walking-scale slope at or above the rover's measured tilt at 74 % of 480 points (r = 0.72) |
-| False no-go rate | 2 % of 703 real Perseverance positions |
-| Hazard model vs JPL's route choices | The rover's real path scores lower than the straight line on 21 of 30 detour drives |
+| Mars clock vs Perseverance MEDA sun geometry | Solar zenith angle error 0.001 ± 0.086° over 5,616 samples on 117 sols (mean error 95 % CI −0.001 to 0.003°) |
+| Terrain vs the rover | Walking-scale slope at or above the rover's measured tilt at 74 % of 480 points (95 % CI 70–78 %; r = 0.72) |
+| False no-go rate | 2 % of 703 real Perseverance positions (95 % CI 1–3 %) |
+| Hazard model vs JPL's route choices | The rover's real path scores lower than the straight line on 21 of 30 detour drives (70 %, 95 % CI 52–83 %) |
 | Route geometry vs the rover's drives | **Not** better than a straight line (38 m vs 34 m): reported as a negative result |
-| Closed loop vs flying the filed plan | 40 paired EVAs: 0 of 40 dipped into the reserve with the loop, 31 of 40 without (Wilcoxon p < 0.001) |
+| Closed loop vs flying the filed plan | 40 paired EVAs: 0 of 40 dipped into the reserve with the loop (95 % CI 0–9 %), 31 of 40 without (95 % CI 62–89 %); Wilcoxon p < 0.001, exact sign test on the 31 discordant pairs p = 9 × 10⁻¹⁰ |
+| Terrain radiation shielding vs Curiosity RAD | Parked by a Murray Butte with 19 % of the sky blocked, RAD measured about −4 % dose. MarsNav's formula gives −3 % to −10 % for that geometry (a wall 25–60° high), and −6 % to −15 % without the butte's own albedo, which overshoots. Not resolved from orbit: the HiRISE 1 m terrain shows only 5–16 % of the sky blocked within 24 m of the stop (the cliff face is smoothed), so MarsNav's map under-states shelter next to cliffs, the conservative side for dose. Reported as unresolved |
 | Against NASA's TSS2027 telemetry server | Detected a battery and CO₂ drain beyond its 8× estimator limit (O₂ about 4×) and turned the EVA home within about 2 minutes |
 | Same trip as the rover | Séítah to the delta front: Perseverance drove 7.1 km over 85 sols; MarsNav planned 3.07 km in under a second (a suited crew: 2.92 km, 1.4 h). Over 45 real drives its routes cross 47 % less mapped sand and 55 % less rocky ground than the rover did, and its speed model reproduces the rover's measured 79.7 m/h (79 m/h) |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-161 automated tests pass: 85 engine, closed-loop and map-tool tests (Node) and 76 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
+182 automated tests pass: 101 engine, closed-loop, radiation-shielding, map-tool and headline-number tests (Node) and 81 pipeline, downloader, map-streaming, science-atlas, place, map-tool and headline-statistics tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
 
 ## How it works
 
@@ -132,8 +136,8 @@ python tools\smoke_exe.py dist\MarsNav\MarsNav.exe   :: start the built program,
 ```
 
 ```sh
-node --test tests/*.test.mjs          # 85 engine, closed-loop and map-tool tests (Node 20+)
-python -m pytest tests -q             # 76 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests (pip install -r requirements.txt)
+node --test tests/*.test.mjs          # 101 engine, closed-loop, shielding, map-tool and headline-number tests (Node 20+)
+python -m pytest tests -q             # 81 pipeline, downloader, map-streaming, science-atlas, place, map-tool and headline-statistics tests (pip install -r requirements.txt)
 node validation/validate.mjs          # validation against Perseverance data (about 30 s)
 node validation/rover_case_study.mjs  # same trips as Perseverance, MarsNav vs the rover (about 15 s)
 node validation/closed_loop_campaign.mjs   # 40 paired closed-loop EVAs (about 70 s)

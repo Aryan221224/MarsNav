@@ -24,6 +24,7 @@ https://youtu.be/n4fgprexx3E (the 29.5-second demo video, English on-screen text
 
 `https://github.com/Aryan221224/MarsNav` (repository: source, README, 86-page user guide, validation reports)
 Download for Windows: `https://github.com/Aryan221224/MarsNav/releases/latest` (`MarsNav-Windows.zip`, unzip and double-click `MarsNav.exe`; nothing to install)
+Try it in a browser: `https://aryan221224.github.io/MarsNav/` (the EVA planner, visor HUD and drive window on real Jezero terrain; Landing mode needs the desktop app)
 
 ## Detailed Project Description
 
@@ -74,16 +75,17 @@ On a site the card adds the planner's own terrain model at that cell and the rov
 
 | Check | Result |
 |---|---|
-| Mars clock vs Perseverance MEDA sun geometry | Solar zenith angle error 0.001 ± 0.086° over 5,616 samples on 117 sols |
-| Terrain vs the rover | Walking-scale slope at or above the rover's measured chassis tilt at 74 % of 480 points (r = 0.72) |
-| False no-go rate | 2 % of 703 real Perseverance positions (all cliff-edge stand-offs) |
-| Hazard model vs JPL's route choices | On 30 detour drives the rover's real path scores lower hazard than the straight line on 21 of 30 |
+| Mars clock vs Perseverance MEDA sun geometry | Solar zenith angle error 0.001 ± 0.086° over 5,616 samples on 117 sols (mean error 95 % CI −0.001 to 0.003°) |
+| Terrain vs the rover | Walking-scale slope at or above the rover's measured chassis tilt at 74 % of 480 points (95 % CI 70–78 %; r = 0.72) |
+| False no-go rate | 2 % of 703 real Perseverance positions (95 % CI 1–3 %; all cliff-edge stand-offs) |
+| Hazard model vs JPL's route choices | On 30 detour drives the rover's real path scores lower hazard than the straight line on 21 of 30 (95 % CI 52–83 %) |
 | Route geometry vs the rover's drives | **Not** better than a straight line (38 m vs 34 m mean offset). Reported as a negative result: drives are shaped by science stops and sub-metre hazards |
-| Closed loop vs flying the filed plan | 40 paired EVAs with crews and hardware the planner was not told about: 0 of 40 dipped into the reserve, against 31 of 40 (Wilcoxon p < 0.001) |
+| Closed loop vs flying the filed plan | 40 paired EVAs with crews and hardware the planner was not told about: 0 of 40 dipped into the reserve (95 % CI 0–9 %), against 31 of 40 (62–89 %); Wilcoxon p < 0.001, exact sign test p = 9 × 10⁻¹⁰ |
+| Terrain radiation shielding vs Curiosity RAD | By a Murray Butte that blocked 19 % of the sky, RAD measured about −4 % dose; MarsNav's formula gives −3 % to −10 % for that geometry (−6 % to −15 % without ground albedo, which overshoots). From orbit the stop is unresolved: 1 m terrain shows 5–16 % of the sky blocked within 24 m, so the map under-states shelter by cliffs (the conservative side) |
 | Against NASA's TSS2027 telemetry server | Detected a battery and CO₂ drain beyond its 8× estimator limit (O₂ about 4×) and turned the EVA home within about 2 minutes |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-161 automated tests pass (85 engine, closed-loop and map-tool, 76 pipeline, downloader, map-streaming, science-atlas, place and map-tool), and the local server passes an end-to-end self-test under load, including a first run on an empty computer.
+182 automated tests pass (101 engine, closed-loop, radiation-shielding, map-tool and headline-number; 81 pipeline, downloader, map-streaming, science-atlas, place, map-tool and headline-statistics), and the local server passes an end-to-end self-test under load, including a first run on an empty computer.
 
 ### Use-case evidence: the same trip as Perseverance
 

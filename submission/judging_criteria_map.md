@@ -31,7 +31,7 @@ The five Space Apps judging criteria, and the evidence in this project for each.
 
 - Validated against Perseverance's own records: sun geometry (0.086° over 5,616 samples), terrain registration (0.2 ± 0.4 m), slope vs chassis tilt (r = 0.72), false no-go (2 %), and hazard agreement with JPL's route choices (21 of 30); the same trips as the rover on 45 drives, with what MarsNav still gets wrong reported (`validation/ROVER_CASE_STUDY.md`).
 - The negative result is reported: route geometry does not beat a straight line against the rover's drives.
-- 161 automated tests (85 engine, loop and map tools; 76 pipeline, downloader, map streaming, science atlas, place and map tools), including the planner's safety contract on real terrain, navigation-filter consistency (NEES), estimator convergence, the UDP bridge over real sockets, and exact-vs-heuristic station selection.
+- 182 automated tests (101 engine, loop, shielding, map tools and headline numbers; 81 pipeline, downloader, map streaming, science atlas, place, map tools and headline statistics), including the planner's safety contract on real terrain, navigation-filter consistency (NEES), estimator convergence, the UDP bridge over real sockets, and exact-vs-heuristic station selection.
 - A paired 40-EVA campaign with a Wilcoxon test: 0 of 40 reserve dips with the closed loop against 31 of 40 without (p < 0.001), with the science cost reported too.
 - A rebuild from raw data is byte-identical.
 - Every constant is tagged by origin (`[SRC]`, `[CALIB]`, `[ASSUME]`, `[PHYS]`), and the limits are stated (docs/08).
@@ -42,7 +42,7 @@ The challenge statement, point by point (docs/06 has the full trace):
 
 | Challenge asks for | MarsNav |
 |---|---|
-| "a layered, integrated view of a location or route" | 11 layers, no-go map, traverse, routes with uncertainty corridors, and a timeline profile |
+| "a layered, integrated view of a location or route" | 12 layers (including terrain radiation shielding), no-go map, traverse, routes with uncertainty corridors, and a timeline profile |
 | "data from multiple NASA science missions" | MRO (HiRISE, CTX), MGS (MOLA datum), Mars 2020 (MEDA, traverse, tilt), MSL (RAD), Apollo (walking) |
 | "details of their routes and destinations" | Guidance legs, target provenance, station procedures |
 | "updates on current conditions" | Live Mars clock, sun, shade and temperature along the route, dust τ, radio line of sight, position error, and live suit and rover telemetry with learned rates |

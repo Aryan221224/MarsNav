@@ -37,7 +37,7 @@ P("Choose a lander (Viking, MER, MSL, Mars 2020 with Terrain-Relative Navigation
 figure("p20_landing_hub", "The landing-safety layer at Jezero for a human-class lander: the crater floor is safe (green), "
        "steep ground hazardous (red). Probability of a safe landing at the chosen target: 100 %.")
 
-H2("Read the terrain: eleven layers")
+H2("Read the terrain: twelve layers")
 P("The <b>Layers</b> box switches what the map shows. Every layer is computed from real data on a 10 m grid (2.3 million "
   "cells at Jezero), and its legend names the source and whether it is derived, modelled or an assumption.")
 figrow([("p01_plan_overview", WMAP, "Safety hazard (composite)"), ("p02_layer_sand", WMAP, "Sand bedforms"),
@@ -53,6 +53,7 @@ table([["Layer", "What it shows"],
        ["Slope · Sand bedforms · Wheel-slip risk", "The ground a boot or wheel meets."],
        ["Shadows at time · Walkback time · EVA range", "Light, the walk home, and how far the consumables reach."],
        ["Radio line of sight · Position error · Data confidence", "Communications, navigation uncertainty, and where the data are weak."],
+       ["Radiation shielding", "How much the hills and walls around each spot cut the cosmic-ray dose (Curiosity RAD's measured angular spread and ground albedo, checked at the Murray Buttes). Terrain is not a solar-storm shelter."],
        ["Landing safety", "Lander-scale safety for the chosen lander."],
        ["No-go areas · Perseverance traverse · Landmarks · Alternative routes", "Overlays: cliffs and keep-outs (hatched), the rover's real path, navigation landmarks, the other route options."]],
       [2.4 * inch, CW - 2.4 * inch])
