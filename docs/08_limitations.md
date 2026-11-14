@@ -24,7 +24,8 @@ What MarsNav does not do, what it assumes, and what we do not claim.
 - **Bedform detection** needs 1 m data. At 20 m the model uses a weak prior with wider uncertainty.
 - **Crater-rim DTMs** have y-parallax striping outside the landing ellipse per USGS; their bedform evidence is halved, not removed.
 - **The climatology** is a harmonic fit to sampled MEDA records (every 15th sol). It gives typical conditions, not a forecast. Dust is taken from the Mars Climate Database dust climatology for the departure season (a typical or a dusty year) or set by hand; storms are not predicted.
-- **Radiation** is the Curiosity RAD surface average; solar particle events are handled as a contingency, not modelled in dose.
+- **Radiation** is the Curiosity RAD surface average, scaled by altitude and by terrain shielding; solar particle events are handled as a contingency, not modelled in dose.
+- **Terrain shielding** comes from 40 m horizons in 16 directions, built from 10-20 m elevation: a cliff face a few metres away is smoothed out, so the map under-states shelter right next to a wall (at Curiosity's Murray Buttes stop the 1 m DTM shows 5-16 % of the sky blocked where the rover saw 19 %). The albedo share (19 %) was itself derived by Guo et al. from that butte, so the dose check there is a consistency check, not an independent test. The model is for a person in the open; it gives no credit for suits, rovers or habitats.
 - **The traverse feed** is a snapshot (sol 1980, September 2026). The rover keep-out uses that position.
 
 ## Software limits

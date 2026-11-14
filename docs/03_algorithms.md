@@ -118,3 +118,27 @@ For each leg:
 - **Mission calendar.** Sol 0 = landing sol at the landing longitude (M2020 for Jezero; any landing epoch for a new site).
 - **Climatology.** A 63-term harmonic model (seasonal ±4 × diurnal ±3 harmonics) fitted to MEDA samples: air RMSE 4.1 K, ground 6.1 K, pressure 4.3 Pa. Pressure is fitted in log space with a hydrostatic elevation term (scale height 11.7 km), so it transfers to other elevations.
 - **Site suit check.** The highest pressure over the operations area across a Mars year is compared with the 7.5 Torr evaporative-cooling limit (research doc 03). Jezero: at most 8.2 hPa (6.2 Torr) at the lowest ground in the operations area: OK. Jezero east floor: 8.4 hPa (6.3 Torr): OK.
+
+## 9. Terrain radiation shielding (`engine/shielding.js`)
+
+Galactic cosmic rays reach the surface from the whole sky, most strongly from overhead: Curiosity RAD measured the flux
+falling as cos^1.18 of the zenith angle (Wimmer-Schweingruber et al. 2015, GRL 42:10557; 1.18 ± 0.07). Terrain rising to
+elevation angle *h* in one direction hides the sky below *h* there; for a dose summed over all directions the share of
+the downward dose lost in that direction is sin(h)^(n+1). The ground sends about 19 % of the flat-terrain dose back up
+as albedo (Guo et al. 2021, GRL 48, e2021GL093912), and a butte face sends its own albedo towards the person in
+proportion to the sky it covers. Averaged over the 16 horizon sectors of each 40 m cell:
+
+    factor = 1 - (1 - a) * mean(sin(h)^(n+1)) + a * mean(sin(h))        a = 0.19, n = 1.18
+
+The factor is divided by 1.0062, its value among the low hills of the Gale floor where RAD measured its 0.64 mSv/day
+average (25 Curiosity stops, `validation/results/shielding_murray_buttes.json`), so ordinary ground keeps the RAD
+average. Each route step's cosmic-ray dose is the altitude-scaled RAD rate (section 8) times this factor; routes also
+report the open-sky dose. Low hills change almost nothing; walls above about 30° nearby start to matter.
+
+Best cover: the 40 m cell with the lowest factor within 600 m, outside no-go ground, with its bearing and walking time
+(straight line × 1.3 at 3 km/h). In a solar particle event the warning puts the walk home first and names terrain cover
+only if it cuts the dose by 10 % or more, as a fallback: solar protons come even more from overhead than cosmic rays,
+so terrain shields them less than the figure shown.
+
+Check: `validation/shielding_murray_buttes.py` (section in `docs/05`).
+

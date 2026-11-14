@@ -75,6 +75,14 @@ These whole-planet layers inform landing-site screening. They are not used in th
 
 **Why a sampler for MEDA.** The MEDA bundle is tens of gigabytes. The sampler reads 48 evenly spaced rows per file with HTTP range requests, every 15th sol from 0 to 1,859. The result is 5,600 temperature and pressure samples and 5,616 sun-geometry samples from a 2 MB download. The procedure is in the script header, so anyone can repeat it.
 
+## Radiation shielding check (validation only, not shipped in the app)
+
+| Data | Source | Use |
+|---|---|---|
+| HiRISE DTMs `DTEEC_040770_1755_039280_1755_A01` and `DTEEC_009650_1755_009716_1755_U01` (1 m) | USGS Astrogeology analysis-ready data (STAC `mro_hirise_socet_dtms`), read remotely, CC0 | Horizons within 6 km of Curiosity's Murray Buttes stop |
+| Curiosity waypoints, sols 1420-1500 (`validation/data/msl_waypoints_sols1420-1500.json`) | NASA/JPL MMGIS `MSL_waypoints.json`; every point matches the traverse the Mount Sharp site was built from | Rover stop positions |
+| Published RAD results | Ehresmann et al. 2021 (JGR Planets 126, e2021JE006851); Guo et al. 2021 (GRL 48, e2021GL093912); Wimmer-Schweingruber et al. 2015 (GRL 42:10557); values as stated in the abstracts | Measured dose change, albedo share, zenith-angle exponent |
+
 ## Stated accuracy of the inputs (from USGS metadata)
 
 - HiRISE DTMs: horizontal co-registration better than 3 m at the 99th percentile (most under 1.1 m). The median vertical offset from the CTX DTM mosaic is about 0.4 m.
