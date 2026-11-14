@@ -90,6 +90,15 @@ const kv = (rows) => `<div class="pv-kv">${rows.filter(Boolean).map(([a, b]) => 
 const sec = (id, title, sub, body) => ({ id, title, sub, html: body });
 
 /** The place's sections as [{id, title, sub, html}]. opts.links: true to make built sites links into the planner. */
+// the year's dust at a place as a small chart: 10th-90th percentile band and median, Ls 0-360, optical depth 0-3
+function dustSpark(curve) {
+  if (!curve?.length) return "";
+  const X = (ls) => (ls / 360) * 120, Y = (t) => 30 - Math.min(3, t) * 9.5;
+  const top = curve.map((r) => `${X(r[0]).toFixed(1)},${Y(r[3]).toFixed(1)}`), bot = curve.slice().reverse().map((r) => `${X(r[0]).toFixed(1)},${Y(r[1]).toFixed(1)}`);
+  const med = curve.map((r) => `${X(r[0]).toFixed(1)},${Y(r[2]).toFixed(1)}`).join(" ");
+  return `<svg class="pv-spark" viewBox="0 0 120 32" width="120" height="32" role="img" aria-label="Dust optical depth over the Mars year"><rect x="60" y="0" width="60" height="32" fill="rgba(255,170,90,.08)"/><polygon points="${top.join(" ")} ${bot.join(" ")}" fill="rgba(230,150,70,.35)"/><polyline points="${med}" fill="none" stroke="#ff9a4a" stroke-width="1.5"/></svg><br>`;
+}
+
 export function placeSections(d, opts = {}) {
   const out = [];
   const W = d.where || {}, E = d.environment || {}, S = d.surface || {}, Wt = d.water || {}, C = d.composition || {}, inst = d.installed || {};
@@ -115,6 +124,8 @@ export function placeSections(d, opts = {}) {
     ["Gravity", g ? `${fmtN(g.g_ms2, 3)} m/s² · ${fmtN(100 * g.earth_ratio, 1)} % of Earth's${d.gravity_anomaly_mgal != null ? ` <span class="pv-na">(anomaly ${d.gravity_anomaly_mgal > 0 ? "+" : ""}${fmtN(d.gravity_anomaly_mgal)} mGal)</span>` : ""}` : "–"],
     ["Sunlight, above air", E.sun_toa ? `${fmtN(E.sun_toa.mean_wm2)} W/m² sol mean (${fmtN(E.sun_toa.min_wm2)}–${fmtN(E.sun_toa.max_wm2)} over the year)` : "–"],
     ["Sunlight, at ground", E.sun_surface_mean_wm2 != null ? `≈ ${fmtN(E.sun_surface_mean_wm2)} W/m² mean, ${fmtN(E.sun_surface_min_wm2)} in the darkest season` : "–"],
+    E.dust ? ["Dust in the air", `${dustSpark(E.dust.curve)} τ ${fmtN(E.dust.clearest.tau, 2)} at Ls ${fmtN(E.dust.clearest.ls)}° (clearest) to ${fmtN(E.dust.dustiest.tau, 2)} at Ls ${fmtN(E.dust.dustiest.ls)}° (dustiest), median year; up to ${fmtN(E.dust.worst_p90.tau, 1)} in dusty years <span class="pv-na">(global storms MY ${(E.dust.storm_years || []).join(", ")})</span>`] : null,
+    d.magnetic ? ["Crustal magnetic field", `${fmtN(d.magnetic.btotal_nT)} nT at 400 km, ${esc(d.magnetic.word)} <span class="pv-na">(Br ${d.magnetic.br_nT > 0 ? "+" : ""}${fmtN(d.magnetic.br_nT)} nT; MGS)</span>`] : null,
     ["Space weather", sw?.have_data ? `<span class="${sw.level === "quiet" ? "pv-ok" : sw.level === "storm" ? "pv-bad" : "pv-warn"}">${esc(sw.headline)}</span>` : '<span class="pv-na">no NASA DONKI data yet</span>'],
   ]) + `<p class="pv-hint">Pressure is the mean for this elevation (it swings ±12 % over the year). Dose: Curiosity's RAD record, moved by the air column; solar particle events come on top.</p>`));
   // ground
@@ -180,6 +191,7 @@ export function placeSections(d, opts = {}) {
     <li>Ice: SWIM (Morgan et al. 2021, 2025). Hydrogen and elements: Mars Odyssey GRS (Boynton et al. 2007). Thermal inertia: TES (Putzig &amp; Mellon 2007). Albedo, dust, minerals: TES (Christensen et al. 2001; Ruff &amp; Christensen 2002; Bandfield 2002). Roughness: MOLA (Kreslavsky &amp; Head 2000).</li>
     <li>Craters: Robbins &amp; Hynek (2012, 2020 update). Geology: Tanaka et al. 2014, USGS SIM 3292. Names: IAU Gazetteer. Charts: USGS 1:5M MC quadrangles.</li>
     <li>Radiation: Curiosity RAD (Hassler et al. 2014; Guo et al. 2017). Space weather: NASA DONKI. Time: Mars24 (Allison &amp; McEwen 2000).</li>
+    <li>Dust: Mars Climate Database dust scenarios MY 24-36 (Montabone et al. 2015, 2020; CC BY-SA 3.0). Magnetic field: MGS MAG/ER at 400 km (Connerney et al. 2001).</li>
   </ul>`));
   return out;
 }

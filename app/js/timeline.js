@@ -9,6 +9,7 @@ export class Timeline {
     this.route = null;
     this.cursor = null;
     this.now = null;
+    this.relay = [];          // Earth relay windows during the EVA: [{t0, t1, label}] in seconds from departure
     new ResizeObserver(() => this.draw()).observe(canvas.parentElement);
     canvas.addEventListener("pointermove", (e) => {
       if (!this.route) return;
@@ -73,6 +74,14 @@ export class Timeline {
       const x = X(t);
       c.beginPath(); c.moveTo(x, 6); c.lineTo(x, this.h - 4); c.stroke();
       c.fillText(fmtDuration(t).slice(0, 5), x + 3, this.h - 6);
+    }
+    // Earth relay windows (sun-synchronous orbiters overhead; plannerx.js)
+    for (const w of this.relay || []) {
+      const x0 = X(Math.max(0, w.t0)), x1 = X(Math.min(T, w.t1));
+      if (x1 <= x0) continue;
+      c.fillStyle = "rgba(60,203,255,0.13)"; c.fillRect(x0, 6, Math.max(2, x1 - x0), this.h - 22);
+      c.fillStyle = "#3ccbff"; c.fillRect(x0, 6, Math.max(2, x1 - x0), 3);
+      c.fillText(`${w.label} ↑`, x0 + 2, 19);
     }
     // station work bands and shade
     for (let k = 1; k < pts.length; k++) {

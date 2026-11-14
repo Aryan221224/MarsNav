@@ -78,3 +78,21 @@ Each of these is a parameter in one place (`engine/physio.js`, `engine/costmodel
 | Hardware interface | UDP bridge over real sockets; NASA TSS2027 built from source and driven through its own commands | Frames relayed as SSE; the loop learned the test suit's 8x battery drain and turned the EVA home (docs/09) |
 | Station selection | Held-Karp vs brute force; QUBO + annealing vs Held-Karp on 15-station instances | Exact agreement; QUBO path within 1.7 % mean (docs/11) |
 | Wilcoxon implementation | Against scipy.stats.wilcoxon | Identical p-values to 5 decimals |
+
+## Worldview-style tools (docs/13)
+
+| Check | Method | Result |
+|---|---|---|
+| Dust: browser and server agree | `engine/dust.js` and `planet/dust.py` on the same points, statistics and years | Equal to 1e-9 |
+| Dust against rover measurements | Bin means at the rovers in the storm years | 3.0 at Meridiani in MY 28 (Opportunity measured 4.6 to 5); 7.4 at Gale in MY 34 (Curiosity measured 8.5): below the daily peaks, above half of them, as 10° bins must be |
+| Dust physics and record | Percentile order everywhere; pressure scaling; the storm years; MY 24 starts at Ls ~103 | p10 ≤ p50 ≤ p90 at 50,960 checked points; τ halves with pressure; storms in MY 25, 28 and 34; no data before Ls 103 of MY 24 |
+| Relay orbits | Periods and MRO's local times against the published orbits | MRO 113 min, TGO 2 h, Mars Express 7 h; MRO passes at 14:00-16:00 and 02:00-04:00 LMST (3 pm ascending node), 7 to 10 min long |
+| Magnetic field | The two check values in the MGS data README | Reproduced within the 0.1 nT storage step; strongest field 221 nT at 52.5° S 177.5° E |
+| MARCI maps | Date lookup; tiles cut from a synthetic map whose colour encodes position; coverage of each map | 2,680 maps, MY 28 Ls 132 to MY 32 Ls 110; tile pixels within 1.6 colour levels of the expected position, zoomed in and out; at MY 29 Ls 280 the two nearest sols lost orbits (38 % and 47 % mapped) and a 89 % sol 2.2° away is shown |
+| MARCI downloads | Server with the map servers unreachable but Harvard Dataverse reachable | The month is downloaded (MD5-checked); stand-in tiles are provisional and never cached, so the real map replaces them |
+| Measuring | Great-circle distances and spherical areas against closed forms | Exact for a 1° box, across 180°, and a hemisphere |
+| Area statistics | Equal-area lattice inside boxes, triangles and shapes across 180° | Every sample inside; the layers' percentiles, with the 610 Pa datum stated when MOLA is not yet on the computer |
+| Exports | GeoTIFF read back tag by tag; ZIP with an independent inflater and CRC; GIF with an independent LZW decoder; KML parsed | Pixel-exact GeoTIFF with Mars-sphere equirectangular GeoKeys; every CRC correct; GIF frames decode back exactly; well-formed KML on the Mars target |
+| Both apps in a browser | Playwright against the desktop server: every tool, the stories and the links | All steps pass, no page errors |
+
+Tests: `tests/worldview_features.test.mjs` (19) and `tests/test_worldview.py` (14).

@@ -94,3 +94,16 @@ Verification codes: **T** = automated test, **V** = validation on real data, **D
 | M22 | Crew states the work at a station and its consumables | User's direction | Per-station task: time, intensity, tool Wh, extra O₂ and water, budgeted into the round trip and shown per station | T, D |
 | M23 | Rocky ground costs wheels, battery and safety | User's direction; Curiosity wheel tests | Motion resistance x1.35, slip energy, wheel-life metric, wear hazard weighted up on worn wheels, rocky share on route cards | T |
 | M24 | Best station set, provably | QPath assessment | Held-Karp exact up to 15 candidates; QUBO beyond, measured against the exact optimum | T |
+
+## Worldview-style tools (docs/13)
+
+| # | Need | Source | Design response | Verified by |
+|---|---|---|---|---|
+| W1 | Conditions that change with the season, as they were observed | CH resources (NASA Worldview); User's direction | Dust climatology MY 24-36 by season (median and dusty year) in both apps and the planner's solar heating; MRO MARCI daily maps of MY 28-32 on the globe | T (dust parity and rover peaks; MARCI dates and tiles), V (storm years, Meridiani and Gale), D |
+| W2 | When the hub can talk to Earth | User's direction | Relay coverage from the published orbits of MRO, Odyssey, TGO and Mars Express: passes per sol, minutes, local-time windows; relay bands on the planner's timeline | T (periods, MRO 3 pm / 3 am windows), D |
+| W3 | Compare two maps or two years | CH resources (Worldview compare) | Swipe line and spy lens in both apps; two MARCI years at the same season | D |
+| W4 | Measure and summarise an area | CH resources (Worldview measure, area statistics) | Great-circle ruler, spherical areas, climb and profile; statistics of every layer inside a shape or the landing ellipse | T (closed-form distances and areas, lattice, statistics), D |
+| W5 | Animate the season or the EVA day, and record it | CH resources (Worldview animation) | Season and MARCI playback on the globe, sol playback in the planner, GIF export | T (GIF decodes back), D |
+| W6 | Take the plan into other tools and share it | CH resources (Worldview image download, permalinks) | GeoTIFF in the site projection, KMZ and KML for Google Earth's Mars view, links that restore the full state, "Get the data" links | T (GeoTIFF, ZIP, KML read back), D (links restored) |
+| W7 | Learn the tools on real events | CH resources (Worldview tours) | Stories: the 2007 global dust storm, choosing a hub with statistics, water ice and the magnetic field; four planner stories | D |
+| W8 | Crustal magnetism as context for space weather | User's direction | MGS MAG/ER field at 400 km: overlay, place view, statistics | T (README check values) |

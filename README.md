@@ -46,6 +46,7 @@ It is a portable Windows desktop app: one folder, one double-click, nothing to i
 | **Space weather** | NASA DONKI: CME arrivals forecast at Mars, solar particle events and flares, the Sun-Earth-Mars angle and an EVA advisory (quiet / watch / storm), cached for Mars mode. |
 | **Any place** | One click anywhere, on the globe or on a built site, gives every layer at that point (`/api/place`). **Where:** position, USGS chart quadrangle, IAU names, built site. **Time:** local solar time, sun, sunrise and sunset, season and Mars Year, Earth light time (live). **Survival:** air pressure, the liquid-water window, air shielding, cosmic-ray dose, gravity, sunlight, space weather. **Ground:** thermal inertia, geologic unit, albedo, dust cover, roughness, craters. **Water:** SWIM ice at three depths, the nearest ice, GRS hydrogen. **Composition:** TES minerals, GRS elements, mineral detections. **Science:** catalogued features and objective scores. **Context:** missions and candidate sites nearby, and the best elevation data covering it. On a built site the card adds that site's terrain model (slope, steps, sand, wheel slip, cliffs, radio, walk home, the no-go reason) and the rover's photographs. |
 | **Crew displays** | Helmet-visor HUD (heading tape, steering cue, walk-home margin, consumables, alerts) over the site's terrain in 3D from the crew's eyes, rover dashboard (speed, slope ahead, power, route map) and wrist cuff (next stop with the rover's photograph, checklist, acknowledge / pin / two-step return), live from the planner; the visor also overlays the drive window. All three show the place under the crew: air, dose rate, gravity, water's boiling point, ground, dust, ice, geology and science nearby. The dashboard and cuff also hold every layer ("Data here"). Opened for any place from Landing mode or a site, they run as a survey: local time, sun and a map of the features within 50 km. |
+| **Worldview-style tools** | On Mars data, as NASA Worldview does for Earth: **dust by season** from the Mars Climate Database climatology (MY 24-36), on the globe and in the planner's solar heating; **MRO MARCI daily weather maps** of Mars years 28-32 (the 2007 global dust storm, sol by sol), with a season slider, Play and GIF; **Earth relay coverage** from the orbits of MRO, Odyssey, TGO and Mars Express (passes per sol and local times, drawn on the planner's timeline); the **crustal magnetic field** (MGS); **compare** two maps or two years with a swipe line or spy lens; a **ruler** with area and **statistics of every layer** inside a shape or the landing ellipse; overlay strength and thresholds; **GeoTIFF, KMZ and KML** exports; **links** that restore the whole state; "Get the data" links; and guided **stories**. Details: [`docs/13_worldview_features.md`](docs/13_worldview_features.md). |
 | **Offline** | Local mode measures and downloads the whole-planet datasets and every high-resolution product around each site; Mars mode then refuses every internet request. The EVA planner needs no internet at any time. |
 
 <table>
@@ -91,7 +92,7 @@ Every result is reported, including the one that did not go our way. Figures re-
 | Same trip as the rover | Séítah to the delta front: Perseverance drove 7.1 km over 85 sols; MarsNav planned 3.07 km in under a second (a suited crew: 2.92 km, 1.4 h). Over 45 real drives its routes cross 47 % less mapped sand and 55 % less rocky ground than the rover did, and its speed model reproduces the rover's measured 79.7 m/h (79 m/h) |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-125 automated tests pass: 65 engine and closed-loop tests (Node) and 60 pipeline, downloader, map-streaming, science-atlas and place tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
+158 automated tests pass: 84 engine, closed-loop and map-tool tests (Node) and 74 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
 
 ## How it works
 
@@ -117,7 +118,7 @@ Hard limits come first and are never traded against time; a partial route from w
 | `validation/` | Validation against Perseverance and the closed-loop campaign, with reports |
 | `tests/` | Engine and closed-loop tests (Node), pipeline and downloader tests (pytest) |
 | `tools/` | Build scripts, the SUITS telemetry bridge, test helpers, the figure script and the user-guide builder (`tools/guide/`) |
-| `docs/` | Concept of operations, architecture, algorithms, data provenance, verification, requirements traceability, deployment, limitations, closed loop, and the 2026 statement update (`docs/12_challenge_2026_update.md`) |
+| `docs/` | Concept of operations, architecture, algorithms, data provenance, verification, requirements traceability, deployment, limitations, closed loop, the 2026 statement update (`docs/12_challenge_2026_update.md`) and the Worldview-style tools (`docs/13_worldview_features.md`) |
 | `submission/` | Project submission text, judging-criteria map, demo script, comparison with other approaches |
 
 ## Build and test from source
@@ -129,12 +130,13 @@ python tools\smoke_exe.py dist\MarsNav\MarsNav.exe   :: start the built program,
 ```
 
 ```sh
-node --test tests/*.test.mjs          # 65 engine and closed-loop tests (Node 20+)
-python -m pytest tests -q             # 60 pipeline, downloader, map-streaming, science-atlas and place tests (pip install -r requirements.txt)
+node --test tests/*.test.mjs          # 84 engine, closed-loop and map-tool tests (Node 20+)
+python -m pytest tests -q             # 74 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests (pip install -r requirements.txt)
 node validation/validate.mjs          # validation against Perseverance data (about 30 s)
 node validation/rover_case_study.mjs  # same trips as Perseverance, MarsNav vs the rover (about 15 s)
 node validation/closed_loop_campaign.mjs   # 40 paired closed-loop EVAs (about 70 s)
 bash tools/build_all.sh               # rebuild every data product from the raw USGS / NASA files
+GLOBAL_PRODUCTS=1 bash tools/build_all.sh   # also the dust climatology, magnetic field and MARCI index (docs/13)
 python tools/build_features.py        # rebuild the whole-Mars feature catalogues from NASA Mars Trek and the rover feeds
 python tools/build_pov.py --site jezero --rover m2020   # the rover's photographs at each station
 python tools/guide/builder/build.py   # rebuild MarsNav_User_Guide.pdf (pip install reportlab)
@@ -142,7 +144,7 @@ python tools/guide/builder/build.py   # rebuild MarsNav_User_Guide.pdf (pip inst
 
 ## Data and credits
 
-Mars data from NASA and the USGS Astrogeology Science Center: HiRISE, CTX, CRISM and GMM-3 gravity (MRO), MOLA and TES (MGS), THEMIS and GRS (Mars Odyssey), HRSC and OMEGA (Mars Express), the MEDA weather station, the rover traverses, raw images and RAD radiation records (Mars 2020, MSL), the Viking colour mosaic, the global geologic map (USGS SIM 3292), the SWIM ice maps, the Robbins & Hynek crater database, the mineral, ice and activity surveys served by NASA Mars Trek, and NASA CCMC's DONKI space-weather database. Candidate sites from NASA's 2015 Human Landing Sites workshop and Golombek et al. (2021). Full provenance and citations: [`docs/04_data_and_provenance.md`](docs/04_data_and_provenance.md) and the user guide.
+Mars data from NASA and the USGS Astrogeology Science Center: HiRISE, CTX, CRISM, MARCI and GMM-3 gravity (MRO), MOLA, TES and the MAG/ER magnetometer (MGS), THEMIS and GRS (Mars Odyssey), HRSC and OMEGA (Mars Express), the MEDA weather station, the rover traverses, raw images and RAD radiation records (Mars 2020, MSL), the Viking colour mosaic, the global geologic map (USGS SIM 3292), the SWIM ice maps, the Robbins & Hynek crater database, the mineral, ice and activity surveys served by NASA Mars Trek, NASA CCMC's DONKI space-weather database, and the Mars Climate Database dust scenarios (LMD, Montabone et al. 2015, 2020). Candidate sites from NASA's 2015 Human Landing Sites workshop and Golombek et al. (2021). Full provenance and citations: [`docs/04_data_and_provenance.md`](docs/04_data_and_provenance.md) and the user guide.
 
 MarsNav is an independent project built for the NASA Space Apps Challenge 2026. It is not a NASA product and is not endorsed by NASA.
 

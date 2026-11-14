@@ -1,7 +1,7 @@
 // map.js - canvas map: CTX orthomosaic, HiRISE 2 m detail tiles when zoomed in, engine overlays, routes drawn as a
 // white core with a dark casing (legible on every Mars tone, research doc 17), a violet position-error corridor,
 // stations, keep-outs, landmarks, the real Perseverance traverse, and the crew during Execute.
-import { lonlatToXY, xyToLonLat } from "../engine/geo.js";
+import { lonlatToXY, xyToLonLat, haversine } from "../engine/geo.js";
 
 export class MapView {
   constructor(canvas, grid, imagery, dataBase) {
@@ -29,6 +29,11 @@ export class MapView {
     this.habitat = null;
     this.crew = null;
     this.hover = null;
+    this.overlayAlpha = 1;      // opacity of the engine overlay (layer panel)
+    // compare two layers (Worldview-style): { mode: "swipe" | "spy", overlay: canvas | null, labelA, labelB, split, r }
+    // A is the layer chosen in the panel; B is drawn right of the swipe line, or inside the spy lens around the cursor
+    this.compare = null;
+    this.measure = null;        // { pts: [[lon, lat]], closed, active }: the measuring line or area
     this._load();
     this._bind();
     this.resize();
@@ -95,6 +100,7 @@ export class MapView {
     let moved = 0, pinch = null;
     cv.addEventListener("pointerdown", (e) => {
       cv.setPointerCapture(e.pointerId);
+      if (this._nearSplit(e.offsetX)) { this._dragSplit = e.pointerId; return; }
       pts.set(e.pointerId, [e.offsetX, e.offsetY]);
       moved = 0;
       if (pts.size === 2) {
@@ -103,9 +109,16 @@ export class MapView {
       }
     });
     cv.addEventListener("pointermove", (e) => {
+      if (this._dragSplit === e.pointerId && this.compare) {
+        this.compare.split = Math.max(0.02, Math.min(0.98, e.offsetX / this.w));
+        this.draw();
+        return;
+      }
       const p = pts.get(e.pointerId);
       if (!p) {
         this.hover = [e.offsetX, e.offsetY];
+        cv.style.cursor = this._nearSplit(e.offsetX) ? "ew-resize" : this.measure?.active ? "crosshair" : "";
+        if (this.compare?.mode === "spy" || this.measure?.active) this.draw();
         this.onHover?.(...this.screenLL(e.offsetX, e.offsetY), e.offsetX, e.offsetY);
         return;
       }
@@ -126,6 +139,7 @@ export class MapView {
       this.draw();
     });
     const up = (e) => {
+      if (this._dragSplit === e.pointerId) { this._dragSplit = null; this.onCompareMoved?.(this.compare?.split); return; }
       if (pts.has(e.pointerId) && moved < 6 && pts.size === 1) this.onClick?.(...this.screenLL(e.offsetX, e.offsetY));
       pts.delete(e.pointerId);
       if (pts.size < 2) pinch = null;
@@ -140,13 +154,29 @@ export class MapView {
   }
 
   setOverlay(ov) {
-    if (!ov) { this.overlay = null; this.draw(); return; }
+    this.overlay = MapView.canvasOf(ov);
+    this.draw();
+  }
+
+  static canvasOf(ov) {
+    if (!ov) return null;
     const c = document.createElement("canvas");
     c.width = ov.w;
     c.height = ov.h;
     c.getContext("2d").putImageData(new ImageData(ov.rgba, ov.w, ov.h), 0, 0);
-    this.overlay = c;
+    return c;
+  }
+
+  /** Compare on: B is an engine overlay (or null = the imagery alone) shown right of the line or in the lens. */
+  setCompare(cmp) {
+    if (!cmp) { this.compare = null; this.draw(); return; }
+    this.compare = { split: this.compare?.split ?? 0.5, r: 120, ...this.compare, ...cmp, overlay: cmp.ov === undefined ? this.compare?.overlay ?? null : MapView.canvasOf(cmp.ov) };
+    delete this.compare.ov;
     this.draw();
+  }
+
+  _nearSplit(x) {
+    return this.compare?.mode === "swipe" && Math.abs(x - this.compare.split * this.w) < 9;
   }
 
   setVeto(ov) {
@@ -200,11 +230,81 @@ export class MapView {
       }
     }
     ctx.imageSmoothingEnabled = false;
-    if (this.overlay) ctx.drawImage(this.overlay, gx, gy, gw, gh);
+    const drawOv = (ov) => { if (!ov) return; ctx.globalAlpha = this.overlayAlpha; ctx.drawImage(ov, gx, gy, gw, gh); ctx.globalAlpha = 1; };
+    const cmp = this.compare;
+    if (!cmp) drawOv(this.overlay);
+    else {
+      // A everywhere except B's side of the swipe line (or B's lens); B there
+      const region = (inside) => {
+        ctx.beginPath();
+        if (cmp.mode === "spy") {
+          const [hx, hy] = this.hover || [this.w / 2, this.h / 2];
+          if (!inside) ctx.rect(0, 0, this.w, this.h);
+          ctx.arc(hx, hy, cmp.r, 0, 2 * Math.PI);
+        } else {
+          const sx = cmp.split * this.w;
+          if (inside) ctx.rect(sx, 0, this.w - sx, this.h); else ctx.rect(0, 0, sx, this.h);
+        }
+      };
+      ctx.save(); region(false); ctx.clip("evenodd"); drawOv(this.overlay); ctx.restore();
+      ctx.save(); region(true); ctx.clip("evenodd"); drawOv(cmp.overlay); ctx.restore();
+    }
     if (this.showVeto && this.veto) { ctx.globalAlpha = 0.85; ctx.drawImage(this.veto, gx, gy, gw, gh); ctx.globalAlpha = 1; }
     ctx.imageSmoothingEnabled = true;
     this._vectors(ctx);
+    if (cmp) this._compareChrome(ctx);
     this._scale();
+  }
+
+  _compareChrome(ctx) {
+    const cmp = this.compare;
+    const tag = (x, y, text, align = "left") => {
+      ctx.font = "600 12px 'Barlow', system-ui, sans-serif";
+      const w = ctx.measureText(text).width + 12;
+      const x0 = align === "right" ? x - w : align === "center" ? x - w / 2 : x;
+      ctx.fillStyle = "rgba(11,15,20,0.82)"; ctx.fillRect(x0, y, w, 20);
+      ctx.fillStyle = "#f2f5f8"; ctx.fillText(text, x0 + 6, y + 14);
+    };
+    if (cmp.mode === "spy") {
+      const [hx, hy] = this.hover || [this.w / 2, this.h / 2];
+      ctx.beginPath(); ctx.arc(hx, hy, cmp.r, 0, 2 * Math.PI);
+      ctx.lineWidth = 4; ctx.strokeStyle = "rgba(11,15,20,0.85)"; ctx.stroke();
+      ctx.lineWidth = 2; ctx.strokeStyle = "#3ccbff"; ctx.stroke();
+      tag(hx, hy - cmp.r - 24, `B: ${cmp.labelB}`, "center");
+      tag(10, 10, `A: ${cmp.labelA} · lens: B`);
+      return;
+    }
+    const sx = Math.round(cmp.split * this.w);
+    ctx.fillStyle = "rgba(11,15,20,0.85)"; ctx.fillRect(sx - 2, 0, 4, this.h);
+    ctx.fillStyle = "#3ccbff"; ctx.fillRect(sx - 1, 0, 2, this.h);
+    ctx.beginPath(); ctx.arc(sx, this.h / 2, 11, 0, 2 * Math.PI); ctx.fillStyle = "#3ccbff"; ctx.fill();
+    ctx.strokeStyle = "#0b0f14"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#0b0f14"; ctx.font = "700 12px system-ui"; ctx.textAlign = "center"; ctx.fillText("⇔", sx, this.h / 2 + 4); ctx.textAlign = "left";
+    tag(sx - 8, 10, `◀ A: ${cmp.labelA}`, "right");
+    tag(sx + 8, 10, `B: ${cmp.labelB} ▶`);
+  }
+
+  /**
+   * The whole site at the grid's own resolution (one pixel per 10 m cell): imagery, the overlay, no-go areas and, with
+   * vectors, the routes, stations, habitat and keep-outs. For the GeoTIFF / KMZ exports.
+   */
+  exportCanvas({ vectors = true } = {}) {
+    const g = this.grid, W = g.width, H = g.height;
+    const c = document.createElement("canvas");
+    c.width = W; c.height = H;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+    if (this.ortho) ctx.drawImage(this.ortho, 0, 0, W, H);
+    ctx.imageSmoothingEnabled = false;
+    if (this.overlay) { ctx.globalAlpha = this.overlayAlpha; ctx.drawImage(this.overlay, 0, 0, W, H); ctx.globalAlpha = 1; }
+    if (this.showVeto && this.veto) { ctx.globalAlpha = 0.85; ctx.drawImage(this.veto, 0, 0, W, H); ctx.globalAlpha = 1; }
+    ctx.imageSmoothingEnabled = true;
+    if (vectors) {
+      const keep = { cx: this.cx, cy: this.cy, mpp: this.mpp, w: this.w, h: this.h, crew: this.crew, probe: this.probe };
+      Object.assign(this, { cx: g.x0 + (W * g.res) / 2, cy: g.y0 - (H * g.res) / 2, mpp: g.res, w: W, h: H, crew: null, probe: null, _export: true });
+      try { this._vectors(ctx); } finally { Object.assign(this, keep); this._export = false; }
+    }
+    return c;
   }
 
   _line(ctx, pts, color, width, dash = null) {
@@ -355,6 +455,7 @@ export class MapView {
       ctx.fillStyle = "#3ccbff"; ctx.fill(); ctx.strokeStyle = "#0b0f14"; ctx.lineWidth = 2; ctx.stroke();
       this._label(ctx, sx + 9, sy + 4, `PIN ${k + 1}`, "#3ccbff", 7);
     });
+    if (this.measure?.pts?.length) this._measure(ctx);
     // the point being inspected in the place card: a crosshair ring
     if (this.probe) {
       const [sx, sy] = this.llScreen(this.probe.lon, this.probe.lat);
@@ -438,6 +539,38 @@ export class MapView {
     this._placeLabels(ctx);
   }
 
+  _measure(ctx) {
+    const m = this.measure, P = m.pts;
+    const ring = m.closed && P.length >= 3 ? [...P, P[0]] : P;
+    // while measuring, a rubber band to the cursor
+    const live = m.active && !m.closed && this.hover && !this._export ? [...P, this.screenLL(...this.hover)] : ring;
+    if (m.closed && P.length >= 3) {
+      ctx.beginPath();
+      P.forEach(([lo, la], k) => { const [sx, sy] = this.llScreen(lo, la); k ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); });
+      ctx.closePath(); ctx.fillStyle = "rgba(255,210,60,0.16)"; ctx.fill();
+    }
+    this._line(ctx, live, "#0b0f14", 6);
+    this._line(ctx, live, "#ffd23c", 2.4, [8, 4]);
+    let tot = 0;
+    for (let k = 1; k < ring.length; k++) {
+      const a = ring[k - 1], b = ring[k], d = haversine(a[0], a[1], b[0], b[1]);
+      tot += d;
+      if (ring.length > 2) {
+        const [x0, y0] = this.llScreen(...a), [x1, y1] = this.llScreen(...b);
+        this._label(ctx, (x0 + x1) / 2 + 4, (y0 + y1) / 2 + 4, d >= 1000 ? `${(d / 1000).toFixed(2)} km` : `${Math.round(d)} m`, "#ffd23c", 5);
+      }
+    }
+    for (const [lo, la] of P) {
+      const [sx, sy] = this.llScreen(lo, la);
+      ctx.beginPath(); ctx.arc(sx, sy, 4.5, 0, 2 * Math.PI); ctx.fillStyle = "#ffd23c"; ctx.fill();
+      ctx.strokeStyle = "#0b0f14"; ctx.lineWidth = 2; ctx.stroke();
+    }
+    if (P.length >= 2) {
+      const [ex, ey] = this.llScreen(...P[P.length - 1]);
+      this._label(ctx, ex + 10, ey - 6, m.closed ? `area ${m.areaText ?? ""}` : `total ${tot >= 1000 ? `${(tot / 1000).toFixed(2)} km` : `${Math.round(tot)} m`}`, "#ffd23c", 8);
+    }
+  }
+
   // labels are queued while drawing and placed last, highest priority first: a label that would overlap another label,
   // a station or habitat marker, or the map buttons is tried on the left of its point and otherwise left out
   // (priority 7 and up - point of no return, landing target, touchdown, pins, re-plan - is always drawn)
@@ -452,7 +585,7 @@ export class MapView {
     // keep clear of the panels floating over the map (buttons, layers, legend, readout, Execute HUD)
     const taken = [];
     const cr = this.cv.getBoundingClientRect();
-    for (const el of this.cv.parentElement.querySelectorAll(".maptools, .layerbox, .legend, .readout, .hud")) {
+    for (const el of this._export ? [] : this.cv.parentElement.querySelectorAll(".maptools, .layerbox, .legend, .readout, .hud, .measurebox")) {
       if (el.hidden || !el.offsetParent) continue;
       const b = el.getBoundingClientRect();
       taken.push([b.left - cr.left - 4, b.top - cr.top - 4, b.width + 8, b.height + 8]);

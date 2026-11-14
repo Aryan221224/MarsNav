@@ -16,9 +16,13 @@ import { ahp, L1_IDS, L1_MATRIX, defaultL1, namedWeightSets } from "../engine/ah
 import { marsContext, missionClock, M2020_CLOCK } from "../engine/marstime.js";
 import { pressureEnvelope, pressureAt } from "../engine/sitecheck.js";
 import { LANDERS, LIMITS, landingSafetyMap, simulateLanding, ellipseChecks, optimiseTarget, hubLocalisation } from "../engine/landing.js";
+import { DustClimatology } from "../engine/dust.js";
+import { lonlatToXY as toXY } from "../engine/geo.js";
+import { relayCoverage, RELAY_ORBITERS } from "../engine/relay.js";
 
 const S = { T: null, env: null, clim: null, models: new Map(), planner: null, plan: null, sim: null, cfg: null };
 let DATA = new URL("../data/", import.meta.url);
+const GLOBAL = new URL("../data/global/", import.meta.url);   // whole-Mars products shared by every site (dust climatology)
 
 async function init({ base } = {}) {
   if (base) DATA = new URL(base);
@@ -29,6 +33,8 @@ async function init({ base } = {}) {
   S.traverse = await io.json("traverse.json").catch(() => null);
   S.validation = await io.json("validation.json").catch(() => null);
   S.env = new Environment(S.T, S.clim);
+  // seasonal dust (tools/build_dust.py); a copy of the planner without it keeps the fixed optical depths
+  S.dust = await DustClimatology.load(browserIO(GLOBAL.href)).catch(() => null);
   const T = S.T;
   S.clock = T.site.clock ? missionClock(T.site.clock) : M2020_CLOCK;
   return {
@@ -36,7 +42,28 @@ async function init({ base } = {}) {
     grid: T.grid.toJSON(), hz: T.hzGrid.toJSON(), reg: T.regGrid.toJSON(), targets: T.targets, keepouts: T.keepouts,
     landmarks: T.landmarks, imagery: S.imagery, traverse: S.traverse, validation: S.validation, stats: T.manifest.stats,
     climSource: S.clim?.source ?? null, l1: defaultL1(), l1Matrix: L1_MATRIX, l1Ids: L1_IDS,
+    dust: S.dust ? { stormYears: S.dust.stormYears, cite: S.dust.cite, url: S.dust.meta.url, licence: S.dust.meta.licence } : null,
   };
+}
+
+// habitat elevation (m) and the MEDA-fit surface pressure there at a time
+function baseAir(cfg, ms) {
+  const g = S.T.grid, i = g.idxOfLonLat(cfg.base.lon, cfg.base.lat);
+  const elev = i >= 0 ? S.T.f32("elev_dm")[i] : NaN;
+  const s = S.env.sun(ms);
+  return { elev, s, p: S.env.pressurePa(s.ltst, s.Ls, Number.isFinite(elev) ? elev : -2550) };
+}
+
+// dust optical depth for a plan: a fixed value, or the seasonal climatology at the habitat for the departure date
+// (median year or the 90th percentile of the 13 Mars years), at the local MEDA-fit pressure
+function resolveTau(cfg) {
+  const mode = /^clim(50|90)$/.test(cfg.tauMode || "") && S.dust ? cfg.tauMode : "fixed";
+  if (mode === "fixed") return { tau: cfg.tau ?? 0.45, mode };
+  const { s, p } = baseAir(cfg, cfg.departMs);
+  const f = (stat) => S.dust.tauVisible(cfg.base.lon, cfg.base.lat, s.Ls, { stat, pressurePa: p });
+  const v = { p10: f("p10"), p50: f("p50"), p90: f("p90") };
+  const tau = Math.round((mode === "clim90" ? v.p90 : v.p50) * 100) / 100;
+  return { tau, mode, Ls: s.Ls, pressurePa: p, ...v };
 }
 
 function modelFor(cfg) {
@@ -52,7 +79,9 @@ function modelFor(cfg) {
   return m;
 }
 
-function setup(cfg) {
+function setup(cfgIn) {
+  const dust = resolveTau(cfgIn);
+  const cfg = { ...cfgIn, tau: dust.tau };
   S.cfg = cfg;
   const m = modelFor(cfg);
   S.env.tau = cfg.tau ?? 0.45;
@@ -71,7 +100,7 @@ function setup(cfg) {
   for (let i = 0; i < m.fine.n; i++) vetoCount[m.fine.veto[i]]++;
   S.pEnv ??= pressureEnvelope(S.env, S.T);
   const bi = m.fine.grid.idxOfLonLat(cfg.base.lon, cfg.base.lat);
-  return { timeEndS: P.timeEndS, sunsetMs: P.sunsetMs, cap: P.cap, vetoCount, vetoNames: VETO_NAMES,
+  return { timeEndS: P.timeEndS, sunsetMs: P.sunsetMs, cap: P.cap, vetoCount, vetoNames: VETO_NAMES, dust, tau: cfg.tau,
     ctx: marsContext(cfg.departMs, cfg.base.lon, cfg.base.lat, S.clock), pEnv: S.pEnv,
     pNow: pressureAt(S.env, cfg.departMs, cfg.base.lon, bi >= 0 ? m.fine.elev[bi] : -2550) };
 }
@@ -147,10 +176,16 @@ function ramp(pal, v) {
   return pal[pal.length - 1][1];
 }
 
+// value range of the numeric layers (for the "show only above" slider): [low, high, unit]
+const RANGE = { hazard: [0, 0.5, ""], slope: [0, 25, "°"], sand: [0, 1, ""], slip: [0, 0.7, ""], sigma: [10, 60, " m"], walkback: [0, 180, " min"] };
+
 function overlay(name, opts = {}) {
   const m = modelFor(S.cfg), pg = m.fine, g = pg.grid, T = S.T;
   const rgba = new Uint8ClampedArray(g.n * 4);
-  const put = (i, c) => { rgba[4 * i] = c[0]; rgba[4 * i + 1] = c[1]; rgba[4 * i + 2] = c[2]; rgba[4 * i + 3] = c[3]; };
+  const min = Number.isFinite(opts.min) && opts.min > (RANGE[name]?.[0] ?? 0) ? opts.min : null;   // threshold, in the layer's unit
+  const put0 = (i, c) => { rgba[4 * i] = c[0]; rgba[4 * i + 1] = c[1]; rgba[4 * i + 2] = c[2]; rgba[4 * i + 3] = c[3]; };
+  let vOf = null;                               // the layer's value at cell i, for the threshold
+  const put = (i, c) => { if (min != null && vOf && !(vOf(i) >= min)) return; put0(i, c); };
   const stripes = (i, a, b) => { const r = Math.floor(i / g.width), c = i % g.width; return ((r + c) >> 2) & 1 ? a : b; };
   let legend = null;
   if (name === "veto") {
@@ -162,17 +197,21 @@ function overlay(name, opts = {}) {
     }
     legend = { kind: "veto", text: "Hatched: no-go (vetoed). Amber/black: keep-out zone." };
   } else if (name === "hazard") {
+    vOf = (i) => pg.haz[i];
     for (let i = 0; i < g.n; i++) if (!pg.veto[i]) put(i, ramp(PAL.haz, Math.min(1, pg.haz[i] / 0.5)));
     legend = { kind: "ramp", pal: "haz", lo: "0", hi: "0.5+", text: "Composite safety hazard (factor tree, static leaves)" };
   } else if (name === "slope") {
     const a = T.f32("slopeW");
+    vOf = (i) => a[i];
     for (let i = 0; i < g.n; i++) put(i, ramp(PAL.seq, Math.min(1, a[i] / 25)));
     legend = { kind: "ramp", pal: "seq", lo: "0 deg", hi: "25 deg", text: "Walking-scale slope, 90th percentile per 10 m cell" };
   } else if (name === "sand") {
     const a = T.f32("sand");
+    vOf = (i) => a[i];
     for (let i = 0; i < g.n; i++) put(i, ramp(PAL.seq, a[i]));
     legend = { kind: "ramp", pal: "seq", lo: "none", hi: "strong", text: "Aeolian bedforms (ripples, TARs) detected in HiRISE 1 m DTMs" };
   } else if (name === "slip") {
+    vOf = (i) => pg.slip[i];
     for (let i = 0; i < g.n; i++) put(i, ramp(PAL.seq, Math.min(1, pg.slip[i] / 0.7)));
     legend = { kind: "ramp", pal: "seq", lo: "0", hi: "0.7 (veto)", text: `Wheel-slip risk (${S.cfg.risk.kind.toUpperCase()}${S.cfg.risk.kind === "cvar" ? " " + S.cfg.risk.alpha : ""})` };
   } else if (name === "shade") {
@@ -195,6 +234,7 @@ function overlay(name, opts = {}) {
       }
       if (sw > 0.2) tf[r * g.width + c] = sv / sw / 60;
     }
+    vOf = (i) => tf[i];
     for (let r = 1; r < g.height; r++) for (let c = 1; c < g.width; c++) {
       const i = r * g.width + c, t = tf[i];
       if (!Number.isFinite(t)) continue;
@@ -216,6 +256,7 @@ function overlay(name, opts = {}) {
     for (let i = 0; i < g.n; i++) if (!pg.los[i]) put(i, [60, 203, 255, 70]);
     legend = { kind: "text", text: "Cyan: no radio line of sight to the 10 m habitat mast (Mars curvature included)" };
   } else if (name === "sigma") {
+    vOf = (i) => pg.sigma[i];
     for (let i = 0; i < g.n; i++) put(i, [201, 160, 255, Math.min(200, (pg.sigma[i] - 10) * 5)]);
     legend = { kind: "text", text: "Planning position error (1 sigma) from distance to the nearest landmark" };
   } else if (name === "confidence") {
@@ -246,7 +287,125 @@ function overlay(name, opts = {}) {
     landing: ["DERIVED", "MSL engineering constraints on the site DTMs"],
   };
   if (legend && PROV[name]) legend.prov = PROV[name];
+  if (legend && RANGE[name]) {
+    legend.range = RANGE[name];
+    if (min != null) legend.text += ` · showing only ≥ ${+min.toFixed(2)}${RANGE[name][2]}`;
+  }
   return { w: g.width, h: g.height, rgba, legend };
+}
+
+// a measured line on the site: length, climb and descent, steepest grade, walking-scale slope and no-go ground along it
+function profileLine(pts) {
+  const m = modelFor(S.cfg), g = S.T.grid, el = S.T.f32("elev_dm"), sw = S.T.f32("slopeW");
+  let len = 0, up = 0, down = 0, maxGrade = 0, maxSlopeW = 0, veto = 0, nodata = 0, lo = Infinity, hi = -Infinity;
+  const samples = [];
+  for (let k = 1; k < pts.length; k++) {
+    const [ax, ay] = lonlatToXYw(pts[k - 1]), [bx, by] = lonlatToXYw(pts[k]);
+    const d = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.ceil(d / 10));
+    let prev = null;
+    for (let j = 0; j <= n; j++) {
+      if (k > 1 && j === 0) continue;
+      const x = ax + ((bx - ax) * j) / n, y = ay + ((by - ay) * j) / n;
+      const r = (g.y0 - y) / g.res - 0.5, c = (x - g.x0) / g.res - 0.5;
+      const e = g.sample(el, r, c), i = g.idxOfXY(x, y);
+      if (!Number.isFinite(e) || i < 0) { nodata += d / n; prev = null; continue; }
+      if (prev) {
+        const dz = e - prev.e, dd = Math.hypot(x - prev.x, y - prev.y);
+        if (dz > 0) up += dz; else down -= dz;
+        if (dd > 0) maxGrade = Math.max(maxGrade, Math.atan(Math.abs(dz) / dd) / (Math.PI / 180));
+        len += dd;
+        if (m.fine.veto[i]) veto += dd;
+      }
+      maxSlopeW = Math.max(maxSlopeW, sw[i]);
+      lo = Math.min(lo, e); hi = Math.max(hi, e);
+      samples.push([Math.round(len), Math.round(e * 10) / 10]);
+      prev = { x, y, e };
+    }
+  }
+  return { lenM: len, climbM: up, descentM: down, maxGradeDeg: maxGrade, maxSlopeWDeg: maxSlopeW, vetoM: veto, noDataM: nodata,
+    minElev: Number.isFinite(lo) ? lo : null, maxElev: Number.isFinite(hi) ? hi : null, samples: samples.filter((_, k) => k % 4 === 0) };
+}
+
+// one Mars year at the habitat, sol by sol from the departure sol: dust optical depth (13-year percentiles at the local
+// MEDA-fit pressure), daylight hours, sunlight energy on the ground with that dust, and the air temperature range
+function seasonYear(cfg) {
+  const out = [];
+  const day0 = Math.round(cfg.departMs / 88775244);
+  for (let k = 0; k < 669; k++) {
+    const noon = solNoon(cfg, cfg.departMs + k * 88775244);
+    const { s, p } = baseAir(cfg, noon);
+    const tau = S.dust ? ["p10", "p50", "p90"].map((st) => S.dust.tauVisible(cfg.base.lon, cfg.base.lat, s.Ls, { stat: st, pressurePa: p })) : [cfg.tau, cfg.tau, cfg.tau];
+    // daylight and energy over the sol, 20-minute steps
+    let light = 0, wh = 0;
+    for (let t = noon - 44387622; t < noon + 44387622; t += 1200000) {
+      const z = S.env.sun(t);
+      if (z.elevation <= 0) continue;
+      light += 1200 / 3600;
+      const mu = Math.sin(z.elevation * Math.PI / 180), a = Math.exp(-tau[1] / Math.max(mu, 0.05));
+      wh += z.S0 * mu * (a + 0.35 * (1 - a)) * (1200 / 3600);
+    }
+    out.push({ k, ms: noon, Ls: s.Ls, p, tau10: tau[0], tau50: tau[1], tau90: tau[2], daylightH: light, sunWh: wh,
+      tMaxK: S.env.airTempK(14.5, s.Ls), tMinK: S.env.airTempK(5.5, s.Ls) });
+  }
+  return { sols: out, day0, stormYears: S.dust?.stormYears ?? [], depart: out[0] };
+}
+
+// local noon (LTST 12:00) of the sol containing ms at the habitat
+function solNoon(cfg, ms) {
+  const s = S.env.sun(ms);
+  return ms + (12 - s.ltst) * 3698968.5;            // 1 Mars hour = 1/24 sol = 3698.97 s
+}
+
+const lonlatToXYw = ([lon, lat]) => toXY(lon, lat);
+
+// sun, sunlight on the ground (with the plan's dust), air temperature and pressure at the habitat at one time
+function envAt(ms) {
+  const cfg = S.cfg, { s, p, elev } = baseAir(cfg, ms);
+  const mu = Math.sin(Math.max(0, s.elevation) * Math.PI / 180), tau = cfg.tau;
+  const a = mu > 0 ? Math.exp(-tau / Math.max(mu, 0.05)) : 0;
+  return { sunEl: s.elevation, sunAz: s.azimuth, ltst: s.ltst, Ls: s.Ls, ghi: mu > 0 ? s.S0 * mu * (a + 0.35 * (1 - a)) : 0, tau,
+    airK: S.env.airTempK(s.ltst, s.Ls), groundK: S.env.groundTempK(s.ltst, s.Ls), pressurePa: p, elev };
+}
+
+// statistics of the site layers inside a polygon (lon/lat ring): percentiles, no-go share, line of sight, 1 m coverage
+function areaStats(poly) {
+  const m = modelFor(S.cfg), g = S.T.grid, pg = m.fine;
+  const xy = poly.map(([lo, la]) => toXY(lo, la));
+  const xs = xy.map((p) => p[0]), ys = xy.map((p) => p[1]);
+  const c0 = Math.max(0, Math.floor((Math.min(...xs) - g.x0) / g.res)), c1 = Math.min(g.width - 1, Math.ceil((Math.max(...xs) - g.x0) / g.res));
+  const r0 = Math.max(0, Math.floor((g.y0 - Math.max(...ys)) / g.res)), r1 = Math.min(g.height - 1, Math.ceil((g.y0 - Math.min(...ys)) / g.res));
+  const inside = (x, y) => {
+    let k = false;
+    for (let i = 0, j = xy.length - 1; i < xy.length; j = i++) {
+      const [xi, yi] = xy[i], [xj, yj] = xy[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) k = !k;
+    }
+    return k;
+  };
+  const el = S.T.f32("elev_dm"), sw = S.T.f32("slopeW"), sand = S.T.f32("sand"), conf = S.T.f32("conf");
+  const E = [], SW = [], H = [], SA = [];
+  let n = 0, veto = 0, los = 0, hires = 0;
+  // at most ~60k samples: a stride over large shapes keeps it fast
+  const stride = Math.max(1, Math.ceil(Math.sqrt(((r1 - r0 + 1) * (c1 - c0 + 1)) / 60000)));
+  for (let r = r0; r <= r1; r += stride) for (let c = c0; c <= c1; c += stride) {
+    const [x, y] = g.cellXY(r, c);
+    if (!inside(x, y)) continue;
+    const i = r * g.width + c;
+    n++;
+    if (pg.veto[i]) veto++;
+    if (pg.los[i]) los++;
+    if (conf[i] >= 0.5) hires++;
+    if (Number.isFinite(el[i])) E.push(el[i]);
+    SW.push(sw[i]); SA.push(sand[i]);
+    if (!pg.veto[i]) H.push(pg.haz[i]);
+  }
+  const st = (a) => {
+    if (!a.length) return null;
+    const b = Float64Array.from(a).sort(), q = (f) => b[Math.min(b.length - 1, Math.floor(f * (b.length - 1)))];
+    return { p10: q(0.1), p50: q(0.5), p90: q(0.9), min: b[0], max: b[b.length - 1], mean: b.reduce((x, y) => x + y, 0) / b.length };
+  };
+  return { n: n * stride * stride, sampled: n, elev: st(E), slopeW: st(SW), haz: st(H), sand: st(SA),
+    vetoFrac: n ? veto / n : 0, losFrac: n ? los / n : 0, hiresFrac: n ? hires / n : 0 };
 }
 
 function cell(lon, lat) {
@@ -287,6 +446,13 @@ const handlers = {
   setup: ({ cfg }) => setup(cfg),
   plan: ({ stops, weights, start = null, end = "base" }) => plan(stops, weights, { start, end }),
   overlay: ({ name, opts }) => overlay(name, opts),
+  profileLine: ({ pts }) => profileLine(pts),
+  season: ({ cfg }) => seasonYear({ ...S.cfg, ...cfg }),
+  relay: ({ lat, opts }) => relayCoverage(lat, opts),
+  envAt: ({ ms }) => envAt(ms),
+  sunTimes: ({ ms }) => { const n = solNoon(S.cfg, ms); return { sunrise: S.env.nextSunrise(n - 44387622), sunset: S.env.nextSunset(n), noon: n }; },
+  areaStats: ({ poly }) => areaStats(poly),
+  relayOrbiters: () => RELAY_ORBITERS,
   cell: ({ lon, lat }) => cell(lon, lat),
   optimise: ({ cands, maxStops }) => {
     if (cands.length > 15) {

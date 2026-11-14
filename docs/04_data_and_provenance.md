@@ -42,6 +42,10 @@ Landing mode streams the whole of Mars from a local tile server that builds each
 | Candidate sites (48 Exploration Zones, 7 Starship, 11 heritage) | NASA, SpaceX study | NASA First Human Landing Site Workshop 2015; Golombek et al. 2021; NSSDCA; NASA Mars Trek | The 66 candidates and their criteria |
 | Place names | IAU | Gazetteer of Planetary Nomenclature | Labels and search |
 | Mars clock | NASA GISS | Mars24 algorithm | Sol, local solar time, season, sun position |
+| Dust climatology (column dust optical depth, MY 24-36) | Mars Climate Database (LMD, with TES, THEMIS, MCS and others) | Montabone et al. 2015, 2020; `www-mars.lmd.jussieu.fr/mars/dust_climatology/`, CC BY-SA 3.0 | Dust by season in both apps, the planner's solar heating, area statistics |
+| MARCI daily global maps, version 1 (MY 28-32) | Mars Reconnaissance Orbiter (NASA/JPL-Caltech/MSSS) | Wang & Richardson 2015; Harvard Dataverse doi:10.7910/DVN/G2VENZ, CC0 | Weather maps of past years on the globe, downloaded per month on demand |
+| Crustal magnetic field at 400 km | Mars Global Surveyor MAG/ER (NASA GSFC) | Connerney et al. 2001; grids by USGS Astrogeology; public domain | Science-atlas overlay, place view, area statistics |
+| Relay orbits (MRO, Odyssey, TGO, Mars Express) | NASA, ESA | PDS mission catalogues, JPL navigation, ESA fact sheets (in `engine/relay.js`) | Earth relay coverage at a site |
 
 **Added for the 2026 statement** (full list with citations in docs/12): CRISM / OMEGA / THEMIS mineral catalogues (Ehlmann & Edwards 2014; Carter et al. 2013; Osterloo et al. 2010), TES mineral and dust maps (Bandfield 2002; Ruff & Christensen 2002), TES albedo (PDS), GRS iron, chlorine, potassium, thorium and silicon (Boynton et al. 2007, PDS), MRO GMM-3 gravity (Genova et al. 2016, PDS), MOLA roughness (Kreslavsky & Head 2000), glaciers, gullies, fans, valley networks, dune fields and present-day activity (USGS and MRO surveys, via NASA Mars Trek), rover traverses and raw images (NASA/JPL), NASA DONKI space weather, and the HRSC + MOLA colour relief. The feature catalogues ship in `planet/data/features.json.gz` and are rebuilt by `tools/build_features.py`; the rover photographs by `tools/build_pov.py`.
 
@@ -89,5 +93,13 @@ These whole-planet layers inform landing-site screening. They are not used in th
 | Crater-rim DTM striping (per USGS metadata) | Bedform evidence × 0.5 | n/a |
 
 ## Derived products shipped in the app
+
+**Whole-planet products of the Worldview-style tools** (docs/13). Each is rebuilt deterministically by its tool from pinned sources:
+
+| File | Size | SHA-256 (first 16) | Built by, from |
+|---|---|---|---|
+| `app/data/global/dust_cdod.bin.gz` + `.json` | 443 kB + 4.6 kB | `693a74c0287218d3` | `tools/build_dust.py`: the 13 MCD dust-scenario NetCDF files, each pinned by SHA-256 in the script |
+| `app/data/global/magnetic_mgs.bin.gz` + `.json` | 231 kB + 1.1 kB | `19808a5fb88182ea` | `tools/build_magnetic.py`: `mars_magnetic_grids_meters.zip` (USGS, SHA-256 `265eb68850cccc2c`); the README check values are asserted |
+| `planet/data/marci_v1_index.json` | 60 kB | `c39f79272f22a753` | `tools/build_marci_index.py`: the 86 monthly MARCI archives on Harvard Dataverse; holds each archive's file id, size and MD5 (checked on every download) and each daily map's date and coverage |
 
 `app/data/<site>/manifest.json` lists every layer with its data type, scale, offset, unit, description, shape and size, plus the site description, projection, calibration, landmarks, targets, keep-outs and quality statistics. The science targets at Jezero are real rover positions from the NASA feed, taken at the sol of each publicly reported event (first cores at Rochette; Malay at Séítah; Mageik at Amalik on the delta front; Cheyava Falls, the potential biosignature; the rim crest). Each target in `pipeline/sites/jezero.json` lists its source and sol.

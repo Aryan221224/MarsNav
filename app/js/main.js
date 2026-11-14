@@ -9,6 +9,7 @@ import { View3D } from "./view3d.js";
 import { fmtDuration } from "../engine/util.js";
 import { speak, tone, primeAudio } from "./speech.js";
 import { TASK_PRESETS } from "../engine/task.js";
+import { initPlannerExtras } from "./plannerx.js";
 
 const $ = (id) => document.getElementById(id);
 const DATA_ROOT = new URL("../data/", import.meta.url).href;
@@ -49,12 +50,17 @@ const busy = (on, text = "Computing…") => {
   if (on) $("busy").textContent = text;
 };
 
+// the planner extras (plannerx.js) work through this context; they add their own hooks to it
+const X = { state, call, $, runSetup: () => runSetup(), runPlan: () => runPlan(), refreshOverlay: (o) => refreshOverlay(o), setMode: (m) => setMode(m),
+  openModal: (...a) => openModal(...a), addStation: (t) => addStation(t), addPointStation: (lo, la) => addPointStation(lo, la), renderStations: () => renderStations(),
+  selectRoute: (n) => selectRoute(n), busy: (on, t) => busy(on, t), startStory: (steps) => startStory(steps) };
+
 // ------------------------------------------------------------------------------------------------------ boot --
 // site selection: data/sites.json lists every built site; "#<site id>" in the address picks one
 async function pickSite() {
   let sites = [];
   try { sites = await (await fetch(new URL("sites.json", DATA_ROOT))).json(); } catch { /* single-site build */ }
-  const want = decodeURIComponent(location.hash.slice(1));
+  const want = decodeURIComponent(location.hash.slice(1).split("&")[0]);   // "#<site>" or "#<site>&p=<plan>" (a shared plan link)
   const site = sites.find((x) => x.id === want) ?? sites[0] ?? null;
   if (site) DATA = new URL(site.path, DATA_ROOT).href;
   state.siteEntry = site;
@@ -119,6 +125,7 @@ async function boot() {
     buildAHP();
     bindUI();
     wireMap();
+    state.pxh = initPlannerExtras(X);
     const now = state.clock.solFromMs(Date.now());
     $("departSol").value = now.sol + 1;
     tickClock();
@@ -139,6 +146,7 @@ async function boot() {
     await runPlan();
     busy(false);
     state.map.fitLonLat([[state.base.lon, state.base.lat], ...state.stations.map((s) => [s.lon, s.lat])], 90);
+    if (await X.applyLinkState?.().catch((e) => { console.error(e); return false; })) $("planMsg").innerHTML += ' <span class="ok">Plan opened from a link.</span>';
     if ("BroadcastChannel" in window) driveChannel();   // a drive window opened earlier (or reloaded) finds us
   } catch (err) {
     console.error(err);
@@ -208,13 +216,15 @@ function readCfg() {
   const sol = parseInt($("departSol").value, 10);
   const [hh, mm] = ($("departLmst").value || "09:00").split(":").map(Number);
   const risk = $("risk").value;
+  const tauSel = $("tau").value, clim = /^clim(50|90)$/.test(tauSel);
   return {
     profile: $("profile").value,
     departMs: state.clock.msFromSol(sol, (hh || 0) + (mm || 0) / 60),
     evaMaxH: Math.max(1, Math.min(8, parseFloat($("evaMax").value) || 7)),
     reserveFrac: Math.max(0.05, Math.min(0.4, (parseFloat($("reserve").value) || 15) / 100)),
     risk: { kind: risk, alpha: 0.9, lambda: 1 },
-    tau: parseFloat($("tau").value),
+    tau: clim ? 0.45 : parseFloat(tauSel),       // seasonal: resolved by the engine from the dust climatology (worker.js)
+    tauMode: clim ? tauSel : "fixed",
     nav: $("nav").value,
     rescue: $("rescue").checked,
     base: state.base,
@@ -241,19 +251,23 @@ async function runSetup() {
     Time budget <span class="num">${fmtDuration(s.timeEndS)}</span> (max EVA or sunset minus 30 min).
     <br>Suit cooling: site pressure ${(s.pNow.pa / 100).toFixed(2)} hPa (${s.pNow.torr.toFixed(1)} Torr) now, at most
     ${(s.pEnv.pMaxPa / 100).toFixed(2)} hPa over a Mars year in this area; limit ${(s.pEnv.limitPa / 100).toFixed(1)} hPa (7.5 Torr):
-    <span class="${s.pEnv.coolingOK ? "ok" : "bad"}">${s.pEnv.coolingOK ? "OK" : "EXCEEDED - evaporative cooling not assured"}</span>.`;
+    <span class="${s.pEnv.coolingOK ? "ok" : "bad"}">${s.pEnv.coolingOK ? "OK" : "EXCEEDED - evaporative cooling not assured"}</span>.
+    <br>Dust optical depth <span class="num">${s.tau.toFixed(2)}</span>${s.dust?.mode && s.dust.mode !== "fixed"
+      ? ` (${s.dust.mode === "clim90" ? "dusty year, 90th percentile" : "typical year"} at Ls ${s.dust.Ls.toFixed(0)}°, 13 Mars years of the Mars Climate Database dust record)` : " (fixed)"}.`;
   const veto = await call("overlay", { name: "veto" });
   state.map.setVeto(veto);
   await refreshOverlay();
   busy(false);
+  await state.pxh?.afterSetup().catch((e) => console.error(e));
 }
 
 async function refreshOverlay(opts = {}) {
   const name = state.overlay;
   if (name === "none") { state.map.setOverlay(null); $("legend").hidden = true; return; }
-  const ov = await call("overlay", { name, opts: { ms: state.cfg.departMs, ...opts } });
+  const ov = await call("overlay", { name, opts: { ms: state.cfg.departMs, min: X.ovMinFor?.(name) ?? null, ...opts } });
   state.map.setOverlay(ov);
   showLegend(ov.legend);
+  state.pxh?.afterOverlay();
 }
 
 function showLegend(lg) {
@@ -603,6 +617,7 @@ function selectRoute(name) {
   renderWhy();
   renderGuidance();
   hudPlan();
+  state.pxh?.afterPlan();
 }
 
 function marginClass(m) {
@@ -707,6 +722,7 @@ function wireMap() {
     busyHover = false;
   };
   m.onClick = (lon, lat) => {
+    if (X.measureClick?.(lon, lat)) return;          // measuring: the click adds a point
     if (state.landPick) {
       state.landPick = false;
       $("btnLandPick").setAttribute("aria-pressed", "false");
@@ -793,7 +809,7 @@ function bindUI() {
   $("btn3d").addEventListener("click", open3D);
   $("btnDrive").addEventListener("click", openDriveWindow);
   $("btnDrive2").addEventListener("click", openDriveWindow);
-  $("btnTour").addEventListener("click", () => tourShow(0));
+  $("btnTour").addEventListener("click", () => { TOUR_STEPS = TOUR; tourShow(0); });
   state.setLayersOpen = initLayerPanel();
   initSectionHelp();
   $("telSrc").addEventListener("change", () => { if (!$("execLeft").hidden) setPhasePill("exec"); });
@@ -1503,20 +1519,22 @@ const TOUR = [
     go: async () => { runSim(false); setMode("review"); } },
 ];
 let tourK = -1;
+let TOUR_STEPS = TOUR;           // the tour, or a story (plannerx.js) shown in the same box
+function startStory(steps) { TOUR_STEPS = steps; tourShow(0); }
 async function tourShow(k) {
   document.querySelectorAll(".tour-hl").forEach((e) => e.classList.remove("tour-hl"));
-  if (k < 0 || k >= TOUR.length) { $("tour").hidden = true; tourK = -1; return; }
+  if (k < 0 || k >= TOUR_STEPS.length) { $("tour").hidden = true; tourK = -1; TOUR_STEPS = TOUR; return; }
   tourK = k;
-  const st = TOUR[k];
+  const st = TOUR_STEPS[k];
   $("tour").hidden = false;
-  $("tourStep").textContent = `STEP ${k + 1} OF ${TOUR.length}`;
+  $("tourStep").textContent = `${TOUR_STEPS === TOUR ? "STEP" : "STORY · STEP"} ${k + 1} OF ${TOUR_STEPS.length}`;
   $("tourTitle").textContent = st.t;
-  $("tourText").textContent = st.x;
+  $("tourText").textContent = st.x || "Working…";
   $("tourBack").disabled = k === 0;
-  $("tourNext").textContent = k === TOUR.length - 1 ? "Finish" : "Next";
+  $("tourNext").textContent = k === TOUR_STEPS.length - 1 ? "Finish" : "Next";
   if (st.sel === "#layers") state.setLayersOpen?.(true);
   try { await st.go(); } catch (e) { console.error(e); }
-  if (tourK === k) document.querySelector(st.sel)?.classList.add("tour-hl");
+  if (tourK === k) { $("tourText").textContent = st.x; document.querySelector(st.sel)?.classList.add("tour-hl"); }
 }
 
 // ------------------------------------------------------------------------------------------------------- 3D --
@@ -1686,4 +1704,5 @@ if (!IN_FRAME && "serviceWorker" in navigator && /^https?:$/.test(location.proto
   });
 }
 
+window.MMState = state;      // for debugging from the console (and the browser tests)
 boot();

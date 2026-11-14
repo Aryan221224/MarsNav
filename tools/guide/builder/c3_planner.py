@@ -115,6 +115,29 @@ figure("p17_3d_orbit", "3D orbit view of the planned route over Jezero's real te
 figrow([("p18_3d_helmet", WMAP, "Helmet view at the start"), ("p19_3d_walk", WMAP, "Walking the route")],
        "Eye-height rehearsal: the route ribbon ahead, distance, mission elapsed time, grade, walk-home time and margin in the "
        "readout at the top.")
+H2("Season, dust and Earth relay; the map tools")
+P("<b>Dust opacity tau</b> (EVA set-up) is seasonal by default: the dust optical depth at the habitat for the departure date, from "
+  "13 Mars years of orbital measurements, for a typical year (median) or a dusty year (90th percentile). Fixed values are still "
+  "offered. It sets the Sun's heating of the suits and the sunlight on the ground.")
+P("<b>Season, dust and Earth relay</b> (left column) charts the year at the habitat: the band is the dust optical depth (10th to "
+  "90th percentile, the line is the median), the dashed line the daily sunlight on the ground, the blue marker the departure. "
+  "Click the chart to move the departure to that season. <b>Play the sol</b> runs the departure sol from sunrise to sunset in "
+  "30-minute steps (sun, shadows and the crew on the routes), and <b>Save as GIF</b> records it. Below the chart are the Earth "
+  "relay passes over the site, modelled from the orbiters' published orbits; MRO's and Odyssey's windows are drawn on the "
+  "timeline under the map.")
+figure("w05_planner_tools", "The map tools at Jezero: the ruler closed into an area, with the statistics of the site layers inside; "
+       "the layer panel with opacity, 'show only above' and compare; and the season, dust and Earth relay panel for a departure at "
+       "Ls 251°.")
+bullets([("<b>Layers</b>: <b>Opacity</b> lets the imagery show through a layer; <b>Show only above</b> hides the layer below a value "
+          "(for example slopes under 15°) to isolate the ground that crosses a limit."),
+        "<b>Compare with</b>: a second layer beside the first, with a <b>Swipe</b> line or a <b>Spy</b> lens.",
+        ("<b>RULER</b> (or M): length, climb, steepest grade and walking-scale slope along a line, and the no-go ground it crosses; "
+          "<b>Area</b> gives the area and the statistics of the site layers inside (elevation, slope, hazard, sand, the no-go share, "
+          "radio line of sight, 1 m data); <b>+ Station</b> makes the last point a station."),
+        ("<b>Map as GeoTIFF</b> saves the map with the current layer and the routes in the site's projection (QGIS, ArcGIS); "
+          "<b>Google Earth (KMZ)</b> saves routes, stations, habitat, keep-outs and the layer for Google Earth's Mars view; <b>Copy link "
+          "to this plan</b> gives an address that reopens the exact plan."),
+        "<b>Stories</b> (top bar): clear season or dusty season, comparing two layers, Perseverance's detour, and sharing a plan."])
 
 # ================================================================== 9. EXECUTE
 chapter("EVA planner: Execute", "flying the Marswalk",

@@ -54,3 +54,5 @@ p.pv-warn, p.pv-bad { margin: 6px 0 0; font-size: 12.5px; }
 .placecard .pc-pov { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .placecard .pc-pov img { width: 100%; border-radius: 4px; display: block; }
 @media (max-width: 900px) { .placecard { left: 10px; right: 10px; width: auto; top: 64px; } }
+/* the dust year at a place: median line, 10th-90th percentile band; the shaded half is the dust-storm season (Ls 180-360) */
+.pv-spark { display: inline-block; vertical-align: middle; margin: 2px 0 3px; background: #ffffff08; border-radius: 3px; }

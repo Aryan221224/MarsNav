@@ -10,9 +10,14 @@ Base layers
   themis_night  THEMIS night-time infrared, 100 m: bright = rock / indurated ground, dark = loose fine material
   viking        Viking MDIM 2.1 colour mosaic, 232 m (NASA Mars Trek)
   mola          MOLA colour shaded relief, 463 m (NASA Mars Trek)
+  marci-<sub>-<day>  MRO MARCI daily global map of one sol (MY 28-32), the weather as the orbiter saw it
+                (planet/marci.py; the month's maps are downloaded once from Harvard Dataverse, 15 MB)
 Overlays (ovl=a,b,...; drawn in this order)
   geology       Global geologic map, Tanaka et al. 2014 (USGS SIM 3292, via NASA Mars Trek)
   ti / grs / ice01 / ice15 / ice5 / craters     planet/datasets.py
+  dust@<Ls> / dust90@<Ls>                       planet/dust.py: dust optical depth at that season (median / 90th pct)
+  magnetic                                      crustal magnetic field, MGS MAG/ER (planet/magnetic.py)
+Overlay strength: op=0.1-1 scales every overlay's opacity.
   safety_<lander>                               planet/safety.py: where this lander can touch down
 Every source tile is cached on disk (flight-simulator style rolling cache)."""
 from __future__ import annotations
@@ -218,14 +223,32 @@ def _grey_rgb(a: np.ndarray) -> np.ndarray:
     return np.repeat(np.clip(np.nan_to_num(a, nan=0.0), 0, 1)[..., None], 3, axis=2)
 
 
-def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = ()) -> tuple[bytes, dict]:
+def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = (), opacity: float = 1.0) -> tuple[bytes, dict]:
     if not valid(z, y, x):
         raise ValueError("tile out of range")
     _ortho_failed.flag = False
     used = []
     provisional = False
+    marci_wait = False              # the MARCI month is not here yet: never final, even in the offline cache
     rgb = None
-    if layer == "ctx":
+    if layer.startswith("marci-"):
+        from . import marci
+        w_, s_, e_, n_ = bounds(z, y, x)
+        mr, nodata = marci.tile_rgb(layer, w_, s_, e_, n_, TILE)
+        if mr is None:
+            provisional = marci_wait = True         # the month's maps are downloading: shown on the next request
+        else:
+            # where MARCI has no data (polar night, gaps between swaths) the Viking colour map shows through, dimmed
+            if nodata.any():
+                vb = _base_trek("viking", z, y, x)
+                bg = np.asarray(vb, np.float32) / 255.0 * 0.35 if vb is not None else np.zeros_like(mr)
+                mr = np.where(nodata[..., None], bg, mr)
+            rgb = mr
+            sub, day = marci.parse_layer(layer)
+            info = next((d for d in marci.index()["subphases"][sub]["days"] if d[0] == day), None)
+            used.append({"name": f"MRO MARCI daily global map, MY {info[2]} Ls {info[1]} ({sub} day {day}; Wang & Richardson 2015, "
+                                 "Harvard Dataverse CC0; NASA/JPL-Caltech/MSSS)" if info else "MRO MARCI daily global map", "frac": 1.0})
+    elif layer == "ctx":
         g = _esri_grey("ctx", z, y, x)
         if g is not None:
             hs = _hillshade_from_dem(z, y, x)
@@ -289,8 +312,21 @@ def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = ()) -> tupl
     provisional = provisional or bool(getattr(_ortho_failed, "flag", False))
     offline_now = net.blocked()
     # ---- overlays
-    from . import atlas, datasets, features
+    from . import atlas, datasets, dust, features, magnetic
+    op = max(0.1, min(1.0, float(opacity)))
     for ov in ovls:
+        if dust.parse_ovl(ov) or ov == "magnetic":
+            if ov == "magnetic":
+                o, prov = magnetic.overlay_rgba(z, y, x, TILE), False
+            else:
+                o, prov = dust.overlay_rgba(ov, z, y, x, TILE)
+            provisional = provisional or prov or o is None
+            if o is None:
+                continue
+            al = o[..., 3:4] * op
+            rgb = rgb * (1 - al) + o[..., :3] * al
+            used.append({"name": magnetic.legend()["title"] if ov == "magnetic" else (dust.legend(ov) or {}).get("title", ov), "frac": 1.0})
+            continue
         if ov == "geology":
             im = _from_parent(lambda zz, yy, xx: _open(_fetch_cached("trek_geology", zz, yy, xx, TREK_GEOLOGY.format(z=zz, y=yy, x=xx), "png"), "RGBA"),
                               11, z, y, x)
@@ -298,7 +334,7 @@ def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = ()) -> tupl
                 provisional = True
                 continue
             a = np.asarray(im, np.float32) / 255.0
-            al = a[..., 3:4] * 0.55
+            al = a[..., 3:4] * 0.55 * op
             rgb = rgb * (1 - al) + a[..., :3] * al
             used.append({"name": "Geologic map of Mars, Tanaka et al. 2014 (USGS SIM 3292)", "frac": 1.0})
         elif ov.startswith("safety"):
@@ -307,7 +343,7 @@ def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = ()) -> tupl
             a, dm = dem.tile(z, y, x)
             provisional = provisional or bool(dm.get("provisional"))
             px, sinfo = safety.tile_classes(a, dm, lander if lander in safety.LIMITS else "human")
-            rgb = safety.overlay(rgb, px, sinfo["verified"])
+            rgb = rgb * (1 - op) + safety.overlay(rgb, px, sinfo["verified"]) * op if op < 1 else safety.overlay(rgb, px, sinfo["verified"])
             used.append({"name": f"landing safety for {lander} at {sinfo['baseline_m']} m", "frac": 1.0})
         elif ov.startswith("f_") or ov in atlas.TREK_OVL or ov in atlas.MODEL_OVL:
             if ov.startswith("f_"):
@@ -320,7 +356,7 @@ def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = ()) -> tupl
             if o is None:
                 provisional = True
                 continue
-            al = o[..., 3:4]
+            al = o[..., 3:4] * op
             rgb = rgb * (1 - al) + o[..., :3] * al
             used.append({"name": name, "frac": 1.0})
         else:
@@ -328,28 +364,34 @@ def build(z: int, y: int, x: int, layer: str = "best", ovls: tuple = ()) -> tupl
             if o is None:
                 provisional = True                     # data not installed yet: never cache the tile without it
                 continue
-            al = o[..., 3:4]
+            al = o[..., 3:4] * op
             rgb = rgb * (1 - al) + o[..., :3] * al
             used.append({"name": datasets.LEGENDS.get(ov, {}).get("title", ov), "frac": 1.0})
     im = Image.fromarray((np.clip(rgb, 0, 1) * 255).astype(np.uint8))
     buf = io.BytesIO()
     im.save(buf, "JPEG", quality=84, optimize=True)
     if offline_now:
-        provisional = False          # Mars mode: built from everything on this computer; it is final (in the offline cache)
+        # built from everything on this computer: final (in the offline cache), except a MARCI stand-in while the month can
+        # still arrive (only Mars mode rules that out)
+        from . import localmode
+        provisional = marci_wait and not localmode.offline()
     return buf.getvalue(), {"z": z, "y": y, "x": x, "layer": layer, "ovls": list(ovls), "sources": used, "provisional": provisional,
                             "offline": offline_now}
 
 
 def parse(layer: str, ovl: str = "") -> tuple[str, tuple]:
     """Normalise a request: base layer + ordered overlay list. Old style layer=safety_<lander> still works."""
+    from . import dust, marci
     from .safety import LIMITS
     ovs = [o for o in (ovl or "").split(",") if o]
     if layer.startswith("safety"):
         ovs.append(layer if "_" in layer else "safety_human")
         layer = "best"
-    if layer not in BASES:
+    if layer not in BASES and not (marci.parse_layer(layer) and marci.parse_layer(layer)[0] in marci.index().get("subphases", {})):
         layer = "best"
-    clean = [o for o in OVERLAYS if o in ovs and o not in ("craters", "f_traverses", "f_landers")]
+    # season fields first (whole-planet, smooth), then the magnetic field, then the rest in the usual order
+    clean = [o for o in ovs if dust.parse_ovl(o)][:1] + [o for o in ("magnetic",) if o in ovs]
+    clean += [o for o in OVERLAYS if o in ovs and o not in ("craters", "f_traverses", "f_landers")]
     saf = next((o for o in ovs if o.startswith("safety_") and o.split("_", 1)[1] in LIMITS), None)
     if saf:
         clean.append(saf)
@@ -359,17 +401,18 @@ def parse(layer: str, ovl: str = "") -> tuple[str, tuple]:
     return layer, tuple(clean)
 
 
-def tile_bytes_ex(z: int, y: int, x: int, layer: str = "best", ovl: str = "") -> tuple[bytes, bool]:
+def tile_bytes_ex(z: int, y: int, x: int, layer: str = "best", ovl: str = "", opacity: float = 1.0) -> tuple[bytes, bool]:
     """(jpeg, final). A provisional tile (imagery offline, better data still downloading, overlay data not installed) is
     served but not cached."""
     layer, ovls = parse(layer, ovl)
-    kind = f"img3_{layer}" + (f"~{'+'.join(ovls)}" if ovls else "")
-    key, _off = tilecache.lookup(kind, z, y, x, "jpg")
+    op = round(max(0.1, min(1.0, float(opacity))), 2) if ovls else 1.0
+    kind = f"img3_{layer}" + (f"~{'+'.join(ovls)}" if ovls else "") + (f"~op{int(op * 100)}" if op < 1 else "")
+    key, _off = tilecache.lookup(kind.replace("@", "_ls"), z, y, x, "jpg")
     if key.exists():
         return tilecache.get_or_build(key, None), True
 
     def make():
-        data, meta = build(z, y, x, layer, ovls)
+        data, meta = build(z, y, x, layer, ovls, op)
         if meta["provisional"]:
             raise dem._Provisional(data)
         return data

@@ -11,6 +11,11 @@
 // globe. Units: kilometres.
 import * as THREE from "../vendor/three.module.min.js";
 import { loadPlace, placeHtml, timeHere, timeHtml } from "./placeview.js";
+import { GifEncoder } from "./gif.js";
+import { kml } from "./geoexport.js";
+import { pathKm, areaKm2, greatCircle, fmtDist, fmtArea } from "./measure.js";
+import { relayCoverage, hhmm } from "../engine/relay.js";
+import { marsState, jdTTFromMsd, msFromJdTT } from "../engine/marstime.js";
 
 const $ = (id) => document.getElementById(id);
 const R = 3396.19;                       // Mars sphere radius, km (IAU 2015; same as the data's datum)
@@ -52,6 +57,10 @@ const S = {
   targetElev: 0,
   route: [], routeResult: null, pick: null, landing: null, names: [], sites: [], coverage: null,
   online: false,
+  // Worldview-style tools: the season (drives the dust layers and the MARCI date), MARCI weather maps, overlay
+  // strength, compare (swipe / spy), the ruler
+  ls: 250, marci: { my: 28, days: null, cur: null }, op: 1,
+  cmp: { base: "", my: 29, mode: "swipe", split: 0.5, layer: null }, meas: { active: false, pts: [], closed: false },
 };
 
 // ------------------------------------------------------------------------------------------------------ renderer
@@ -139,34 +148,53 @@ function activeOverlays() {
   for (const el of document.querySelectorAll("[data-ovl]")) {
     if (!el.checked) continue;
     const k = el.dataset.ovl;
-    out.push(k === "safety" ? `safety_${$("landerSel").value}` : k === "ice" ? $("iceDepth").value : k);
+    out.push(k === "safety" ? `safety_${$("landerSel").value}` : k === "ice" ? $("iceDepth").value
+      : k === "dust" || k === "dust90" ? `${k}@${(Math.round(S.ls / 5) * 5) % 360}` : k);
   }
   return out;
 }
+// the base layer as the server names it: a MARCI map is "marci-<month>-<day>" for the chosen Mars year and season
+function baseLayer(base = S.base, my = S.marci.my) {
+  if (base !== "marci") return base;
+  const d = marciNearest(my, S.ls);
+  return d ? `marci-${d[0]}-${String(d[1]).padStart(2, "0")}` : "viking";
+}
 function imgLayer() {
   const ov = activeOverlays();
-  return `${S.base}${ov.length ? `&ovl=${ov.join(",")}` : ""}`;
+  return `${baseLayer()}${ov.length ? `&ovl=${ov.join(",")}` : ""}${ov.length && S.op < 1 ? `&op=${S.op}` : ""}`;
+}
+let texLoads = 0;                  // texture swaps in flight (the season animation waits for them)
+function swapTexture(t, want) {
+  t.texLayer = want; texLoads++;
+  return loadTexture(t, want).then((tex) => {
+    if (t.texLayer !== want || !t.mesh) { tex.dispose(); return; }
+    const old = t.mesh.material.map;
+    t.mesh.material.map = tex; t.texHave = want;
+    if (!old) { t.mesh.material.color.set(0xffffff); t.mesh.material.needsUpdate = true; } else old.dispose();
+    if (t.provisional && !t.refreshAt) t.refreshAt = performance.now() + 20000;
+  }).catch(() => {
+    // the old texture stays; asked for again in a few seconds when the tile is in view (selectTiles)
+    if (t.texLayer === want) { t.texLayer = t.texHave; t.texRetryAt = performance.now() + 4000; }
+  }).finally(() => { texLoads--; });
 }
 function reloadTextures() {
-  const want = imgLayer();
-  for (const t of tiles.values()) if (t.state === "ready") {
-    t.texLayer = want;
-    loadTexture(t).then((tex) => {
-      if (t.texLayer !== want || !t.mesh) { tex.dispose(); return; }
-      t.mesh.material.map?.dispose(); t.mesh.material.map = tex; t.mesh.material.needsUpdate = true;
-      if (t.provisional && !t.refreshAt) t.refreshAt = performance.now() + 20000;
-    }).catch(() => null);
-  }
+  // the tiles on screen now; the others are swapped when they come into view (selectTiles), which keeps a change of
+  // layer, season or Mars year to a screenful of requests
+  const want = S.texWant = imgLayer();
+  for (const t of tiles.values()) if (t.state === "ready" && (t.mesh?.visible || t.z <= 1)) swapTexture(t, want);
 }
-function loadTexture(t) {
-  const url = `/tiles/img/${t.z}/${t.y}/${t.x}.jpg?layer=${imgLayer()}`;
+function loadTexture(t, layer = imgLayer(), mark = true) {
+  const url = `/tiles/img/${t.z}/${t.y}/${t.x}.jpg?layer=${layer}`;
+  let prov = false;
   // fetch (not the image loader) so the "provisional" header can be read
   return fetch(url).then((r) => {
     if (!r.ok) throw new Error(`imagery ${r.status}`);
-    if (r.headers.get("X-MM-Provisional")) t.provisional = true;
+    prov = !!r.headers.get("X-MM-Provisional");
+    if (prov && mark) t.provisional = true;
     return r.blob();
   }).then((b) => createImageBitmap(b, { imageOrientation: "flipY" })).then((bmp) => {
     const tex = new THREE.CanvasTexture(bmp);
+    tex.userData.provisional = prov;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
     tex.generateMipmaps = true; tex.minFilter = THREE.LinearMipmapLinearFilter;
@@ -177,6 +205,7 @@ function loadTexture(t) {
 
 async function loadTile(t) {
   const refresh = t.state === "ready";          // re-fetch of a provisional tile: keep drawing the old one meanwhile
+  const layer = S.texWant || imgLayer();
   if (!refresh) t.state = "loading";
   t.provisional = false;
   loading++;
@@ -187,11 +216,12 @@ async function loadTile(t) {
         if (r.headers.get("X-MM-Provisional")) t.provisional = true;
         return r.arrayBuffer();
       }).then(decodeMMD),
-      loadTexture(t).catch(() => null),
+      loadTexture(t, layer).catch(() => null),
     ]);
     if (refresh && t.mesh?.material.map && tex) t.mesh.material.map.dispose();
     t.dem = dem;
     t.tex = tex;
+    if (tex) { t.texHave = t.texLayer = layer; }
     const vis = t.mesh?.visible;
     buildMesh(t);
     if (vis) t.mesh.visible = true;
@@ -256,6 +286,7 @@ function buildMesh(t) {
 
 function disposeTile(t) {
   if (t.mesh) { tilesGroup.remove(t.mesh); t.mesh.geometry.dispose(); t.mesh.material.map?.dispose(); t.mesh.material.dispose(); }
+  t.texB?.dispose(); t.texB = null;
   tiles.delete(t.k);
 }
 
@@ -364,6 +395,7 @@ function selectTiles() {
   for (const t of draw) if (t.mesh) t.mesh.visible = true;
   const now = performance.now();
   for (const t of draw) if (t.refreshAt && now > t.refreshAt && loading < MAX_LOADS) { t.refreshAt = 0; loadTile(t); }
+  if (S.texWant) for (const t of draw) if (t.state === "ready" && t.texHave !== S.texWant && t.texLayer !== S.texWant && !(t.texRetryAt > now) && texLoads < 16) swapTexture(t, S.texWant);
   pump();
   // evict least recently used
   if (tiles.size > MAX_TILES) {
@@ -480,6 +512,7 @@ function rebuildOverlays() {
     for (let k = 0; k <= n; k++) pts.push([S.focus.lon + wrap180(S.iceTarget.lon - S.focus.lon) * k / n, S.focus.lat + (S.iceTarget.lat - S.focus.lat) * k / n, null]);
     overlay.add(lineFrom(pts, 0x7fc4ff, { depthTest: false, opacity: 0.95 }));
   }
+  measureLines();
   if (S.coverage && $("covChk").checked) {
     const box = (b, color) => {
       const [w, s, e, n] = b, pts = [], k = 12;
@@ -523,7 +556,7 @@ let drag = null, dirty = true;
 canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 canvas.addEventListener("pointerdown", (e) => {
   canvas.setPointerCapture(e.pointerId);
-  drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, rot: e.button === 2 || e.shiftKey, t: performance.now() };
+  drag = { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, rot: e.button === 2 || e.shiftKey, t: e.timeStamp };
   canvas.classList.add("drag");
 });
 canvas.addEventListener("pointermove", (e) => {
@@ -547,13 +580,15 @@ canvas.addEventListener("pointermove", (e) => {
 });
 canvas.addEventListener("pointerup", (e) => {
   canvas.classList.remove("drag");
-  if (drag && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 4 && performance.now() - drag.t < 500 && e.button === 0) {
+  if (drag && Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 4 && e.timeStamp - drag.t < 500 && e.button === 0) {
     const p = pickAt(e.clientX, e.clientY);
-    if (p) selectPoint(p.lon, p.lat);
+    if (p && S.meas.active) measureAdd(p.lon, p.lat);
+    else if (p) selectPoint(p.lon, p.lat);
   }
   drag = null;
 });
 canvas.addEventListener("dblclick", (e) => {
+  if (S.meas.active) { measureFinish(); return; }
   const p = pickAt(e.clientX, e.clientY);
   if (p) flyTo(p.lon, p.lat, S.cam.range * 0.35);
 });
@@ -573,12 +608,15 @@ canvas.addEventListener("wheel", (e) => {
   dirty = true;
 }, { passive: false });
 window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && S.meas.active) { measureFinish(); return; }
   if (e.key === "Escape") { $("help").hidden = true; $("localModal").hidden = true; $("searchRes").hidden = true; if (document.activeElement?.blur) document.activeElement.blur(); return; }
   if (e.target.closest("input, select, textarea")) return;
   if (e.key === "/") { e.preventDefault(); $("searchIn").focus(); return; }
   if (e.key === "?") { $("help").hidden = false; return; }
   if (e.key === "a" || e.key === "A") { if (S.focus) assess(); return; }
   if (e.key === "l" || e.key === "L") { $("layers").classList.toggle("collapsed"); return; }
+  if (e.key === "m" || e.key === "M") { measureToggle(); return; }
+  if (e.key === " " && !e.target.closest("button, a, summary")) { e.preventDefault(); $("marciPlay").click(); return; }
   const c = S.cam, step = c.range * 0.15 / R / DEG;
   const H = c.heading * DEG;
   const mv = (n, ea) => { c.lat += n * Math.cos(H) - ea * Math.sin(H); c.lon += (n * Math.sin(H) + ea * Math.cos(H)) / Math.max(0.05, Math.cos(c.lat * DEG)); };
@@ -739,7 +777,7 @@ async function updateLegend() {
   box.hidden = !parts.length;
 }
 function legendHtml(key, L) {
-  const note = L.note ? `<p>${esc(L.note)}</p>` : "";
+  const note = (L.note ? `<p>${esc(L.note)}</p>` : "") + (L.data_url ? `<p><a href="${esc(L.data_url)}" target="_blank" rel="noopener">Get the data ↗</a></p>` : "");
   if (L.classes) {
     const sw = L.classes.map((c) => `<i style="background:rgba(${c.rgba[0]},${c.rgba[1]},${c.rgba[2]},${Math.min(1, c.rgba[3] * 1.8)})"></i><span>${esc(c.label)}</span>`).join("");
     if (key !== "safety") return `<div class="lg"><b>${esc(L.title)}</b><div class="cls">${sw}</div>${note}</div>`;
@@ -937,7 +975,7 @@ function selectPoint(lon, lat, cand = null) {
   $("btnAssess").disabled = false; $("btnAssess").textContent = "Assess landing site";
   $("btnSafe").hidden = true;
   $("btnHub").disabled = true; $("btnHub").textContent = "Set as hub…";
-  $("btnReport").disabled = true; $("btnJson").disabled = true;
+  $("btnReport").disabled = true; $("btnJson").disabled = true; $("btnKml").disabled = false;
   $("hubCard").hidden = true; $("siteDone").innerHTML = ""; $("siteLog").hidden = true;
   $("btnAddRoute").disabled = false;
   $("dSections").innerHTML = "";
@@ -998,7 +1036,8 @@ function renderQuick(f) {
         <span>Elevation data</span><span>${src}${pt.finest_m ? ` (finest ${fmtKm(pt.finest_m / 1000)})` : ""}</span>
         ${(pt.names || []).length ? `<span>Nearby</span><span>${pt.names.map((n) => `${esc(n.name)} <span class="na-t">${fmtKm(n.dist_km ?? 0)}</span>`).join("<br>")}</span>` : ""}
       </div>`}
-    </section>`;
+    </section>` + extraSections(null);
+  wireExtraSections();
 }
 function candidateSection(c) {
   if (!c) return "";
@@ -1215,8 +1254,9 @@ function renderDossier(d) {
     <li>Criteria: NASA Human Landing Sites call (2015) and HLS2 workshop; Starship study (Golombek et al. 2021). Environment: model values [ASSUME], see notes.</li>
   </ul></section>`);
 
-  $("dSections").innerHTML = sect.join("");
+  $("dSections").innerHTML = sect.join("") + extraSections(d);
   renderPlace();
+  wireExtraSections();
   // wire the buttons made above
   $("btnShowSafety")?.addEventListener("click", () => {
     const cb = document.querySelector('[data-ovl="safety"]');
@@ -1825,7 +1865,8 @@ function saveHash() {
   const c = S.cam, f = S.focus;
   const ov = [...document.querySelectorAll("[data-ovl]")].filter((x) => x.checked).map((x) => x.dataset.ovl).join("+");
   const sel = !f ? "" : f.cand && ["ez", "starship", "heritage"].includes(f.cand.kind) && !/refined/.test(f.cand.name) ? `c:${f.cand.id}` : `${f.lat.toFixed(5)};${f.lon.toFixed(5)}`;
-  history.replaceState(null, "", `#${c.lat.toFixed(4)},${c.lon.toFixed(4)},${c.range.toFixed(2)},${c.heading.toFixed(0)},${c.tilt.toFixed(0)},${S.base},${S.crit},${ov},${encodeURIComponent(sel)}`);
+  const x = [`ls=${+S.ls.toFixed(1)}`, `my=${S.marci.my}`, S.op < 1 ? `op=${Math.round(S.op * 100)}` : "", S.cmp.base ? `cmp=${S.cmp.base}~${S.cmp.mode}~${S.cmp.my}` : ""].filter(Boolean).join(";");
+  history.replaceState(null, "", `#${c.lat.toFixed(4)},${c.lon.toFixed(4)},${c.range.toFixed(2)},${c.heading.toFixed(0)},${c.tilt.toFixed(0)},${S.base},${S.crit},${ov},${encodeURIComponent(sel)},${encodeURIComponent(x)}`);
 }
 let hashSel = null;
 function readHash() {
@@ -1840,6 +1881,13 @@ function readHash() {
     S.hashOvls = (p[7] || "").split("+").filter(Boolean);       // the atlas layers are added later: they are ticked then
     for (const k of S.hashOvls) { const cb = document.querySelector(`[data-ovl="${k}"]`); if (cb) cb.checked = true; }
     hashSel = p[8] || null;
+    for (const kv of (p[9] || "").split(";")) {
+      const [k, v] = kv.split("=");
+      if (k === "ls" && isFinite(+v)) S.ls = ((+v % 360) + 360) % 360;
+      if (k === "my" && [28, 29, 30, 31, 32].includes(+v)) S.marci.my = +v;
+      if (k === "op" && isFinite(+v)) S.op = Math.max(0.1, Math.min(1, +v / 100));
+      if (k === "cmp" && v) { const [b, m, y] = v.split("~"); S.cmp.base = b; S.cmp.mode = m === "spy" ? "spy" : "swipe"; S.cmp.my = +y || 29; }
+    }
     return true;
   }
   return false;
@@ -2014,6 +2062,508 @@ $("swxRefresh").onclick = async () => {
   } catch (e) { $("swxJob").textContent = e.message; }
 };
 
+// ================================================================================================= Worldview-style tools
+// Season and MARCI weather maps, overlay strength, compare (swipe / spy), the ruler with area statistics, the extra
+// dossier sections (Earth relay, statistics inside the landing ellipse, past weather), KML export and stories.
+
+// ------------------------------------------------------------------------------------------------- season, MARCI
+const SEASON_WORD = (ls) => ["northern spring", "northern summer", "northern autumn", "northern winter"][Math.floor((((ls % 360) + 360) % 360) / 90)];
+// a sol whose map lost orbits (under 60 % of 60 S - 60 N mapped) is shown only if no better one is within 6 deg
+const MIN_COV = 0.6;
+const okDay = (d) => (d[4] ?? 1) >= MIN_COV;
+function marciNearest(my, ls) {
+  const D = S.marci.days;
+  if (!D) return null;
+  let best = null, bs = 1e9;
+  for (const d of D) {
+    if (d[2] !== my) continue;
+    const g = Math.abs(((d[3] - ls + 540) % 360) - 180);
+    if (g > 6) continue;
+    const sc = g + (okDay(d) ? 0 : 100);
+    if (sc < bs) { bs = sc; best = d; }
+  }
+  return best;
+}
+// the season of that Mars year's map closest to ls (MARCI began at Ls 132 of MY 28; MY 32 ends at Ls 110)
+function marciClosestLs(my, ls) {
+  let best = ls, bs = 1e9;
+  for (const d of S.marci.days || []) if (d[2] === my) { const sc = Math.abs(((d[3] - ls + 540) % 360) - 180) + (okDay(d) ? 0 : 100); if (sc < bs) { bs = sc; best = d[3]; } }
+  return best;
+}
+// Earth date (UTC) of a Mars year and season: MY 1 began at Ls 0 on MSD 28892.7 (engine/marstime.js marsYear)
+function dateOfMyLs(my, ls) {
+  let msd = 28892.7 + (my - 1) * 668.5991 + (ls / 360) * 668.5991;
+  for (let k = 0; k < 8; k++) {
+    const L = marsState(jdTTFromMsd(msd)).Ls;
+    msd += (((ls - L + 540) % 360) - 180) / 360 * 668.5991 * 0.9;
+  }
+  return new Date(msFromJdTT(jdTTFromMsd(msd)));
+}
+async function loadMarciIndex() {
+  if (S.marci.days) return S.marci.days;
+  try {
+    const r = await api("/api/marci/index");
+    S.marci.days = r.days; S.marci.cite = r.cite; S.marci.doi = r.doi;
+  } catch { S.marci.days = []; }
+  return S.marci.days;
+}
+let seasonT = 0;
+function seasonUi() {
+  $("lsR").value = Math.round(S.ls);
+  $("lsV").textContent = `Ls ${Math.round(S.ls)}°`;
+  $("lsWord").textContent = SEASON_WORD(S.ls) + (S.ls >= 180 && S.ls < 330 ? " · dust-storm season" : "");
+  $("marciRow").hidden = S.base !== "marci";
+  [...$("playStep").options].forEach((o, i) => { o.textContent = S.base === "marci" ? `${STEP_SOLS[i]} sol${STEP_SOLS[i] > 1 ? "s" : ""}` : `${STEP_DEG[i]}°`; });
+  $("marciMy").value = String(S.marci.my);
+  $("opR").value = Math.round(S.op * 100);
+  $("opV").textContent = `${Math.round(S.op * 100)} %`;
+  marciLine();
+}
+function marciLine() {
+  const out = $("marciOut");
+  const rows = [];
+  if (S.base === "marci") rows.push(["", S.marci.my]);
+  if (S.cmp.base === "marci") rows.push(["Compared: ", S.cmp.my]);
+  if (!rows.length) { out.textContent = ""; return; }
+  if (!S.marci.days) { out.textContent = "Loading the MARCI index…"; return; }
+  out.innerHTML = rows.map(([pre, my]) => pre + marciInfo(my)).join("<br>") + `<br><span class="na-t">Wang &amp; Richardson 2015; Harvard Dataverse, CC0; NASA/JPL-Caltech/MSSS</span>`;
+}
+function marciInfo(my) {
+  const d = marciNearest(my, S.ls);
+  if (!d) return `<span class="warn-t">No MARCI map within 6° of Ls ${Math.round(S.ls)} in MY ${my}</span> (mapping began at Ls 132 of MY 28; a few months have gaps).`;
+  const dt = dateOfMyLs(d[2], d[3]);
+  const f = S.marciFetch?.[d[0]], here = S.marciLocal?.has(d[0]);
+  const dl = here ? "" : f && !f.error ? ` · <span class="warn-t">downloading this month from Harvard Dataverse: ${(f.done / 1e6).toFixed(1)} of ${(f.total / 1e6).toFixed(0)} MB</span>`
+    : f?.error ? ` · <span class="bad-t">download failed: ${esc(f.error)}</span>`
+    : S.marciOffline ? ` · <span class="warn-t">not on this computer, and the app is offline (Mars mode): the dimmed Viking map stands in</span>` : "";
+  return `MRO MARCI · MY ${d[2]} · Ls ${d[3].toFixed(1)}° · ${dt.toISOString().slice(0, 10)}${dl}`;
+}
+let marciPoll = 0;
+const marciWaiting = new Set();
+function marciWanted() {
+  const subs = new Set();
+  for (const [on, my] of [[S.base === "marci", S.marci.my], [S.cmp.base === "marci", S.cmp.my]]) {
+    const d = on ? marciNearest(my, S.ls) : null;
+    if (d) subs.add(d[0]);
+  }
+  return subs;
+}
+// a month of maps just arrived: the tiles drawn from the stand-in (dimmed Viking) are asked for again
+function refreshStandIns() {
+  for (const t of tiles.values()) {
+    if (t.mesh?.material.map?.userData?.provisional) { t.texHave = null; if (t.mesh.visible && S.texWant) swapTexture(t, S.texWant); }
+    if (t.texB?.userData?.provisional) t.texBLayer = null;
+  }
+}
+async function pollMarci() {
+  clearTimeout(marciPoll);
+  const want = marciWanted();
+  if (!want.size) { marciLine(); return; }
+  try {
+    const st = await api("/api/marci/status");
+    S.marciFetch = st.fetching || {};
+    S.marciLocal = new Set(st.local || []);
+    S.marciOffline = !!st.offline;
+    let pending = false, arrived = false;
+    for (const sub of want) {
+      if (S.marciLocal.has(sub)) { if (marciWaiting.delete(sub)) arrived = true; continue; }
+      const f = S.marciFetch[sub];
+      if (f?.error || S.marciOffline) { marciWaiting.delete(sub); continue; }   // shown under the control; tried again on the next change
+      pending = true; marciWaiting.add(sub);
+      if (!f) post("/api/marci/fetch", { sub }).catch(() => null);
+    }
+    if (arrived) refreshStandIns();
+    marciLine();
+    if (pending) marciPoll = setTimeout(pollMarci, 1000);
+  } catch { marciPoll = setTimeout(pollMarci, 3000); }
+}
+function seasonChanged(now = false) {
+  seasonUi();
+  clearTimeout(seasonT);
+  const go = () => {
+    const seasonal = activeOverlays().some((o) => /^dust/.test(o));
+    if (S.base === "marci" || seasonal) { reloadTextures(); updateLegend(); }
+    if (S.cmp.base === "marci") S.cmp.layer = cmpLayer();
+    saveHash();
+    pollMarci();
+  };
+  if (now) go(); else seasonT = setTimeout(go, 250);
+}
+$("lsR").addEventListener("input", () => { S.ls = +$("lsR").value; seasonChanged(); });
+$("marciMy").addEventListener("change", () => {
+  S.marci.my = +$("marciMy").value;
+  if (S.marci.days && !marciNearest(S.marci.my, S.ls)) S.ls = marciClosestLs(S.marci.my, S.ls);
+  seasonChanged(true);
+});
+$("opR").addEventListener("input", () => { S.op = +$("opR").value / 100; $("opV").textContent = `${Math.round(S.op * 100)} %`; clearTimeout(seasonT); seasonT = setTimeout(() => { reloadTextures(); saveHash(); }, 300); });
+$("baseSel").onchange = async () => {
+  S.base = $("baseSel").value;
+  if (S.base === "marci") {
+    await loadMarciIndex();
+    if (!marciNearest(S.marci.my, S.ls)) S.ls = Math.max(S.ls, 135);    // MARCI mapping began at Ls 132 of MY 28
+  }
+  seasonChanged(true);
+};
+
+// play: MARCI sol by sol through the chosen Mars year (or, without MARCI, the season in 5 deg steps), each step held
+// until the map in view has arrived; GIF: the same, recorded
+const PLAY = { on: false, gif: null };
+const settle = async (maxMs = 9000) => {
+  const t0 = performance.now();
+  await new Promise((r) => setTimeout(r, 350));
+  while (performance.now() - t0 < maxMs) {
+    // this step's textures, a MARCI month still downloading (its tiles are stand-ins until pollMarci swaps them), and
+    // tiles of the view still missing (up to 3 s). Elevation tiles refreshing in the background (provisional while the
+    // MOLA grid downloads) do not hold the animation.
+    if (!texLoads && !marciWaiting.size && (!lastStat.wanted || performance.now() - t0 > 3000)) break;
+    await new Promise((r) => setTimeout(r, 200));
+  }
+};
+// step per frame: MARCI maps (sols) on the weather map, degrees of Ls otherwise (the dust layer changes every 5 deg)
+const STEP_SOLS = [1, 5, 15], STEP_DEG = [5, 10, 30];
+const playStep = () => Math.max(0, Math.min(2, (+$("playStep").value || 1) - 1));
+function stepSeason() {
+  const k = playStep();
+  if (S.base === "marci" && S.marci.days) {
+    // the next well-covered sols of this Mars year after the one on screen (in season order)
+    let D = S.marci.days.filter((d) => d[2] === S.marci.my && okDay(d));
+    if (!D.length) D = S.marci.days.filter((d) => d[2] === S.marci.my);
+    const cur = marciNearest(S.marci.my, S.ls), at = cur ? cur[3] : S.ls;
+    const i = D.findIndex((d) => d[3] > at + 1e-6);
+    S.ls = D[i < 0 ? 0 : (i + STEP_SOLS[k] - 1) % D.length][3];
+  } else S.ls = (S.ls + STEP_DEG[k]) % 360;
+  seasonChanged(true);
+}
+async function playLoop() {
+  while (PLAY.on) {
+    await settle();
+    if (!PLAY.on) break;
+    if (PLAY.gif) {
+      captureFrame();
+      $("marciGif").textContent = `${PLAY.gif.n} / ${PLAY.gif.max}`;
+      if (PLAY.gif.n >= PLAY.gif.max) { PLAY.on = false; break; }
+    }
+    stepSeason();
+    if (!PLAY.gif) await new Promise((r) => setTimeout(r, 450));
+  }
+  $("marciPlay").textContent = "Play";
+  if (PLAY.gif) finishGif();
+}
+$("marciPlay").addEventListener("click", () => {
+  PLAY.on = !PLAY.on;
+  $("marciPlay").textContent = PLAY.on ? "Stop" : "Play";
+  if (PLAY.on) playLoop();
+});
+function captureFrame() {
+  const g = PLAY.gif;
+  renderer.render(scene, camera);
+  g.ctx.fillStyle = "#000"; g.ctx.fillRect(0, 0, g.cv.width, g.cv.height);
+  g.ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, g.w, g.h);
+  g.ctx.fillStyle = "#0b0f14"; g.ctx.fillRect(0, g.h, g.w, 26);
+  g.ctx.fillStyle = "#f2f5f8"; g.ctx.font = "600 13px Barlow, system-ui, sans-serif";
+  const d = S.base === "marci" ? marciNearest(S.marci.my, S.ls) : null;
+  g.ctx.fillText(d ? `MRO MARCI · MY ${d[2]} · Ls ${d[3].toFixed(1)}° · ${dateOfMyLs(d[2], d[3]).toISOString().slice(0, 10)} · MarsNav`
+    : `Season Ls ${Math.round(S.ls)}° · ${activeOverlays().join(", ") || S.base} · MarsNav`, 8, g.h + 18);
+  g.enc.addFrame(g.ctx.getImageData(0, 0, g.cv.width, g.cv.height).data);
+  g.n++;
+}
+function finishGif() {
+  const g = PLAY.gif;
+  PLAY.gif = null;
+  $("marciGif").textContent = "Encoding…";
+  setTimeout(() => {
+    try {
+      const bytes = g.enc.encode();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([bytes], { type: "image/gif" }));
+      a.download = `marsnav_${S.base === "marci" ? `marci_my${S.marci.my}` : "season"}_ls${Math.round(g.ls0)}.gif`;
+      document.body.appendChild(a); a.click(); a.remove();
+      toast(`GIF saved: ${g.n} frames.`);
+    } catch (err) { toast(`GIF failed: ${err.message}`); }
+    $("marciGif").textContent = "GIF";
+  }, 30);
+}
+$("marciGif").addEventListener("click", () => {
+  if (PLAY.on) { PLAY.on = false; return; }
+  const w = Math.min(640, canvas.clientWidth), h = Math.round(w * canvas.clientHeight / canvas.clientWidth);
+  const cv = document.createElement("canvas"); cv.width = w; cv.height = h + 26;
+  PLAY.gif = { enc: new GifEncoder(cv.width, cv.height, { delayMs: 220 }), cv, ctx: cv.getContext("2d", { willReadFrequently: true }), w, h, n: 0, max: 30, ls0: S.ls };
+  PLAY.on = true;
+  $("marciPlay").textContent = "Stop";
+  playLoop();
+});
+
+// ------------------------------------------------------------------------------------------------- compare
+// The second map (B) is rendered in its own pass into a canvas over the globe, clipped to the right of the swipe line
+// or to a lens around the cursor; each tile keeps a second texture for it.
+const cmpCanvas = $("cmpCanvas"), cmpCtx = cmpCanvas.getContext("2d");
+let cmpLoads = 0;
+function cmpLayer() {
+  const b = S.cmp.base;
+  if (!b) return null;
+  return b === "marci" ? baseLayer("marci", S.cmp.my) : b;
+}
+function compareUi() {
+  const on = !!S.cmp.base;
+  $("cmpRow").hidden = !on;
+  $("cmpMyL").hidden = S.cmp.base !== "marci";
+  $("cmpBase").value = S.cmp.base; $("cmpMy").value = String(S.cmp.my);
+  for (const b of $("cmpModeL").querySelectorAll("[data-cm]")) b.setAttribute("aria-pressed", String(b.dataset.cm === S.cmp.mode));
+  cmpCanvas.hidden = !on; $("cmpHandle").hidden = !on || S.cmp.mode !== "swipe";
+  const name = (v, my) => v === "marci" ? `MARCI MY ${my}` : ($("baseSel").querySelector(`option[value="${v}"]`)?.textContent || v).split(",")[0];
+  $("cmpTagA").textContent = `◀ ${name(S.base, S.marci.my)}`;
+  $("cmpTagB").textContent = `${name(S.cmp.base, S.cmp.my)} ▶`;
+  placeHandle();
+}
+async function compareChanged() {
+  S.cmp.base = $("cmpBase").value; S.cmp.my = +$("cmpMy").value;
+  if (S.cmp.base === "marci") await loadMarciIndex();
+  S.cmp.layer = cmpLayer();
+  for (const t of tiles.values()) if (t.texB && t.texBLayer !== S.cmp.layer) { t.texB.dispose(); t.texB = null; t.texBLayer = null; }
+  compareUi(); saveHash(); pollMarci();
+}
+$("cmpBase").addEventListener("change", compareChanged);
+$("cmpMy").addEventListener("change", compareChanged);
+for (const b of $("cmpModeL").querySelectorAll("[data-cm]")) b.addEventListener("click", () => { S.cmp.mode = b.dataset.cm; compareUi(); saveHash(); });
+function placeHandle() {
+  const h = $("cmpHandle");
+  h.style.left = `${S.cmp.split * canvas.clientWidth}px`;
+}
+{
+  const h = $("cmpHandle");
+  let dragging = false;
+  h.addEventListener("pointerdown", (e) => { dragging = true; h.setPointerCapture(e.pointerId); e.preventDefault(); });
+  h.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    const r = canvas.getBoundingClientRect();
+    S.cmp.split = Math.max(0.03, Math.min(0.97, (e.clientX - r.left) / r.width));
+    placeHandle();
+  });
+  h.addEventListener("pointerup", () => { dragging = false; });
+  canvas.addEventListener("pointermove", (e) => { const r = canvas.getBoundingClientRect(); S.cmp.lens = [e.clientX - r.left, e.clientY - r.top]; });
+}
+function renderCompare() {
+  const L = S.cmp.layer;
+  // second textures for the tiles in view
+  const vis = [...tiles.values()].filter((t) => t.mesh?.visible);
+  const now = performance.now();
+  for (const t of vis) {
+    const stale = t.texBLayer !== L || (t.texBRetry && now > t.texBRetry);
+    if (stale && !t.loadingB && cmpLoads < 6) {
+      t.loadingB = true; cmpLoads++; t.texBRetry = 0;
+      const want = L;
+      loadTexture(t, want, false).then((tex) => {
+        if (S.cmp.layer !== want || !t.mesh) { tex.dispose(); return; }
+        t.texB?.dispose(); t.texB = tex; t.texBLayer = want;
+        if (tex.userData.provisional) t.texBRetry = performance.now() + 15000;
+      }).catch(() => { t.texBRetry = performance.now() + 8000; }).finally(() => { t.loadingB = false; cmpLoads--; });
+    }
+  }
+  const w = canvas.width, h = canvas.height;
+  if (cmpCanvas.width !== w || cmpCanvas.height !== h) { cmpCanvas.width = w; cmpCanvas.height = h; }
+  const swap = [];
+  for (const t of vis) if (t.texB && t.texBLayer === L && t.mesh.material.map) { swap.push([t.mesh.material, t.mesh.material.map]); t.mesh.material.map = t.texB; }
+  renderer.render(scene, camera);
+  cmpCtx.clearRect(0, 0, w, h);
+  cmpCtx.drawImage(canvas, 0, 0);
+  for (const [m, map] of swap) m.map = map;
+  const cw = canvas.clientWidth;
+  if (S.cmp.mode === "spy") {
+    const [x, y] = S.cmp.lens || [cw / 2, canvas.clientHeight / 2];
+    cmpCanvas.style.clipPath = `circle(130px at ${x}px ${y}px)`;
+  } else cmpCanvas.style.clipPath = `inset(0 0 0 ${S.cmp.split * cw}px)`;
+}
+
+// ------------------------------------------------------------------------------------------------- ruler
+function measureToggle(on = !S.meas.active) {
+  S.meas.active = on;
+  if (on && S.meas.closed) { S.meas.pts = []; S.meas.closed = false; }
+  $("ruler").setAttribute("aria-pressed", String(on));
+  $("measureL").hidden = !on && !S.meas.pts.length;
+  canvas.classList.toggle("measuring", on);
+  labelsEl.classList.toggle("measuring", on);             // labels let clicks through to the planet while measuring
+  if (on && !S.meas.pts.length) { $("mlOut").textContent = "Click the planet to add points; double-click to finish."; $("mlStats").innerHTML = ""; }
+}
+function measureAdd(lon, lat) {
+  const last = S.meas.pts[S.meas.pts.length - 1];
+  if (last && pathKm([last, [lon, lat]]).total < Math.max(0.001, S.cam.range * 0.003)) return;
+  S.meas.pts.push([lon, lat]);
+  measureDraw();
+}
+function measureFinish() { S.meas.active = false; $("ruler").setAttribute("aria-pressed", "false"); canvas.classList.remove("measuring"); labelsEl.classList.remove("measuring"); measureDraw(); }
+function measureDraw() {
+  clearMarkers("ms");
+  S.meas.pts.forEach(([lo, la], k) => addMarker("ms", lo, la, k === S.meas.pts.length - 1 ? "◆" : "•"));
+  rebuildOverlays();
+  const P = S.meas.pts, ring = S.meas.closed ? [...P, P[0]] : P;
+  if (P.length < 2) { $("mlOut").textContent = P.length ? "Add the next point." : "Click the planet to add points."; return; }
+  const len = pathKm(ring);
+  // climb and descent along the line from the elevation tiles in memory
+  let up = 0, down = 0, prev = null, lo = Infinity, hi = -Infinity;
+  for (let k = 1; k < ring.length; k++) {
+    for (const [a, b] of greatCircle(ring[k - 1], ring[k], Math.max(0.05, len.total / 400))) {
+      const e = elevAt(a, b);
+      if (prev != null) { if (e > prev) up += e - prev; else down += prev - e; }
+      prev = e; lo = Math.min(lo, e); hi = Math.max(hi, e);
+    }
+  }
+  const flat = hi - lo < 0.5 && Math.abs(lo) < 0.5;          // the stand-in tiles before the elevation data is here
+  $("mlOut").innerHTML = `<b class="num">${fmtDist(len.total)}</b> ${S.meas.closed ? "perimeter" : `along ${ring.length - 1} segment${ring.length > 2 ? "s" : ""}`}
+    ${S.meas.closed ? `· area <b class="num">${fmtArea(areaKm2(P))}</b>` : ""}<br>
+    ${flat ? `<span class="na-t">Elevation along the line: not loaded yet (the elevation map downloads on first use).</span>`
+    : `climb <span class="num">+${Math.round(up)} m / −${Math.round(down)} m</span> · elevation ${Math.round(lo)} to ${Math.round(hi)} m <span class="na-t">(best elevation now in view)</span>`}`;
+}
+async function areaStats(poly, box, title) {
+  box.innerHTML = `<p class="hint">Reading every layer inside${title ? ` ${esc(title)}` : ""}…</p>`;
+  try {
+    const r = await post("/api/stats", { poly, ls: Math.round(S.ls) });          // the season as the panel shows it
+    const rows = Object.values(r.layers).filter((v) => v.n).map((v) => `<tr><td>${esc(v.name)}${v.unit ? ` <span class="na-t">${esc(v.unit)}</span>` : ""}${v.cover < 0.99 ? ` <span class="warn-t">(${Math.round(100 * v.cover)} % of the area)</span>` : ""}</td><td class="num">${v.p10}</td><td class="num">${v.p50}</td><td class="num">${v.p90}</td><td class="num">${v.max}</td></tr>`).join("");
+    box.innerHTML = `<table class="tbl stat"><tr><th></th><th>p10</th><th>median</th><th>p90</th><th>max</th></tr>${rows}</table>
+      <p class="hint">${r.points.toLocaleString()} points ${fmtDist(r.spacing_km)} apart over ${fmtArea(r.area_km2)}${r.craters ? ` · ${r.craters.count} craters ≥ 1 km inside (${r.craters.per_1e6_km2.toLocaleString()} per 10⁶ km²)` : ""}.
+      Dust for the season set under Map layers (Ls ${Math.round(S.ls)}°).${r.elevation_missing ? ` <span class="warn-t">${esc(r.elevation_missing)}.</span>` : ""}</p>`;
+    return r;
+  } catch (e) { box.innerHTML = `<p class="bad-t">Statistics failed: ${esc(e.message)}</p>`; return null; }
+}
+$("ruler").addEventListener("click", () => measureToggle());
+$("mlClose").addEventListener("click", () => { S.meas = { active: false, pts: [], closed: false }; clearMarkers("ms"); $("measureL").hidden = true; canvas.classList.remove("measuring"); labelsEl.classList.remove("measuring"); $("ruler").setAttribute("aria-pressed", "false"); rebuildOverlays(); });
+$("mlUndo").addEventListener("click", () => { if (S.meas.closed) S.meas.closed = false; else S.meas.pts.pop(); $("mlStats").innerHTML = ""; measureDraw(); });
+$("mlClear").addEventListener("click", () => { S.meas.pts = []; S.meas.closed = false; $("mlStats").innerHTML = ""; measureToggle(true); measureDraw(); });
+$("mlDone").addEventListener("click", measureFinish);
+$("mlArea").addEventListener("click", () => {
+  if (S.meas.pts.length < 3) { $("mlOut").textContent = "An area needs at least three points."; return; }
+  S.meas.closed = true; measureFinish();
+  areaStats(S.meas.pts, $("mlStats"));
+});
+// drawn with the other overlays (rebuildOverlays calls this)
+function measureLines() {
+  const P = S.meas.pts;
+  if (P.length < 2) return;
+  const ring = S.meas.closed ? [...P, P[0]] : P, pts = [];
+  for (let k = 1; k < ring.length; k++) for (const [a, b] of greatCircle(ring[k - 1], ring[k], Math.max(0.5, S.cam.range / 300))) pts.push([a, b, null]);
+  overlay.add(lineFrom(pts, 0x000000, { depthTest: false, opacity: 0.6 }));
+  overlay.add(lineFrom(pts, 0xffd23c, { depthTest: false, opacity: 0.95 }));
+}
+
+// ------------------------------------------------------------------------------------------------- dossier extras
+function extraSections(d) {
+  return `<section class="sect" id="xRelay"><h3>Earth relay coverage <small>modelled from published orbits</small></h3><p class="hint">Flying MRO, Odyssey, TGO and Mars Express over this latitude…</p></section>
+    ${d?.landing?.ellipse ? `<section class="sect"><h3>Inside the landing ellipse <small>every global layer</small></h3><div id="xEllStats"><button class="btn small" id="btnEllStats">Statistics inside the ellipse</button></div></section>` : ""}
+    <section class="sect"><h3>Weather here in past years <small>MRO MARCI daily maps, Ls ${Math.round(S.ls)}°</small></h3>
+      <div class="row">${[28, 29, 30, 31, 32].map((my) => `<button class="btn small" data-wx="${my}">MY ${my}</button>`).join("")}</div>
+      <p class="hint">Shows the MARCI map of that Mars year at the season set under Map layers (its month of maps, 8 to 15 MB, downloads once). MY 28 had a planet-encircling dust storm from Ls ~262° (late June 2007).</p></section>`;
+}
+const RELAY_CACHE = new Map();        // by half-degree of latitude: the model takes ~0.15 s
+function wireExtraSections() {
+  const f = S.focus;
+  setTimeout(() => {
+    const el = $("xRelay");
+    if (!el || S.focus !== f) return;
+    const k = Math.round(f.lat * 2) / 2;
+    if (!RELAY_CACHE.has(k)) RELAY_CACHE.set(k, relayCoverage(k, { sols: 16, runs: 2, stepS: 20 }));
+    const r = RELAY_CACHE.get(k);
+    el.innerHTML = `<h3>Earth relay coverage <small>modelled from published orbits</small></h3><div class="kv">${r.orbiters.map((o) => `<span>${esc(o.name)}</span><span>${o.passesPerSol.toFixed(1)} passes/sol, ${Math.round(o.minutesPerSol)} min/sol${o.windows.some((w) => w.allDay) ? ", on most orbits" : o.windows.length ? `, ${o.windows.map((w) => `${hhmm(w.fromH)}–${hhmm(w.toH)}`).join(" and ")} LMST` : ", times vary"}${o.uncertain ? ' <span class="na-t">(local time assumed)</span>' : ""}</span>`).join("")}
+      <span>All orbiters</span><span><b>${Math.round(r.minutesPerSol)} min/sol</b> of contact</span></div>
+      <p class="hint">${esc(r.note)} MAVEN is not counted (contact lost December 2025). Polar sites see the polar orbiters on most orbits.</p>`;
+  }, 60);
+  $("btnEllStats")?.addEventListener("click", () => areaStats(S.landing.ellipse, $("xEllStats"), "the landing ellipse"));
+  for (const b of $("dSections").querySelectorAll("[data-wx]")) {
+    b.addEventListener("click", async () => {
+      await loadMarciIndex();
+      S.marci.my = +b.dataset.wx;
+      if (!marciNearest(S.marci.my, S.ls)) S.ls = marciClosestLs(S.marci.my, S.ls);
+      $("baseSel").value = "marci"; S.base = "marci";
+      seasonChanged(true);
+      flyTo(f.lon, f.lat, 3500);
+      toast(`MARCI weather map, MY ${S.marci.my}, Ls ${Math.round(S.ls)}°. Move the season slider (Map layers) or press Play.`, 6000);
+    });
+  }
+}
+
+// ------------------------------------------------------------------------------------------------- KML
+$("btnKml").addEventListener("click", () => {
+  const f = S.focus; if (!f) return;
+  const d = S.dossier, parts = [];
+  const name = f.cand?.name || f.name || "Selected site";
+  parts.push(kml.point(name, f.lon, f.lat, { style: "hab", description: d ? `${d.verdict} · score ${d.score} · ${d.criteria_label}` : "Selected in MarsNav Landing mode" }));
+  if (S.landing?.ellipse) parts.push(kml.polygon(`Landing ellipse (${S.landing.label || $("landerSel").value})`, S.landing.ellipse, { style: "ellipse" }));
+  parts.push(kml.polygon("Exploration zone (100 km)", circle(f.lon, f.lat, 100).map((p) => [p[0], p[1]]), { style: "zone" }));
+  parts.push(kml.polygon("Infrastructure radius (5 km)", circle(f.lon, f.lat, 5).map((p) => [p[0], p[1]]), { style: "zone" }));
+  if (S.iceTarget) { parts.push(kml.point("Nearest water ice (SWIM Ci ≥ 0.5)", S.iceTarget.lon, S.iceTarget.lat)); parts.push(kml.line("To the ice", [[f.lon, f.lat], [S.iceTarget.lon, S.iceTarget.lat]], { style: "alt" })); }
+  if (S.routeResult?.points?.length > 1) parts.push(kml.line(`Traverse (${$("modeSel").value})`, S.routeResult.points.map((p) => [p[0], p[1], 0])));
+  if (S.meas.pts.length >= 2) parts.push(S.meas.closed ? kml.polygon("Measured area", S.meas.pts, { style: "measure" }) : kml.line("Measured line", S.meas.pts, { style: "measure" }));
+  const doc = kml.doc(`MarsNav: ${name}`, parts.join("\n"), { description: `Exported from MarsNav Landing mode on ${new Date().toISOString().slice(0, 10)}. Open in Google Earth Pro, Mars view.` });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([doc], { type: "application/vnd.google-earth.kml+xml" }));
+  a.download = `marsnav_${name.replace(/[^\w-]+/g, "_")}.kml`;
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("KML saved: opens in Google Earth Pro's Mars view.");
+});
+
+// ------------------------------------------------------------------------------------------------- stories
+const STORY = { steps: null, k: -1 };
+// tick (or untick) a layer the way a click would
+function tick(id, on = true) {
+  const cb = document.querySelector(`[data-ovl="${id}"]`);
+  if (!cb || cb.checked === on) return;
+  cb.checked = on;
+  if (on) cb.closest("details")?.setAttribute("open", "");
+  cb.onchange?.();
+}
+const waitMs = (ms) => new Promise((r) => setTimeout(r, ms));
+const LSTORIES = [
+  { id: "storm", title: "The 2007 global dust storm", steps: [
+    { t: "Mars before the storm", x: "MRO's MARCI camera mapped the whole planet every sol. This is Mars year 28 at Ls 222°, mid northern autumn (April 2007): clear air over most of the planet, the dark markings sharp.",
+      go: async () => { await loadMarciIndex(); S.marci.my = 28; S.ls = 222; $("baseSel").value = "marci"; S.base = "marci"; seasonChanged(true); flyTo(-10, 5, 11000); } },
+    { t: "The planet disappears", x: "Ls 280° (mid-July 2007): the storm that began near Ls 262° has wrapped the planet and the markings vanish under the dust. At Meridiani, Opportunity measured an optical depth of about 5 and was put into a minimal mode to survive (Lemmon et al. 2015). This month of maps downloads once (about 8 MB).",
+      go: async () => { S.ls = 280; seasonChanged(true); } },
+    { t: "Same season, a calm year", x: "Swipe: left, MY 28 in the storm; right, MY 29 at the same season (June 2009). Drag the blue line. In the 13 Mars years of the dust record (MY 24-36), storms of this size came in MY 25, 28 and 34.",
+      go: async () => { $("cmpBase").value = "marci"; $("cmpMy").value = "29"; S.cmp.mode = "swipe"; await compareChanged(); } },
+    { t: "What it means for a crew", x: "The Dust layer (Map layers, Science atlas, Atmospheric) maps the optical depth of a dusty year (90th percentile) at this season. Direct sunlight falls as e^-τ: to 37 % at τ 1, 5 % at τ 3. The EVA planner uses the same climatology for solar heating and power.",
+      go: async () => { $("cmpBase").value = ""; await compareChanged(); $("baseSel").value = "viking"; S.base = "viking"; tick("dust90"); seasonChanged(true); } },
+  ] },
+  { id: "hub", title: "Choosing a hub with statistics", steps: [
+    { t: "A candidate", x: "Jezero crater, a NASA landing site with 1 m elevation data. Assess it to see the criteria and the landing ellipse.",
+      go: async () => { selectPoint(77.45, 18.44); flyTo(77.45, 18.44, 600); await waitMs(1500); await assess(); } },
+    { t: "Inside the ellipse", x: "“Statistics inside the ellipse” (dossier) gives the 10th-90th percentile of every global layer inside the landing ellipse: slope, thermal inertia, albedo, dust, the magnetic field.",
+      go: async () => { $("btnEllStats")?.click(); $("xEllStats")?.scrollIntoView({ block: "center" }); } },
+    { t: "Talking to Earth", x: "Earth relay coverage: how many orbiter passes a sol at this latitude and, for MRO and Odyssey, at what local times. The ruler (M) measures any distance or area on the globe.",
+      go: async () => { $("xRelay")?.scrollIntoView({ block: "center" }); } },
+  ] },
+  { id: "ice", title: "Water ice and the magnetic field", steps: [
+    { t: "Where the ice is", x: "Arcadia Planitia: SWIM finds ground consistent with shallow water ice (blue), one of the strongest candidates for a crewed base.",
+      go: async () => { tick("ice"); flyTo(-165, 46, 2600); } },
+    { t: "Ancient magnetism", x: "Mars Global Surveyor's map of the crustal magnetic field: strongest in the southern highlands (Terra Sirenum, Terra Cimmeria). It deflects some solar wind, not cosmic rays.",
+      go: async () => { tick("ice", false); tick("magnetic"); flyTo(175, -40, 9000); } },
+  ] },
+];
+function storyShow(k) {
+  if (!STORY.steps || k < 0 || k >= STORY.steps.length) { $("storyBox").hidden = true; STORY.steps = null; return; }
+  STORY.k = k;
+  const st = STORY.steps[k];
+  $("storyBox").hidden = false;
+  $("storyStep").textContent = `STORY · STEP ${k + 1} OF ${STORY.steps.length}`;
+  $("storyTitle").textContent = st.t; $("storyText").textContent = st.x;
+  $("storyBack").disabled = k === 0;
+  $("storyNext").textContent = k === STORY.steps.length - 1 ? "Finish" : "Next";
+  Promise.resolve(st.go()).catch((e) => console.error(e));
+}
+$("storyNext").addEventListener("click", () => storyShow(STORY.k + 1));
+$("storyBack").addEventListener("click", () => storyShow(STORY.k - 1));
+$("storyEnd").addEventListener("click", () => storyShow(-1));
+$("storiesPill").addEventListener("click", () => {
+  const m = $("help");
+  const box = m.querySelector(".mbox");
+  if (!m.dataset.orig) m.dataset.orig = box.innerHTML;
+  box.innerHTML = `<h2>Stories</h2><p class="hint">Guided walkthroughs on real data. Each step sets the globe up and explains what is on screen.</p>
+    <div class="stories">${LSTORIES.map((s) => `<button class="btn story" data-ls="${s.id}"><b>${esc(s.title)}</b><span>${s.steps.length} steps</span></button>`).join("")}</div>
+    <div class="row"><button class="btn" id="storiesClose">Close</button></div>`;
+  m.hidden = false;
+  const restore = () => { box.innerHTML = m.dataset.orig; $("helpClose").onclick = () => { m.hidden = true; }; };
+  $("storiesClose").onclick = () => { m.hidden = true; restore(); };
+  for (const b of box.querySelectorAll("[data-ls]")) b.onclick = () => { m.hidden = true; restore(); STORY.steps = LSTORIES.find((s) => s.id === b.dataset.ls).steps; storyShow(0); };
+});
+window.MMLandingX = { S, PLAY, LSTORIES, storyShow, measureAdd, areaStats, seasonChanged, compareChanged, loadMarciIndex, marciNearest, dateOfMyLs };
+
 // ------------------------------------------------------------------------------------------------- loading bar
 // "Loading map": a batch starts when tiles begin streaming and ends when none are left; the bar is the share of the
 // batch's tiles that have arrived. Under it, the first-run download of the whole-Mars elevation grid (33 MB, once).
@@ -2051,6 +2601,7 @@ function frame(now) {
   if (Math.abs(Math.log(S.cam.range / (overlayRange || 1))) > 0.7) rebuildOverlays();
   labelsEl.classList.toggle("far", S.cam.range > 5200);
   updateMarkers();
+  if (S.cmp.layer) renderCompare();
   renderer.render(scene, camera);
   if (now - lastScale > 120) {
     lastScale = now;
@@ -2069,6 +2620,9 @@ if (canvas.clientWidth < 820 || window.innerHeight < 820) {       // small scree
   $("layers").classList.add("collapsed"); $("layersToggle").setAttribute("aria-expanded", "false");
 }
 loadNames();
+seasonUi();
+if (S.base === "marci" || S.cmp.base) loadMarciIndex().then(() => { S.cmp.layer = cmpLayer(); compareUi(); seasonChanged(true); });
+compareUi();
 updateLegend();
 loadDatasets().then(() => { loadCandidates(); loadAtlas(); });
 loadHubs().then(() => loadLocal());

@@ -44,6 +44,7 @@
       <span class="pill off" id="cntA" title="Advisories">A 0</span>
     </span>
     <button class="btn ghost sm" id="btnTour" title="A guided two-minute tour for first-time users and judges">Tour</button>
+    <button class="btn ghost sm" id="btnStories" title="Guided stories on real data: the dusty season, comparing layers, Perseverance's detour, sharing a plan">Stories</button>
   </div>
 </header>
 
@@ -81,8 +82,10 @@
               <option value="mean">Mean (risk-neutral)</option>
             </select></label>
           <label><span class="lbl">Dust opacity tau</span>
-            <select id="tau">
-              <option value="0.45">0.45 typical Jezero</option>
+            <select id="tau" title="Dust in the air dims the sunlight: it sets the suits' solar heating (cooling water, warmth in the cold) and the sunlight on the ground shown in the season chart, which the habitat's solar arrays would collect. Seasonal: from 13 Mars years of orbital measurements (Mars Climate Database dust scenarios) at the habitat for the departure date.">
+              <option value="clim50" selected>Seasonal, typical year (median)</option>
+              <option value="clim90">Seasonal, dusty year (90th percentile)</option>
+              <option value="0.45">0.45 fixed (clear season)</option>
               <option value="1.5">1.5 regional dust</option>
               <option value="5">5 global storm (2018)</option>
             </select></label>
@@ -118,6 +121,20 @@
           <button class="btn" id="btnCarry" disabled title="Start from the rates learned on the last EVA flown">Use rates learned on the last EVA</button>
           <p class="note">What the suit and rover report before egress. Capacities and rates scale with it; during the EVA the closed loop keeps learning them from telemetry.</p>
         </details>
+      </section>
+
+      <section class="section" id="seasonSec">
+        <h2>Season, dust and Earth relay</h2>
+        <canvas id="seasonChart" class="season" aria-label="The Mars year at the habitat: dust optical depth and daily sunlight; click to choose the departure season"></canvas>
+        <div id="seasonNote" class="note"></div>
+        <div class="row">
+          <button class="btn" id="btnDayPlay" title="Shadows and sunlight across the departure sol, from sunrise to sunset">Play the sol</button>
+          <button class="btn" id="btnDayGif" title="Record the sol as an animated GIF">Save as GIF</button>
+        </div>
+        <input type="range" id="dayT" min="0" max="1440" step="5" value="540" aria-label="Local time on the departure sol">
+        <div id="dayOut" class="note num"></div>
+        <div id="relayOut" class="note"></div>
+        <p class="note help">Dust: the 10th-90th percentile band and the median of 13 Mars years (MY 24-36, 1999-2022) at the habitat, from the Mars Climate Database dust scenarios (Montabone et al. 2015, 2020); the dashed years had global dust storms. Click the chart to set the departure season. Relay: when the orbiters that carry data to Earth are overhead, modelled from their published orbits (pass rates and the local times of MRO and Odyssey passes are properties of the orbit; exact times need the spacecraft ephemerides).</p>
       </section>
 
       <section class="section" id="landingSec">
@@ -248,7 +265,10 @@
         <h2>Exports</h2>
         <button class="btn" id="btnCue">EVA cue card</button>
         <button class="btn" id="btnGeo">Routes as GeoJSON</button>
-        <p class="note help">The cue card is the paper fallback crews carry (Artemis practice). GeoJSON opens in MMGIS or QGIS.</p>
+        <button class="btn" id="btnTiff" title="The whole site as a georeferenced image with the current layer and the routes (opens in QGIS / ArcGIS)">Map as GeoTIFF</button>
+        <button class="btn" id="btnKmz" title="Routes, stations, habitat, keep-outs and the map layer for Google Earth (Mars mode)">Google Earth (KMZ)</button>
+        <button class="btn" id="btnLink" title="A link that opens this exact plan: site, stations, settings, layer and view">Copy link to this plan</button>
+        <p class="note help">The cue card is the paper fallback crews carry (Artemis practice). GeoJSON opens in MMGIS or QGIS. The GeoTIFF is in the site's own projection (equirectangular on the Mars 2000 sphere); the KMZ opens in Google Earth Pro's Mars view. The link stores the whole plan in the address.</p>
       </section>
       <section class="section">
         <h2>Event log</h2>
@@ -265,6 +285,7 @@
       <button class="btn" id="zoomIn" aria-label="Zoom in">+</button>
       <button class="btn" id="zoomOut" aria-label="Zoom out">&minus;</button>
       <button class="btn" id="zoomFit" aria-label="Fit route">Fit</button>
+      <button class="btn" id="btnMeasure" aria-label="Measure" aria-pressed="false" title="Measure a distance, a climb or an area on the map (M)">RULER</button>
       <button class="btn" id="btn3d" aria-label="3D view" title="3D terrain view of the route">3D</button>
       <button class="btn" id="btnDrive2" aria-label="Drive window" title="Walk or drive the route yourself in a separate first-person window">Drive</button>
       <button class="btn" data-display="visor" aria-label="Crew displays" title="Open the crew displays: helmet visor HUD (rover dashboard and wrist cuff from its menu)">HUD</button>
@@ -303,6 +324,46 @@
       <label><input type="checkbox" id="chkTrav" checked> Perseverance traverse</label>
       <label><input type="checkbox" id="chkLmk"> Landmarks</label>
       <label><input type="checkbox" id="chkAlt" checked> Alternative routes</label>
+      <hr>
+      <div class="lctl">
+        <label class="lbl" for="ovOpacity">Opacity <span id="ovOpacityV" class="num">100 %</span></label>
+        <input type="range" id="ovOpacity" min="10" max="100" step="5" value="100">
+        <label class="lbl" for="ovMin" id="ovMinLbl">Show only above <span id="ovMinV" class="num">off</span></label>
+        <input type="range" id="ovMin" min="0" max="100" step="1" value="0">
+      </div>
+      <hr>
+      <div class="lctl">
+        <label class="lbl" for="cmpSel">Compare with</label>
+        <select id="cmpSel">
+          <option value="">Off</option>
+          <option value="none">Imagery only</option>
+          <option value="hazard">Safety hazard</option>
+          <option value="slope">Slope (walking scale)</option>
+          <option value="sand">Sand bedforms</option>
+          <option value="slip">Wheel-slip risk</option>
+          <option value="shade">Shadows at time</option>
+          <option value="walkback">Walkback time</option>
+          <option value="los">Radio line of sight</option>
+          <option value="sigma">Position error</option>
+          <option value="confidence">Data confidence</option>
+          <option value="landing">Landing safety</option>
+        </select>
+        <div class="seg cmpmode" id="cmpMode" role="group" aria-label="Compare mode">
+          <button class="btn" data-cm="swipe" aria-pressed="true" title="Drag the line">Swipe</button>
+          <button class="btn" data-cm="spy" aria-pressed="false" title="A lens follows the cursor">Spy</button>
+        </div>
+      </div>
+      </div>
+    </div>
+    <div class="measurebox" id="measureBox" hidden role="dialog" aria-label="Measure">
+      <div class="mhead"><b>Measure</b><button class="btn ghost sm" id="mClose" aria-label="Close">×</button></div>
+      <div id="mOut" class="note">Click the map to add points. Double-click or “Finish” to end.</div>
+      <div class="row">
+        <button class="btn sm" id="mUndo">Undo</button>
+        <button class="btn sm" id="mArea" title="Close the shape and give its area">Area</button>
+        <button class="btn sm" id="mDone">Finish</button>
+        <button class="btn sm" id="mStation" title="Add the last point as an EVA station">+ Station</button>
+        <button class="btn sm" id="mClear">Clear</button>
       </div>
     </div>
     <div class="readout" id="readout">Move over the map for terrain details. Click any point for everything known there.</div>

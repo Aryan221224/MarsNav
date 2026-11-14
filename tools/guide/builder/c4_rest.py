@@ -45,7 +45,7 @@ table([["Layer", "Built with"],
         "the science atlas, missions and objectives, space weather, and the lookup of every layer at a point."],
        ["Data pipeline", "Python with numpy, scipy, rasterio / GDAL and Pillow (pipeline/): download with SHA-256 checks, "
         "terrain statistics, hazard layers, imagery, weather fit."],
-       ["Verification", "Node's test runner (65 engine and closed-loop tests), pytest (60 pipeline, downloader, map-streaming, science-atlas and place tests), "
+       ["Verification", "Node's test runner (84 engine, closed-loop and map-tool tests), pytest (74 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests), "
         "validation scripts against Perseverance data, an end-to-end server self-test, and on every change a Windows build that is "
         "started and checked before it is published (GitHub Actions)."]],
       [1.45 * inch, CW - 1.45 * inch])
@@ -284,7 +284,10 @@ bullets(["1 m HiRISE coverage is 75 % of the Jezero operations area with all sev
          "not what a drill will meet. TES mineral and dust values are read back from published colour maps, so they are relative.",
          "<b>Space weather</b> is a stated heuristic on NASA's DONKI records, which see the Sun from Earth's side. The live service "
          "could not be reached from the development network on 28-29 October 2026, so the parser is tested on DONKI's documented "
-         "record shapes. There is no crustal magnetic field layer: no openly licensed global grid was found.",
+         "record shapes. The crustal magnetic field is Mars Global Surveyor's map at 400 km altitude: context, not shielding.",
+         ("<b>Dust by season</b> is a climatology of 13 Mars years, not a forecast; its 10° bins smooth storm peaks that last days. "
+          "The MARCI weather maps are stretched to show storms and clouds, not calibrated, and cover Mars years 28 to 32. "
+          "<b>Earth relay coverage</b> is a model of the orbits, not a pass schedule."),
          "<b>The crew displays</b> take heading from the track, because SUITS telemetry has no compass, and simulate a HUD on a "
          "screen; they have not been tried on a visor.",
          "The Windows program is not code-signed, so Windows asks once before running it on a new PC.",

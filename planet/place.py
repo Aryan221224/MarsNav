@@ -208,6 +208,20 @@ def everything(lon: float, lat: float, crit: str = "hls2", wait_s: float = 4.0) 
     out["water"] = {"ice": D.get("ice"), "grs_h2o_wt": D.get("grs_h2o_wt"), "nearest_ice": datasets.ice_near(lon, lat, 100.0)}
     out["composition"] = {"chem": D.get("chem")}
     out["gravity_anomaly_mgal"] = D.get("gravity_mgal")
+    # dust in the air by season (Mars Climate Database dust scenarios, MY 24-36) at this place's mean pressure
+    try:
+        from . import dust
+        if dust.available():
+            ds = dust.season(lon, lat, env["pressure_pa"] if elev is not None else 610.0, step=10)
+            out["environment"]["dust"] = {**{k: ds[k] for k in ("clearest", "dustiest", "worst_p90", "storm_years", "pressure_pa")},
+                                          "curve": [[r["ls"], r["p10"], r["p50"], r["p90"]] for r in ds["curve"]]}
+    except Exception:  # noqa: BLE001 - a missing product never breaks the place
+        out["environment"]["dust"] = None
+    try:
+        from . import magnetic
+        out["magnetic"] = magnetic.point(lon, lat) if magnetic.available() else None
+    except Exception:  # noqa: BLE001
+        out["magnetic"] = None
     out["installed"] = D.get("installed")
     if features.available():
         out["science"] = {"context": features.context(lon, lat, 100.0), "nearest": features.in_radius(lon, lat, 50.0, None, 12)}

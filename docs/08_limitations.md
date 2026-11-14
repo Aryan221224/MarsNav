@@ -23,7 +23,7 @@ What MarsNav does not do, what it assumes, and what we do not claim.
 - **1 m coverage.** It is 64 % of the Jezero operations area with the four DTMs in the default build. East of 77.47° E it is only 26 %, and three more USGS DTMs (E, N, DL) are fetched optionally to close that gap. Elsewhere the map is 20 m based: boulders and scarps smaller than about 20 m are not in it, and the route cards and cue card say so.
 - **Bedform detection** needs 1 m data. At 20 m the model uses a weak prior with wider uncertainty.
 - **Crater-rim DTMs** have y-parallax striping outside the landing ellipse per USGS; their bedform evidence is halved, not removed.
-- **The climatology** is a harmonic fit to sampled MEDA records (every 15th sol). It gives typical conditions, not a forecast. Dust storms are represented through the τ setting, not predicted.
+- **The climatology** is a harmonic fit to sampled MEDA records (every 15th sol). It gives typical conditions, not a forecast. Dust is taken from the Mars Climate Database dust climatology for the departure season (a typical or a dusty year) or set by hand; storms are not predicted.
 - **Radiation** is the Curiosity RAD surface average; solar particle events are handled as a contingency, not modelled in dose.
 - **The traverse feed** is a snapshot (sol 1980, September 2026). The rover keep-out uses that position.
 
@@ -47,7 +47,14 @@ What MarsNav does not do, what it assumes, and what we do not claim.
 - **Feature catalogues are published surveys** with their own completeness limits (for example, dune fields under about 1 km² are not mapped; gullies were surveyed in CTX over about 85 % of the planet). Absence on the map is not absence on the ground.
 - **Science-objective scores** count catalogued evidence within 100 km; they rank candidates for a first look, they are not a science case.
 - **Mission status** is as reported on 28 October 2026 and changes; time-sensitive entries cite a source.
-- **No crustal magnetic field layer:** no openly licensed global grid was available.
 - **Point-of-view photos are raw rover images** from where the rover stood (Perseverance: at that exact localisation; Curiosity: on sols it stood there all day). They are not calibrated or mosaicked, and the rover's camera is at about 2 m, not a suited crew's eye height.
 - **Mount Sharp boxwork site:** with dead-reckoning-class navigation most of the site is out of reach behind cliff stand-offs; the hub is a forward camp (pressurised rover) because the foothills are no place for a lander. The Monte Grande drill pair stays unreachable: its hollow is ringed by ridge walls that the 10 m map treats as cliffs.
 - **The crew displays** use a BroadcastChannel, so they run in the same browser (or app) as the planner. A display on another device would read the plan uplink (`/api/tss/plan`), which carries the route but not every snapshot.
+
+## Added with the Worldview-style tools (docs/13)
+
+- **Dust is a climatology, not a forecast.** It is built from 13 Mars years (MY 24-36) in 10° Ls bins on a 3° grid (6° for single years), which smooths storm peaks that last days: the MY 28 bin mean at Meridiani is 3.0 where Opportunity measured 4.6 to 5, and 7.4 at Gale in MY 34 where Curiosity measured 8.5.
+- **MARCI weather maps are stretched, not calibrated,** and cover MY 28 (from Ls 132) to MY 32 (to Ls 110). Polar night and gaps between swaths show the dimmed Viking map. Each month needs one download (8 to 15 MB) from Harvard Dataverse.
+- **Relay coverage is a model of the orbits, not a pass schedule.** Pass rates, lengths and the local times of the sun-synchronous orbiters are right; the times on a given sol need the spacecraft ephemerides. Odyssey's local time is assumed; the orbiters' remaining lifetimes and their scheduling are not modelled.
+- **The crustal magnetic field is measured at 400 km altitude.** The surface field is stronger and finer. The layer is context for space weather, not shielding.
+- **Area statistics use the global layers at their own resolution** (1/128° to 3°). For a landing ellipse a few kilometres across, the coarse layers give one value for the whole ellipse.

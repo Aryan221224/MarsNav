@@ -17,6 +17,11 @@ for s in "${SITES[@]}"; do
   python3 pipeline/build_imagery.py --site "$s"
 done
 python3 pipeline/build_clutter.py               # Jezero: 25 cm HiRISE clutter for the robotic scout (reads the mosaic in place, ~2 GB of range requests)
+if [ -n "${GLOBAL_PRODUCTS:-}" ]; then         # the whole-planet products of the Worldview-style tools (docs/13)
+  python3 tools/build_dust.py                   # dust climatology: 13 Mars Climate Database NetCDF files, pinned by SHA-256
+  python3 tools/build_magnetic.py               # MGS crustal magnetic field (USGS grids, README check values asserted)
+  python3 tools/build_marci_index.py            # MARCI daily-map index with coverage (reads 1.2 GB of monthly archives)
+fi
 bash tools/build_app.sh
 python3 -m pytest tests -q
 node --test tests/*.test.mjs

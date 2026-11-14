@@ -34,7 +34,14 @@ GET  /api/objectives                        science objectives
 GET  /api/objective/rank?id=                every candidate site and hub scored for one objective
 GET  /api/objective/eval?lon=&lat=          every objective scored at one place
 GET  /api/spaceweather                      NASA DONKI digest for Mars with an EVA advisory (planet/spaceweather.py)
-POST /api/spaceweather/refresh              -> job (fetch the latest from DONKI)"""
+POST /api/spaceweather/refresh              -> job (fetch the latest from DONKI)
+GET  /api/marci/index                       every MRO MARCI daily global map: [sub, day, Mars year, Ls] (planet/marci.py)
+GET  /api/marci/nearest?my=&ls=             the daily map of that Mars year closest to that season
+GET  /api/marci/status                      months being downloaded (bytes done / total) and the ones on this computer
+POST /api/marci/fetch   {sub}               download one month of maps in the background (15 MB)
+POST /api/stats         {poly, ls}          statistics of every numeric layer inside an area (planet/stats.py)
+GET  /api/dust/season?lon=&lat=&p=          the dust year at a place: percentiles, each Mars year, storm years (planet/dust.py)
+GET  /tiles/img/...&op=0.6                  overlays at a reduced strength"""
 from __future__ import annotations
 
 import json
@@ -172,16 +179,24 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
             from . import datasets
             return _ok({"ok": True, "datasets": datasets.status()})
         if p == "/api/legend":
-            from . import atlas, datasets, features
+            from . import atlas, datasets, dust, features, magnetic
             ov = q.get("ovl", "")
             if ov.startswith("safety"):
                 from . import safety
-                return _ok({"ok": True, "legend": {"title": "Landing safety", "classes": safety.LEGEND}})
-            if ov.startswith("f_"):
-                return _ok({"ok": True, "legend": features.legend(ov)})
-            if ov in atlas.TREK_OVL or ov in atlas.MODEL_OVL:
-                return _ok({"ok": True, "legend": atlas.legend(ov)})
-            return _ok({"ok": True, "legend": datasets.legend(ov)})
+                lg = {"title": "Landing safety", "classes": safety.LEGEND}
+            elif ov.startswith("f_"):
+                lg = features.legend(ov)
+            elif dust.parse_ovl(ov):
+                lg = dust.legend(ov)
+            elif ov == "magnetic":
+                lg = magnetic.legend()
+            elif ov in atlas.TREK_OVL or ov in atlas.MODEL_OVL:
+                lg = atlas.legend(ov)
+            else:
+                lg = datasets.legend(ov)
+            if lg is not None:
+                lg = {**lg, "data_url": data_url(ov)}
+            return _ok({"ok": True, "legend": lg})
         if p == "/api/atlas":
             from . import atlas, datasets
             cat = atlas.catalogue()
@@ -225,6 +240,24 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
             lon, lat = float(q["lon"]), float(q["lat"])
             e = float(megdr.sample16(np.array([lon]), np.array([lat]))[0])
             return _ok({"ok": True, "objectives": [science.evaluate(o["id"], lon, lat, e) for o in science.objectives().get("objectives", [])]})
+        if p == "/api/marci/index":
+            from . import marci
+            ix = marci.index()
+            return _ok({"ok": True, "days": marci.days(), "years": ix.get("years"), "cite": ix.get("cite"), "doi": ix.get("doi"),
+                        "licence": ix.get("licence"), "what": ix.get("what")})
+        if p == "/api/marci/nearest":
+            from . import marci
+            return _ok({"ok": True, "map": marci.nearest(int(q["my"]), float(q["ls"]))})
+        if p == "/api/marci/status":
+            from . import marci
+            ix = marci.index()
+            local = [sub for sub, v in ix.get("subphases", {}).items() if marci.have(sub, v["days"][0][0])]
+            return _ok({"ok": True, **marci.status(), "local": local, "offline": net.blocked(ix.get("download", ""))})
+        if p == "/api/dust/season":
+            from . import dust
+            if not dust.available():
+                return _err("the dust climatology is not installed (tools/build_dust.py)", 404)
+            return _ok({"ok": True, **dust.season(float(q["lon"]), float(q["lat"]), float(q.get("p", 610)), float(q.get("step", 5)))})
         if p == "/api/spaceweather":
             from . import spaceweather
             spaceweather.ensure_fresh()
@@ -275,6 +308,18 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
                 from . import assess
                 pts = [[float(a[0]), float(a[1]), str(a[2]) if len(a) > 2 else ""] for a in data.get("points", [])][:400]
                 return _ok({"ok": True, "results": assess.screen(pts, str(data.get("crit", "hls2")))})
+            if p == "/api/marci/fetch":
+                from . import marci
+                sub = str(data.get("sub", ""))
+                if net.blocked(marci.index()["download"]):
+                    return _err("MARCI maps need the internet (Harvard Dataverse): Mars mode is on or the server does not answer", 409)
+                marci.fetch_async(sub)
+                return _ok({"ok": True, "sub": sub})
+            if p == "/api/stats":
+                from . import stats
+                poly = [[float(a), float(b)] for a, b in data.get("poly", [])]
+                with workers.request(budget=60, cancel=client_gone):
+                    return _ok(stats.polygon_stats(poly, float(data["ls"]) if data.get("ls") is not None else None, int(data.get("n", 1500))))
             if p == "/api/spaceweather/refresh":
                 from . import spaceweather
                 return _ok({"ok": True, "job": jobs.start("spaceweather", spaceweather.refresh)})
@@ -345,7 +390,11 @@ def _tile(p: str, q: dict):
         layer = q.get("layer", "best")
         if layer == "safety":
             layer = f"safety_{q.get('lander', 'human')}"
-        data, final = imagery.tile_bytes_ex(z, y, x, layer, q.get("ovl", ""))
+        try:
+            op = float(q.get("op", 1))
+        except ValueError:
+            op = 1.0
+        data, final = imagery.tile_bytes_ex(z, y, x, layer, q.get("ovl", ""), op)
         return 200, {"Content-Type": "image/jpeg", **_tile_cache(final)}, data
     return _err("unknown tile kind", 404)
 
@@ -458,3 +507,32 @@ def delete_site(site_id: str) -> dict:
     if not removed:
         raise ValueError(f"no site {site_id}")
     return {"ok": True, "id": site_id, "removed": removed}
+
+
+# where the data behind each map layer can be downloaded (the legend's "Get the data" link, Worldview-style hand-off)
+DATA_URLS = {
+    "geology": "https://pubs.usgs.gov/sim/3292/",
+    "ice01": "https://swim.psi.edu/", "ice15": "https://swim.psi.edu/", "ice5": "https://swim.psi.edu/",
+    "craters": "https://craters.sjrdesign.net/",
+    "gcr": "https://doi.org/10.1002/2016JE005206",
+    "tes_plag": "https://trek.nasa.gov/mars/", "tes_cpx": "https://trek.nasa.gov/mars/", "tes_glass": "https://trek.nasa.gov/mars/",
+    "dci": "https://trek.nasa.gov/mars/", "roughness": "https://trek.nasa.gov/mars/",
+}
+
+
+def data_url(ov: str) -> str | None:
+    from . import datasets, dust, magnetic
+    if ov in DATA_URLS:
+        return DATA_URLS[ov]
+    if dust.parse_ovl(ov):
+        return "https://www-mars.lmd.jussieu.fr/mars/dust_climatology/"
+    if ov == "magnetic":
+        try:
+            return magnetic.load()["m"]["url"]
+        except Exception:  # noqa: BLE001
+            return None
+    did = {"ti": "ti", "grs": "grs", "albedo": "albedo", "gravity": "gravity"}.get(ov) or ("grs_el" if ov.startswith("grs_") else None)
+    if did and did in datasets.REGISTRY:
+        f = next(iter(datasets.REGISTRY[did]["files"].values()))
+        return f.rsplit("/", 1)[0] + "/"                    # the PDS / provider folder the app downloads from
+    return None

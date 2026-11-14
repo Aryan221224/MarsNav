@@ -139,6 +139,31 @@ P("In the <b>Traverse</b> tab, add the selected point (and more), choose the tra
   "rover or suited walk) and press <b>Plan traverse</b>. The router finds the least-cost path on the real elevation, coarse "
   "to fine: slopes over the traveller's limit are impassable, and climbing costs more than descending. The result shows "
   "distance, climb, steepest slope, driving time in sols and an elevation profile with over-limit stretches in red.")
+H2("Compare, measure and share")
+P("<b>Compare with</b> (Map layers) puts a second map beside the first: another base map, or the MARCI weather map of another "
+  "Mars year at the same season. <b>Swipe</b> draws a blue line across the globe, the first map on its left and the second on "
+  "its right; drag the line. <b>Spy</b> shows the second map in a lens that follows the pointer. Both keep working as you move "
+  "and zoom.")
+figrow([("w02_compare_years", None, "Swipe: the same season in two Mars years"), ("w03_ruler_stats", None, "Ruler with area statistics")],
+       "Left: Ls 284° on MRO's MARCI daily maps; on 27 July 2007 (MY 28, left of the line) the planet-encircling dust storm hides "
+       "the surface, on 13 June 2009 (MY 29, right) the markings are clear. Right: a 688,000 km² box over Isidis Planitia on the "
+       "2009 map, with the statistics of every layer inside.", height=4.6 * inch)
+P("The <b>ruler</b> (under the zoom controls, or M) measures on the planet: click to add points, double-click or <b>Finish</b> to "
+  "end. It gives the great-circle length of the line and the climb along it from the best elevation in view. <b>Area + "
+  "statistics</b> closes the shape, gives its area on the sphere, and asks for the 10th, 50th and 90th percentile and the maximum "
+  "of every installed layer inside: elevation, slope, surface pressure, cosmic-ray dose, thermal inertia, albedo, water, ice, "
+  "dust at the season and the crustal magnetic field, with the craters inside. While the ruler is on, clicks go to the planet, "
+  "not to the labels. The dossier gives the same statistics for the landing ellipse (Chapter 6).")
+H3("Sharing")
+bullets([("<b>KML</b> (dossier actions) saves the site, the landing ellipse, the 100 km and 5 km zones, the ice target, the traverse "
+          "and your measurements for Google Earth Pro's Mars view."),
+        ("The address in the browser always holds the whole view: position, base map, overlays, the selected place, the season, "
+          "the Mars year, overlay strength and the comparison. Copy it to send exactly what is on screen."),
+        "Each legend ends with <b>Get the data</b>: the page where that layer can be downloaded.",
+        ("<b>STORIES</b> in the top bar opens guided walks on real data: the 2007 global dust storm (clear skies, the planet hidden, "
+          "the same season in a calm year, what it means for a crew), choosing a hub with statistics, and water ice with the "
+          "magnetic field. Each step sets the globe up and explains what is on screen; <b>Back</b>, <b>Next</b> and <b>End</b> move "
+          "through it.")])
 H2("Science layers and keyboard")
 P("Seven datasets are downloaded once (about 300 MB in all) and converted on this computer: SWIM ice consistency (Morgan "
   "et al. 2021, 2025), TES thermal inertia (Putzig & Mellon 2007), Mars Odyssey GRS hydrogen and elements (Boynton et al. "
@@ -152,7 +177,8 @@ table([["Keys", "Action", "Keys", "Action"],
        ["Arrows · Q / E", "pan · turn", "PgUp / PgDn", "tilt"],
        ["N", "north up", "/", "search"],
        ["A", "assess the selection", "L", "map layers"],
-       ["?", "help", "Esc", "close a panel"]], [1.35 * inch, 1.85 * inch, 1.35 * inch, CW - 4.55 * inch], bold_first=True)
+       ["M", "ruler", "Space", "play or stop the animation"],
+       ["?", "help", "Esc", "close a panel, finish a measurement"]], [1.35 * inch, 1.85 * inch, 1.35 * inch, CW - 4.55 * inch], bold_first=True)
 
 # ================================================================== 5. EVERYTHING AT ANY PLACE
 chapter("Everything at any place", "every data layer at one point, anywhere on Mars",
@@ -253,6 +279,34 @@ P("The feature catalogues ship inside the app, built from NASA Mars Trek by <fon
   "they work offline at once. The GRS elements, albedo and gravity install once in the Data tab. The TES mineral, dust and "
   "roughness maps stream from NASA Mars Trek and are kept by Local mode. The atmosphere, dose and sunlight maps are computed "
   "from MOLA elevation and latitude.")
+H2("Seasons: dust, weather maps of past years and the animation")
+P("Mars's weather follows its seasons, given as Ls, the solar longitude: 0° is the northern spring equinox, 90° northern summer, "
+  "180° northern autumn and 270° northern winter. Mars is closest to the Sun near Ls 251°, and roughly Ls 180° to 330° is the "
+  "dust-storm season. The <b>Season</b> slider in Map layers sets Ls for every seasonal layer.")
+table([["Layer", "What it shows", "Source"],
+       ["Dust optical depth (Atmospheric group): median year or dusty year", "How much dust is in the air at that season, as visible optical depth at the local surface pressure. Direct sunlight falls as e^-τ: to 37 % at τ 1 with the Sun overhead, 5 % at τ 3.", "Mars Climate Database dust scenarios, Mars years 24-36 (Montabone et al. 2015, 2020): 10th, 50th and 90th percentiles of each 10° of Ls"],
+       ["MARCI daily weather map (Base imagery)", "The planet as MRO's MARCI camera saw it on one sol, around 3 pm local time: dust storms, water-ice clouds, polar hoods. Choose the Mars year (28 to 32); the season picks the sol.", "Wang & Richardson 2015; Harvard Dataverse, CC0; NASA/JPL-Caltech/MSSS. A month of maps (8 to 15 MB) downloads the first time it is shown"],
+       ["Crustal magnetic field (Geophysical group)", "The radial field of magnetised ancient crust at 400 km altitude, red outward, blue inward; strongest in Terra Cimmeria and Terra Sirenum. Context for space weather, not shielding.", "Mars Global Surveyor MAG/ER (Connerney et al. 2001)"]],
+      [1.6 * inch, CW - 3.4 * inch, 1.8 * inch])
+figure("w01_marci_storm", "The MARCI weather map of 27 July 2007 (MY 28, Ls 284.5°): the global dust storm hides the surface. "
+       "The season box sets the season, the Mars year and the animation step, and dates the map.", width=CW * 0.6)
+P("<b>Play</b> steps through the season: sol by sol on the MARCI map (or 5 or 15 sols at a time), otherwise 5°, 10° or 30° of Ls "
+  "at a time; each step waits for its maps. <b>GIF</b> records 30 steps as an animated GIF, 640 pixels wide, with the date under "
+  "each frame; Space starts and stops the animation. A sol whose map lost orbits (under 60 % of 60° S to 60° N mapped) gives way "
+  "to a neighbouring sol with a full map when there is one within 6°. Where MARCI has no data (polar night, gaps between swaths) "
+  "the Viking map shows through, dimmed.")
+H2("Earth relay coverage and the weather here in past years")
+P("The site dossier adds three sections for every place and assessed site.")
+bullets([("<b>Earth relay coverage</b>: how many passes a sol MRO, Odyssey, TGO and Mars Express make over this latitude, the minutes of "
+          "contact, and for the sun-synchronous orbiters the local times of the passes, modelled from their published orbits. At "
+          "Jezero MRO passes about 2.3 times a sol, between 02:00 and 04:00 and between 14:00 and 16:00 local time, for up to 10 "
+          "minutes; Mars Express's long elliptical orbit gives passes of about two hours. These are properties of the orbits, not a "
+          "schedule. MAVEN is not counted (contact lost in December 2025)."),
+        "<b>Inside the landing ellipse</b> (after Assess): the statistics of every global layer inside the ellipse.",
+        ("<b>Weather here in past years</b>: one button per Mars year opens that year's MARCI map at the current season, centred on "
+          "the place.")])
+figure("w04_dossier_extras", "The three sections at Jezero: relay coverage, statistics inside a human-class lander's ellipse "
+       "(1.8 ha) and the weather of past years.", width=CW * 0.45)
 H2("Science objectives")
 P("The <b>Science</b> tab starts from the question, as the challenge does: choose an objective, then find where to pursue it. "
   "Each objective card says what to look for, why a human on foot changes the answer, example places, what to do at the "

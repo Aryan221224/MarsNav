@@ -71,12 +71,43 @@ def _host(url: str) -> str:
 
 
 def blocked(url: str = "") -> bool:
-    """True when nothing may go out: Mars mode is on, or the last internet check (under 30 s ago) failed."""
+    """True when nothing may go out: Mars mode is on, or the last internet check (under 30 s ago) failed. With a url on a
+    server the check does not cover (Harvard Dataverse for the MARCI maps), that server is asked itself before refusing:
+    the map servers being unreachable does not mean every server is."""
     from . import localmode
     if localmode.offline():
         return True
     with _lock:
-        return _state["online"] is False and time.time() - _state["checked"] < NO_NET_RETRY_S
+        down = _state["online"] is False and time.time() - _state["checked"] < NO_NET_RETRY_S
+    return down and not (url and _host_up(url))
+
+
+_hosts: dict = {}               # host -> (answered, when) for servers outside the map-server probe
+_hosts_busy: set = set()
+
+
+def _host_up(url: str) -> bool:
+    """Did this url's own server answer lately (any HTTP answer counts)? One probe per host at a time; an answer is trusted
+    for 120 s, no answer for NO_NET_RETRY_S. Hosts of the map-server probe are not asked again here."""
+    h = _host(url)
+    if not h or "://" not in url or h in {_host(u) for u in PROBE_URLS}:
+        return False
+    now = time.time()
+    with _lock:
+        ok, when = _hosts.get(h, (None, 0.0))
+        if ok is not None and now - when < (120 if ok else NO_NET_RETRY_S):
+            return ok
+        if h in _hosts_busy:
+            return False                        # being asked by another request: refused until it answers
+        _hosts_busy.add(h)
+    try:
+        ok, _err = _probe_one(f"{url.split('://')[0]}://{h}/", timeout=6)
+    finally:
+        with _lock:
+            _hosts_busy.discard(h)
+    with _lock:
+        _hosts[h] = (ok, time.time())
+    return ok
 
 
 def _guard(url: str) -> None:
@@ -99,7 +130,7 @@ def get(url: str, timeout: float = 30, retries: int = 2, headers: dict | None = 
             req = urllib.request.Request(url, headers={"User-Agent": UA, **(headers or {})})
             with urllib.request.urlopen(req, timeout=timeout, context=_ctx) as r:
                 data = r.read()
-            _mark(True)
+            _mark(True, url=url)
             COUNTERS["fetched"] += 1
             return data
         except urllib.error.HTTPError as e:
@@ -270,7 +301,7 @@ def _download(url: str, dest: Path, progress, expected, timeout, resume, cancel,
                     done += len(b)
                     if progress:
                         progress(done, total)
-        _mark(True)
+        _mark(True, url=url)
         COUNTERS["fetched"] += 1
     except InterruptedError:
         raise
@@ -283,12 +314,18 @@ def _download(url: str, dest: Path, progress, expected, timeout, resume, cancel,
     return dest
 
 
-def _mark(ok: bool, err=None):
-    """Record the outcome of a request. A success proves the internet is up. A failure proves only that one server did not
-    answer (swim.psi.edu or the USGS map service can be down while NASA and USGS data servers are fine), so it does not
-    declare the app offline: it makes the next online() check probe the map servers again instead."""
+def _mark(ok: bool, err=None, url: str = ""):
+    """Record the outcome of a request. A success proves the internet is up, except a success on a server outside the
+    map-server probe while the probe is failing (Harvard Dataverse reachable, the map servers not): that only records
+    that server as up, so the globe does not start asking map servers that do not answer. A failure proves only that one
+    server did not answer (swim.psi.edu or the USGS map service can be down while NASA and USGS data servers are fine),
+    so it does not declare the app offline: it makes the next online() check probe the map servers again instead."""
     with _lock:
         if ok:
+            h = _host(url) if url else ""
+            if h and _state["online"] is False and h not in {_host(u) for u in PROBE_URLS}:
+                _hosts[h] = (True, time.time())
+                return
             _state["online"] = True
             _state["checked"] = time.time()
         else:
