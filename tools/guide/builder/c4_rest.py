@@ -45,7 +45,7 @@ table([["Layer", "Built with"],
         "the science atlas, missions and objectives, space weather, and the lookup of every layer at a point."],
        ["Data pipeline", "Python with numpy, scipy, rasterio / GDAL and Pillow (pipeline/): download with SHA-256 checks, "
         "terrain statistics, hazard layers, imagery, weather fit."],
-       ["Verification", "Node's test runner (84 engine, closed-loop and map-tool tests), pytest (74 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests), "
+       ["Verification", "Node's test runner (85 engine, closed-loop and map-tool tests), pytest (76 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests), "
         "validation scripts against Perseverance data, an end-to-end server self-test, and on every change a Windows build that is "
         "started and checked before it is published (GitHub Actions)."]],
       [1.45 * inch, CW - 1.45 * inch])

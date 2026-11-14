@@ -31,7 +31,7 @@ The five Space Apps judging criteria, and the evidence in this project for each.
 
 - Validated against Perseverance's own records: sun geometry (0.086° over 5,616 samples), terrain registration (0.2 ± 0.4 m), slope vs chassis tilt (r = 0.72), false no-go (2 %), and hazard agreement with JPL's route choices (21 of 30); the same trips as the rover on 45 drives, with what MarsNav still gets wrong reported (`validation/ROVER_CASE_STUDY.md`).
 - The negative result is reported: route geometry does not beat a straight line against the rover's drives.
-- 158 automated tests (84 engine, loop and map tools; 74 pipeline, downloader, map streaming, science atlas, place and map tools), including the planner's safety contract on real terrain, navigation-filter consistency (NEES), estimator convergence, the UDP bridge over real sockets, and exact-vs-heuristic station selection.
+- 161 automated tests (85 engine, loop and map tools; 76 pipeline, downloader, map streaming, science atlas, place and map tools), including the planner's safety contract on real terrain, navigation-filter consistency (NEES), estimator convergence, the UDP bridge over real sockets, and exact-vs-heuristic station selection.
 - A paired 40-EVA campaign with a Wilcoxon test: 0 of 40 reserve dips with the closed loop against 31 of 40 without (p < 0.001), with the science cost reported too.
 - A rebuild from raw data is byte-identical.
 - Every constant is tagged by origin (`[SRC]`, `[CALIB]`, `[ASSUME]`, `[PHYS]`), and the limits are stated (docs/08).
@@ -59,5 +59,6 @@ The challenge statement, point by point (docs/06 has the full trace):
 ## Presentation: how well is it communicated?
 
 - A desktop app with a mission-console display informed by NASA-STD-3001, loaded with real Jezero data and the whole planet in Landing mode. It includes a 3D view that walks the planned route at eye height against the real crater skyline, with the live walk-home margin. There is a one-click demo EVA to the delta front where Perseverance cored Mageik.
-- A 55-page illustrated user guide (`MarsNav_User_Guide.pdf`), a 30-second video script and a 2-minute walkthrough (`submission/demo_script.md`).
+- Laid out like ground software: one convention for each kind of information on every screen (gauges show what is left, one status-marker style, latched alerts marked cleared on every display), operations controls apart from simulator and training controls, the next step always the highlighted button, and one Guide button (quick tour and stories) in the same place in both modules. A scripted check of 23 layout and behaviour rules (no overlaps at 1366, 1600 and 1920 px, dialogs, search, messages) passes.
+- An 86-page illustrated user guide (`MarsNav_User_Guide.pdf`), a 30-second video script and a 2-minute walkthrough (`submission/demo_script.md`).
 - Focused documents: concept of operations, architecture, algorithms, data, verification, traceability, deployment, and limits.

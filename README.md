@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="MarsNav_User_Guide.pdf"><b>User guide (PDF, 55 pages)</b></a> ·
+  <a href="MarsNav_User_Guide.pdf"><b>User guide (PDF, 86 pages)</b></a> ·
   <a href="#run-it">Run it</a> ·
   <a href="#checked-against-perseverance">Validation</a> ·
   <a href="docs/">Technical documents</a>
@@ -92,7 +92,7 @@ Every result is reported, including the one that did not go our way. Figures re-
 | Same trip as the rover | Séítah to the delta front: Perseverance drove 7.1 km over 85 sols; MarsNav planned 3.07 km in under a second (a suited crew: 2.92 km, 1.4 h). Over 45 real drives its routes cross 47 % less mapped sand and 55 % less rocky ground than the rover did, and its speed model reproduces the rover's measured 79.7 m/h (79 m/h) |
 | Reproducibility | A full rebuild from the raw USGS files gives byte-identical layers |
 
-158 automated tests pass: 84 engine, closed-loop and map-tool tests (Node) and 74 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
+161 automated tests pass: 85 engine, closed-loop and map-tool tests (Node) and 76 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests (pytest). The desktop server passes an end-to-end self-test under load, including a first run from an empty data folder. Details: [`validation/REPORT.md`](validation/REPORT.md), [`validation/ROVER_CASE_STUDY.md`](validation/ROVER_CASE_STUDY.md), [`validation/CLOSED_LOOP.md`](validation/CLOSED_LOOP.md), [`docs/05_verification_and_validation.md`](docs/05_verification_and_validation.md).
 
 ## How it works
 
@@ -130,8 +130,8 @@ python tools\smoke_exe.py dist\MarsNav\MarsNav.exe   :: start the built program,
 ```
 
 ```sh
-node --test tests/*.test.mjs          # 84 engine, closed-loop and map-tool tests (Node 20+)
-python -m pytest tests -q             # 74 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests (pip install -r requirements.txt)
+node --test tests/*.test.mjs          # 85 engine, closed-loop and map-tool tests (Node 20+)
+python -m pytest tests -q             # 76 pipeline, downloader, map-streaming, science-atlas, place and map-tool tests (pip install -r requirements.txt)
 node validation/validate.mjs          # validation against Perseverance data (about 30 s)
 node validation/rover_case_study.mjs  # same trips as Perseverance, MarsNav vs the rover (about 15 s)
 node validation/closed_loop_campaign.mjs   # 40 paired closed-loop EVAs (about 70 s)
