@@ -50,7 +50,7 @@ callout("For judges: the two-minute path",
         ["Download <b>MarsNav-Windows.zip</b> from <font name='Plex'>github.com/Aryan221224/MarsNav/releases/latest</font>, "
          "unzip it and double-click <b>MarsNav.exe</b>. From the source folder instead: double-click <b>build_exe.bat</b> once, "
          "then <b>MarsNav.exe</b> (Chapter 2).",
-         "Click <b>Tour</b> in the top bar: a guided, seven-step walkthrough of the EVA planner (Chapter 12).",
+         "Click <b>Guide</b> in the top bar and choose <b>Quick tour</b>: a guided, seven-step walkthrough of the EVA planner (Chapter 12).",
          "Click <b>Landing mode</b> and click anywhere on Mars: every data layer at that point appears (Chapter 5). Then pick "
          "<b>Arcadia Planitia AP-1</b> and press <b>Assess landing site</b> (Chapter 4).",
          "In the <b>Science</b> tab, choose <b>Groundwater and the boxwork of Mount Sharp</b>, the challenge's own example, and "
@@ -177,7 +177,7 @@ table([["Item", "What it is"],
 callout("Keep the folder together", "MarsNav.exe needs the folders next to it. Move or copy the whole MarsNav folder, never "
         "the .exe alone. To remove MarsNav, delete the folder (and the shortcuts if you added them).", "amber")
 H2("Your first ten minutes")
-numbered(["Press <b>Tour</b> in the top bar for a guided walkthrough of the EVA planner.",
+numbered(["Press <b>Guide</b> in the top bar, then <b>Quick tour</b>, for a guided walkthrough of the EVA planner.",
           "Press <b>Plan EVA</b> and compare the five route cards on the right.",
           "Switch to <b>Execute</b>, set the speed to 120x and press <b>Run</b>; then press <b>Suit leak</b> and watch "
           "the warning and the automatic walk-home.",
@@ -200,11 +200,11 @@ table([["#", "Part", "What it shows or does"],
        ["4", "EVA phase", "Plan, Execute and Review."],
        ["5", "Mars clock", "UTC, mission sol, local mean solar time and sun elevation; wider windows also show the season (Ls) and the one-way radio delay to Earth."],
        ["6", "Annunciators", "The EVA phase and telemetry source (PRE-EVA, EVA · SIM TLM, EVA · LIVE TLM, POST-EVA), then the W / C / A counters: warnings, cautions, advisories."],
-       ["7", "Tour", "The guided two-minute walkthrough (Chapter 12)."],
-       ["8", "Left panel", "EVA set-up in Plan, telemetry and controls in Execute, exports and the event log in Review."],
+       ["7", "Guide", "The quick tour (Chapter 12) and the guided stories on real data, in the same place in both modules."],
+       ["8", "Left panel", "EVA set-up in Plan, operations then simulator and training controls in Execute, exports and the event log in Review."],
        ["9", "Map tools", "Zoom, fit the route, 3D view, Drive (the first-person drive window) and HUD (the crew displays, Chapter 10)."],
        ["10", "Layers", "Shows the layer on the map; click it (or press L) for the eleven layers and four overlays."],
-       ["11", "Right panel", "Route cards in Plan, alerts and the closed loop in Execute, validation in Review."],
+       ["11", "Right panel", "Route cards in Plan, alerts and the closed loop in Execute, the after-action summary (planned versus flown), validation and provenance in Review."],
        ["12", "The route", "The selected route in white, alternatives dashed, no-go areas hatched."],
        ["13", "Legend", "What the active layer means and the data it comes from (DERIVED, MODELLED or [ASSUME] tags)."],
        ["14", "Timeline", "Elevation, walk-home margin and sun angle along the route; a cursor follows the crew in Execute."]],

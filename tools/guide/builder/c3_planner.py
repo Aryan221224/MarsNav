@@ -25,8 +25,9 @@ bullets(["<b>Crew mode</b>: suited walk, unpressurised rover with walkback, or r
          "navigation constellation. The position error they imply widens the stand-off from cliffs and keep-out zones.",
          "<b>Suit and rover state</b>: tank fills, battery health, scrubber capacity, the crew's work rate and pace, rover "
          "battery and wheel wear. <b>Use rates learned on the last EVA</b> starts from what the closed loop learned.",
-         "Below the fields: the site's suit-cooling check (pressure against the 7.5 Torr evaporative-cooling limit) and the "
-         "EVA time budget (the EVA limit, or sunset minus 30 minutes)."])
+         "Below the fields, the set-up at a glance, one labelled row each: habitat, departure (sol, local time, UTC, season "
+         "and sun), the time budget (the EVA limit, or sunset minus 30 minutes), suit cooling (OK, or exceeded, then the "
+         "pressure against the 7.5 Torr evaporative-cooling limit) and the atmosphere's dust optical depth."])
 H3("Landing site & hub at site scale")
 P("Choose a lander (Viking, MER, MSL, Mars 2020 with Terrain-Relative Navigation, or a human-class precision lander) and "
   "an approach azimuth. <b>Target on map</b>, <b>Find safest target</b> and <b>Fly the landing</b> run a Monte Carlo of "
@@ -59,9 +60,9 @@ table([["Layer", "What it shows"],
 story.append(CondPageBreak(4.2 * inch))
 H2("Choose stations and the best sortie")
 figrow([("p09_stations", None, "Stations and route order"), ("p10_sortie", None, "Suggest best sortie"),
-        ("p11_ahp", None, "Priorities (AHP)")],
-       "Stations with their tasks and consumables, the exact sortie optimiser, and the AHP priorities with a live "
-       "consistency ratio (CR 0.009: consistent).")
+        ("p11_ahp", None, "Advanced: route priorities")],
+       "Stations with their tasks and consumables, the exact sortie optimiser, and the route priorities (AHP) with a live "
+       "consistency check (the ratio itself is in the tooltip).")
 bullets(["Add stations with <b>+ Add on map</b>, or pick from the curated <b>science and survey targets</b> (including "
          "Perseverance's real sample sites). For each, set the work time, intensity (light, moderate or heavy), tool energy "
          "and any extra oxygen or water; its own budget and the walk-home margin after it update at once.",
@@ -70,8 +71,9 @@ bullets(["Add stations with <b>+ Add on map</b>, or pick from the curated <b>sci
          "holds whatever the end point.",
          "<b>Suggest best sortie</b> finds the best set and order of stations for the time, oxygen and battery budget, "
          "exactly (Held-Karp dynamic programming over every subset, about 35 ms for 15 candidates), ranked by science value.",
-         "<b>Priorities (AHP)</b>: weigh safety, consumables, recoverability, time and science value with pairwise sliders. "
-         "The consistency ratio updates live, so you can see when your own judgements stop being consistent.",
+         "<b>Advanced: route priorities</b> (folded): weigh safety, consumables, recoverability, time and science value with "
+         "pairwise sliders (the Analytic Hierarchy Process). The check below them updates live, so you can see when your own "
+         "judgements contradict each other; the consistency ratio is in its tooltip.",
          "<b>What you'll see · n photos</b> on a station opens the rover's own photographs from that spot (below).",
          "Click any point of the map, outside <b>+ Add on map</b>, for the site's terrain there and every planet-wide layer; "
          "<b>Add as station</b> on that card adds it (Chapter 5)."])
@@ -137,7 +139,8 @@ bullets([("<b>Layers</b>: <b>Opacity</b> lets the imagery show through a layer; 
         ("<b>Map as GeoTIFF</b> saves the map with the current layer and the routes in the site's projection (QGIS, ArcGIS); "
           "<b>Google Earth (KMZ)</b> saves routes, stations, habitat, keep-outs and the layer for Google Earth's Mars view; <b>Copy link "
           "to this plan</b> gives an address that reopens the exact plan."),
-        "<b>Stories</b> (top bar): clear season or dusty season, comparing two layers, Perseverance's detour, and sharing a plan."])
+        "<b>Guide</b> (top bar): after the quick tour, the stories: clear season or dusty season, comparing two layers, "
+        "Perseverance's detour, and sharing a plan."])
 
 # ================================================================== 9. EXECUTE
 chapter("EVA planner: Execute", "flying the Marswalk",
@@ -146,15 +149,15 @@ chapter("EVA planner: Execute", "flying the Marswalk",
         "re-plans from where the crew really is.")
 figure("e05_station", "Execute mode at the first station, at 120x speed: consumables (left), the glance band, the live map, "
        "alerts and the closed loop (right).",
-       marks=[(0.106, 0.151, 1), (0.356, 0.155, 2), (0.608, 0.155, 3), (0.589, 0.243, 4), (0.053, 0.334, 5), (0.178, 0.462, 6), (0.097, 0.555, 7), (0.881, 0.124, 8), (0.803, 0.151, 9), (0.822, 0.330, 10), (0.422, 0.500, 11), (0.453, 0.835, 12)])
+       marks=[(0.106, 0.151, 1), (0.356, 0.155, 2), (0.608, 0.155, 3), (0.589, 0.243, 4), (0.053, 0.334, 5), (0.144, 0.476, 6), (0.165, 0.775, 7), (0.881, 0.124, 8), (0.803, 0.151, 9), (0.822, 0.330, 10), (0.422, 0.500, 11), (0.453, 0.835, 12)])
 table([["#", "Part", "What it shows"],
-       ["1", "Consumables", "Oxygen, CO₂ scrubber, cooling water and battery used; the white tick is what the walk home would need from here."],
+       ["1", "Consumables", "Oxygen, CO₂ scrubber, cooling water and battery left, as on the crew displays; the white tick is what the walk home needs from here."],
        ["2", "Glance band", "Mission elapsed time, walk-home time, position error (2σ) and radio line of sight."],
        ["3", "Walkback margin", "The worst margin along the rest of the route, and oxygen left."],
        ["4", "Mode", "TRAVERSE, STATION or RETURN."],
        ["5", "Telemetry source", "Built-in simulator, live suit telemetry, or you in the 3D drive window."],
-       ["6", "Hidden truth", "What the crew and hardware are really doing. The software is not told; it has to learn it."],
-       ["7", "Run, Pause, Speed", "30x, 120x or 600x, so a four-hour EVA can be shown in minutes."],
+       ["6", "Operations", "Run and Pause (they follow whichever telemetry source is chosen), Drop pin, Return now (arm, then confirm), re-plan from telemetry, and the crew displays."],
+       ["7", "Simulator and training", "Hidden truth (what the simulated crew and hardware really do; the software is not told), speed (30x, 120x or 600x) and fault injection. Folded away and switched off when the source is the live suit or the drive window."],
        ["8", "Annunciators", "EVA phase and telemetry source (here EVA · SIM TLM), then the warning, caution and advisory counters."],
        ["9", "Alerts", "Latching cautions and warnings with the action to take; acknowledge, or silence the tone."],
        ["10", "Closed loop", "Each rate as planned, as learned from telemetry (with its uncertainty) and the hidden truth."],
@@ -165,18 +168,19 @@ H2("Telemetry sources")
 bullets(["<b>Built-in simulator (TSS format)</b>: no setup. Choose a <b>hidden truth</b> (crew working 35 % harder than "
          "modelled, rough going 25 % slower, a suit battery draining 40 % faster, ground softer than mapped) and watch the "
          "closed loop discover it.",
-         "<b>Live suit telemetry</b>: <b>Enable live telemetry</b> and MarsNav looks for a NASA SUITS Telemetry Stream Server "
-         "by itself (Chapter 14). With none on the network, a built-in demo suit flies the plan instead.",
+         "<b>Live suit telemetry</b>: <b>Enable live telemetry</b> (it starts and stops this source) and MarsNav looks for a NASA "
+         "SUITS Telemetry Stream Server by itself (Chapter 14). With none on the network, a built-in demo suit flies the plan "
+         "instead; its own hidden truth and speed sit beside it.",
          "<b>You, in the 3D drive window</b>: walk or drive the route yourself; your movement becomes the telemetry."])
 P("The same EVA can be shown at once on the crew's own displays: <b>Helmet visor</b>, <b>Rover dash</b> and <b>Wrist cuff</b> "
-  "under the telemetry controls, or <b>HUD</b> on the map (Chapter 10).")
+  "under Operations, or <b>HUD</b> on the map (Chapter 10).")
 H2("The closed loop")
 P("The heart of Execute. The engine compares the rates the plan assumed with what telemetry reports: work rate (oxygen "
   "use), cooling water, suit battery, CO₂ loading and walking pace. As the estimates firm up, it re-plans the rest of the "
   "EVA from the crew's real position, shown as a separate <b>re-planned</b> route, before the margin is gone. It waits for "
   "confident estimates unless the walk-home margin is thin or station work is about to start, and it cuts the lowest-value "
   "station short before dropping it.")
-figrow([("e01b_exec_left", None, "Telemetry and controls"), ("e03b_loop_panel", None, "Closed loop"),
+figrow([("e01b_exec_left", None, "Operations, simulator and training"), ("e03b_loop_panel", None, "Closed loop"),
         ("e05b_proc_voice", None, "Station procedure and voice")],
        "The simulated crew is working 35 % harder than modelled. Within minutes the loop has learned the work rate, cooling "
        "water and CO₂ loading (×1.35, ×1.25, ×1.35 against the hidden truth of ×1.35, ×1.25, ×1.35), each with its "
@@ -186,7 +190,7 @@ P("MarsNav follows NASA's three-tier convention: <b>WARNING</b> (red, an immedia
   "<b>CAUTION</b> (amber, a developing problem) and <b>ADVISORY</b> (informational). Every alert has the action to take and "
   "a tone; alerts latch until acknowledged, one press silences the tone, and a critical fault turns the plan into the "
   "walk-home route automatically. <b>Return now</b> is a deliberate two-step action, arm then confirm.")
-P("Inject faults with the buttons under the controls: <b>Suit leak</b>, <b>Cooling</b>, <b>Injury</b>, <b>Dust storm</b>, "
+P("Inject faults (built-in simulator) under <b>Simulator and training</b>: <b>Suit leak</b>, <b>Cooling</b>, <b>Injury</b>, <b>Dust storm</b>, "
   "<b>Solar particle event</b> and <b>Rover failure</b>.")
 figure("e06_leak_return", "A suit leak injected after the station: SUIT PRESSURE DECAY (warning), and the mode switches to "
        "RETURN at once, with 53 % oxygen and a 27 % walk-home margin left; the return route is drawn in red.")
@@ -201,11 +205,12 @@ P("<b>Open 3D drive window</b> (or <b>Drive</b> on the map) opens a first-person
   "Choose <b>Walk</b> (suited) or <b>Rover</b>. W / A / S / D or the arrows move (Shift to hurry), the mouse looks around, "
   "F works at a station, C changes the camera, M zooms the minimap and P hides the panel. Every second of your movement "
   "becomes suit telemetry in TSS format for the main window, which runs its closed loop on it and re-plans live.")
-P("The drive panel sets the hidden truth and the declared checkout, and <b>Live: change consumables now</b> hits the running "
+P("<b>Start EVA</b> sits at the top of the drive panel, with the suit's live consumables under it. Below, the panel sets "
+  "the hidden truth and the declared checkout, and <b>Live: change consumables now</b> hits the running "
   "EVA with a sudden event of 15, 35 or 60 %: O₂ tank loss, battery failure, coolant leak, suit O₂ leak, CO₂ scrubber "
   "degradation, an exertion spike or a rover battery fault. Each reaction of the planner is listed with how long it took.")
-figure("d01_drive", "The 3D drive window: hidden truth, live consumable events and the first-person view of Jezero with the "
-       "route, the next station and the minimap.", crop=(8, 38, 1742, 1067))
+figure("d01_drive", "The 3D drive window before Start EVA: the start button and live consumables, the hidden truth, "
+       "live consumable events and the first-person view of Jezero with the route, the next station and the minimap.", crop=(8, 38, 1742, 1067))
 
 # ================================================================== 10. CREW DISPLAYS
 chapter("Crew displays", "helmet visor, rover dashboard and wrist cuff",
@@ -285,22 +290,24 @@ P("During an EVA the planner sends every layer at the crew's position again afte
 chapter("EVA planner: Review", "after the EVA",
         "Review is the debrief: what was planned against what was flown, every event, the paper fallback, files for other "
         "tools, and the software's own scorecard against real rover data.")
-figure("r01_review", "Review after an EVA cut short by a suit leak: exports and the event log (left), validation on real data (right).")
+figure("r01_review", "Review after an EVA cut short by a suit leak: exports and the event log (left); planned versus flown first, "
+       "then the validation on real data (folded) and the data provenance (right).")
 figrow([("r02b_aar", None, "Planned vs flown"), ("r02c_prov", None, "Data provenance"), ("r02_review_right", None, "Validation on real data")],
        "The after-action comparison (duration, distance, O₂, water, battery, outcome), the provenance of every layer, and the "
-       "validation scorecard against Perseverance.")
-bullets(["<b>After-action</b>: planned versus flown for time, distance and every consumable, and the outcome (here a "
+       "validation scorecard against Perseverance, opened.")
+bullets(["<b>After-action: planned versus flown</b>, at the top: planned versus flown for time, distance and every consumable, and the outcome (here a "
          "contingency return), linked to the re-plans in the event log.",
          "<b>Event log</b>: every alert, re-plan, pin and command with its mission time.",
          "<b>EVA cue card</b>: the paper fallback in the Artemis style, with heading, distance, time, climb, arrival time and "
          "walk-home margin for every leg. <b>Save file</b> saves it for printing; <b>Copy</b> copies it.",
          "<b>Routes as GeoJSON</b>: for MMGIS or QGIS.",
-         "<b>Validation on real data</b> and <b>data provenance</b>: which NASA and USGS products, and which processing, produced each layer."])
+         "<b>Validation on real data</b> (click to open) and <b>data provenance</b>: how the software scores against "
+         "Perseverance's own records, and which NASA and USGS products, and which processing, produced each layer."])
 figure("r04_cue_card", "The EVA cue card: the plan on paper if every display fails.", crop=(338, 203, 1463, 884), width=CW * 0.64)
 
 # ================================================================== 12. TOUR
 chapter("The guided Tour", "seven steps for first-time users and judges",
-        "Press <b>Tour</b> in the top bar at any time. The Tour drives the app itself through a real scenario and explains "
+        "Press <b>Guide</b> in the top bar at any time and choose <b>Quick tour</b>. The Tour drives the app itself through a real scenario and explains "
         "each step in a card; <b>Next</b>, <b>Back</b> and <b>End tour</b> control it.")
 table([["Step", "Title", "What it shows"],
        ["1", "Real Mars, real data", "The live Mars clock (Mars24), and a map built from HiRISE 1 m and CTX 20 m elevation models."],

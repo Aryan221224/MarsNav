@@ -18,11 +18,11 @@ figure("l01_overview", "Landing mode on first opening: 66 candidate sites, scree
               (0.744, 0.888, 13), (0.794, 0.524, 14)])
 table([["#", "Part", "What it does"],
        ["1", "Module switch", "Landing (this page) and EVA planner."],
-       ["2", "Search", "Place names, candidate sites, or coordinates such as 18.4N 77.5E (press / to jump here)."],
+       ["2", "Search", "Place names, candidate sites, or coordinates such as 18.4N 77.5E (press / to jump here). Hubs and candidates appear as you type; IAU place names are added when the server answers."],
        ["3", "Criteria set", "NASA HLS 2015 (Human Landing Sites call) or Starship 2021 (Golombek et al.)."],
        ["4", "Annunciators", "Connection to NASA / USGS, Local mode data on this computer (click to open Local mode), and SCIENCE n/7: how many installable science layers are on this computer."],
        ["5", "Space weather", "SPACE WX: NASA DONKI space weather at Mars, quiet, watch or storm. Click it for the digest (Chapter 6)."],
-       ["6", "Help", "The keyboard shortcuts and how to read the scores."],
+       ["6", "Guide and help", "<b>Guide</b> (left of the mark) opens the stories on real data; <b>?</b> the keyboard shortcuts and how to read the scores."],
        ["7", "Mission", "Lander class and approach azimuth. They set the size and orientation of the landing ellipse."],
        ["8", "Tabs", "Candidates, Science (objectives and missions, Chapter 6), Hubs (sites already built), Traverse (long drives) and Data (science layers, offline download, sources)."],
        ["9", "Screen all candidates", "Re-scores every candidate on global data in a second or two."],
@@ -68,7 +68,8 @@ table([["Criterion", "NASA HLS 2015", "Starship 2021", "Data used"],
        ["Craters", "not in a crater or on a crater wall; few craters within 10 km", "same", "Robbins & Hynek database"]],
       [1.05 * inch, 2.05 * inch, 1.35 * inch, CW - 4.45 * inch])
 H3("The dossier")
-P("Below the verdict, the dossier explains every number, section by section, with its data source:")
+P("Below the verdict, the dossier explains every number, section by section, with its data source. A row of links at its "
+  "top (Criteria, Landing, Water, Environment, Relay, Weather, All data) stays in view and jumps to each part:")
 bullets(["<b>Criteria</b>, grouped (engineering, landing, resources, surface), each with the measured value, the limit and a note.",
          "<b>Landing ellipse</b>: its size and orientation, the share that is safe / caution / hazard / no-go, the class of the "
          "touchdown point and the elevation data under it. If the point is not safe, <b>Move to nearest safe spot</b> fixes it.",
@@ -114,7 +115,9 @@ figure("l05_safety", "The landing-safety overlay for a human-class lander, zoome
        width=CW * 0.86)
 
 H2("Step 4 · Commit the hub")
-P("<b>Set as hub…</b> opens the commit card. It repeats the verdict and asks for the hub's name, the size of the EVA site "
+P("Once a site is assessed, <b>Set as hub…</b> is the highlighted button (for a no-go site it is <b>Move to nearest safe spot</b>, "
+  "if there is safe ground nearby). It opens the commit card right under the dossier's buttons, with the cursor in the name. "
+  "The card repeats the verdict and asks for the hub's name, the size of the EVA site "
   "(6 to 24 km) and the lander. <b>Build hub site</b> then builds a complete EVA site centred on the hub, with the habitat "
   "exactly there. It takes a few minutes and the log shows each step. When it is done, <b>Open … in the EVA planner</b> "
   "takes you to the new site, which also appears in the <b>Hubs</b> tab and on the globe.")
@@ -160,7 +163,7 @@ bullets([("<b>KML</b> (dossier actions) saves the site, the landing ellipse, the
         ("The address in the browser always holds the whole view: position, base map, overlays, the selected place, the season, "
           "the Mars year, overlay strength and the comparison. Copy it to send exactly what is on screen."),
         "Each legend ends with <b>Get the data</b>: the page where that layer can be downloaded.",
-        ("<b>STORIES</b> in the top bar opens guided walks on real data: the 2007 global dust storm (clear skies, the planet hidden, "
+        ("<b>Guide</b> in the top bar opens guided stories on real data: the 2007 global dust storm (clear skies, the planet hidden, "
           "the same season in a calm year, what it means for a crew), choosing a hub with statistics, and water ice with the "
           "magnetic field. Each step sets the globe up and explains what is on screen; <b>Back</b>, <b>Next</b> and <b>End</b> move "
           "through it.")])
@@ -178,7 +181,7 @@ table([["Keys", "Action", "Keys", "Action"],
        ["N", "north up", "/", "search"],
        ["A", "assess the selection", "L", "map layers"],
        ["M", "ruler", "Space", "play or stop the animation"],
-       ["?", "help", "Esc", "close a panel, finish a measurement"]], [1.35 * inch, 1.85 * inch, 1.35 * inch, CW - 4.55 * inch], bold_first=True)
+       ["?", "help", "Esc", "close a dialog (back to its button), finish a measurement"]], [1.35 * inch, 1.85 * inch, 1.35 * inch, CW - 4.55 * inch], bold_first=True)
 
 # ================================================================== 5. EVERYTHING AT ANY PLACE
 chapter("Everything at any place", "every data layer at one point, anywhere on Mars",
@@ -189,8 +192,8 @@ H2("In Landing mode")
 P("Click anywhere on the globe, or pick a candidate. The dossier first shows the quick screen against the criteria set and "
   "the best elevation at the current zoom, then <b>All data at this place</b>: the time there, live, and nine folding "
   "sections, the first four open. They stay below the dossier when you press <b>Assess landing site</b>. "
-  "<b>JSON</b> saves them with the assessment (or alone, before one), and <b>Report</b> prints them; <b>HUD</b> opens the "
-  "crew displays as a survey of the point (Chapter 10).")
+  "<b>JSON</b> saves them with the assessment (or alone, before one), and <b>Report</b> prints them; <b>Crew displays</b> opens the "
+  "helmet visor, rover dashboard and wrist cuff as a survey of the point (Chapter 10).")
 figure("g01_place_full", "A point clicked on the floor of Jezero crater: the quick screen against NASA's 2015 criteria, the "
        "elevation and slope at this zoom, and the start of All data at this place, with the local time and the sun.")
 figrow([("g02_place_time", None, "Time and where"), ("g03_place_env", None, "Survival and ground"),

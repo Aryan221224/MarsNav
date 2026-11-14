@@ -72,7 +72,7 @@ It is a portable Windows desktop app: one folder, one double-click, nothing to i
 
 The first time you open Landing mode the globe streams NASA imagery and elevation; a **Loading map** bar shows the tiles arriving, and the whole-Mars elevation map (33 MB) downloads once in the background. Everything is cached on this computer, so later visits are fast.
 
-No Python, no installer and no admin rights are needed. The window uses Microsoft Edge WebView2, which is part of Windows 10 and 11. For a two-minute tour, press **Tour** in the top bar; the [user guide](MarsNav_User_Guide.pdf) walks through every feature with screenshots.
+No Python, no installer and no admin rights are needed. The window uses Microsoft Edge WebView2, which is part of Windows 10 and 11. For a two-minute tour, press **Guide** in the top bar, then **Quick tour**; the [user guide](MarsNav_User_Guide.pdf) walks through every feature with screenshots.
 
 **Any OS, EVA planner only:** `python3 -m http.server 8765 --directory app`, then open `http://localhost:8765`.
 

@@ -17,7 +17,7 @@ The 2026 challenge lists NASA Worldview among its resources. Worldview is an Ear
 | **Exports** | KML of the site, landing ellipse, zones, ice target, traverse and measurements (Google Earth, Mars view); GIF | GeoTIFF of the map in the site's projection; KMZ with the routes, stations and map overlay; GIF | Taking the plan into GIS tools and Google Earth |
 | **Links with the full state** | The view, base map, overlays, selected place, season, Mars year, overlay strength and comparison | The site, plan settings, overlay, comparison and selected route | Sending exactly what is on screen to a colleague |
 | **Data links** | "Get the data" in each legend | | Where each layer can be downloaded |
-| **Stories** | The 2007 global dust storm; choosing a hub with statistics; water ice and the magnetic field | Dust and the plan; comparing layers; a detour; sharing a plan | A guided walk through the tools on real data |
+| **Stories** (the **Guide** button) | The 2007 global dust storm; choosing a hub with statistics; water ice and the magnetic field | Dust and the plan; comparing layers; a detour; sharing a plan | A guided walk through the tools on real data |
 
 ## Data sources
 
