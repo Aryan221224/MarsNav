@@ -195,7 +195,7 @@
         <p class="note help">Bar = what is left. White tick = what the walk home needs from here, as on the crew displays. Margins include the planning reserve.</p>
       </section>
       <section class="section">
-        <h2>Telemetry</h2>
+        <h2>Operations</h2>
         <div class="row">
           <label style="flex:1"><span class="lbl">Source</span>
             <select id="telSrc">
@@ -208,21 +208,11 @@
           <button class="btn" id="btnDrive" title="Open a separate first-person 3D window: walk or drive the route yourself; your movement is the telemetry">Open 3D drive window</button>
         </div>
         <p class="note" id="driveStatus" hidden></p>
-        <div class="lbl" style="margin-top:6px">Crew displays (the same EVA, live)</div>
-        <div class="row displays">
-          <button class="btn" data-display="visor" title="Heads-up display projected on the helmet visor: heading, steering cue, walk-home margin, consumables, alerts">Helmet visor</button>
-          <button class="btn" data-display="rover" title="Rover dashboard: speed, heading, slope ahead, battery and range, route map, alerts">Rover dash</button>
-          <button class="btn" data-display="cuff" title="Wrist cuff tablet: next stop with the rover's photo, procedure checklist, big consumables, acknowledge / pin / return">Wrist cuff</button>
-        </div>
-        <div class="row" id="simOpts">
-          <label style="flex:1"><span class="lbl">Hidden truth (the software is not told)</span>
-            <select id="truthSel"></select></label>
-        </div>
         <div id="liveOpts" hidden>
           <div class="row">
             <label style="flex:2"><span class="lbl">Suit telemetry from</span>
               <select id="tssMode">
-                <option value="auto" selected>Automatic: find a NASA SUITS TSS, else the demo suit</option>
+                <option value="auto" selected title="Find a NASA SUITS telemetry server (this computer, then the network); if there is none, use the built-in demo suit">Automatic: TSS, else demo suit</option>
                 <option value="addr">A TSS at a specific address</option>
                 <option value="demo">Demo suit (built in, no hardware)</option>
               </select></label>
@@ -232,31 +222,50 @@
             <label style="flex:1"><span class="lbl">TSS address (IP or IP:port)</span><input id="tssAddr" type="text" placeholder="192.168.1.20:14141" spellcheck="false"></label>
           </div>
           <div class="row" id="demoRow">
-            <label style="flex:1"><span class="lbl">Demo suit: hidden truth (the planner is not told)</span><select id="demoTruth"></select></label>
+            <label style="flex:1" title="What the demo suit really does. The planner is not told: it has to learn it from the telemetry."><span class="lbl">Demo suit: hidden truth</span><select id="demoTruth"></select></label>
+            <label style="flex:0 0 84px"><span class="lbl">Speed</span><select id="demoSpeed"><option value="30">30x</option><option value="120" selected>120x</option><option value="600">600x</option></select></label>
           </div>
           <div class="row"><button class="btn primary" id="btnLive">Enable live telemetry</button></div>
           <p class="note" id="liveStatus">Press Enable. The app finds the telemetry server by itself (this computer, then your network) and falls back to a built-in demo suit if there is none. Nothing to install or start.</p>
         </div>
-        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="chkReplan" checked> Re-plan automatically from telemetry</label>
-        <div class="row">
-          <button class="btn primary" id="btnRun">Run</button>
+        <div class="row" id="runRow">
+          <button class="btn primary" id="btnRun" title="Start following the telemetry: the simulator, the live suit or the drive window">Run</button>
           <button class="btn" id="btnPause">Pause</button>
-          <label style="flex:1" id="speedBox"><span class="lbl">Speed</span>
-            <select id="simSpeed"><option value="30">30x</option><option value="120" selected>120x</option><option value="600">600x</option></select></label>
         </div>
         <div class="row">
           <button class="btn" id="btnPin" title="Drop a pin at your estimated position">Drop pin</button>
           <button class="btn danger" id="btnAbort" title="Two-step: arm, then confirm">Return now</button>
         </div>
-        <h2 style="margin-top:6px">Inject a fault</h2>
-        <div class="faults">
-          <button class="btn" data-fault="leak">Suit leak</button>
-          <button class="btn" data-fault="cooling">Cooling</button>
-          <button class="btn" data-fault="injury">Injury</button>
-          <button class="btn" data-fault="dust">Dust storm</button>
-          <button class="btn" data-fault="spe">Solar particle event</button>
-          <button class="btn" data-fault="rover">Rover failure</button>
+        <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="chkReplan" checked> Re-plan automatically from telemetry</label>
+        <div class="lbl" style="margin-top:6px">Crew displays (the same EVA, live)</div>
+        <div class="row displays">
+          <button class="btn" data-display="visor" title="Heads-up display projected on the helmet visor: heading, steering cue, walk-home margin, consumables, alerts">Helmet visor</button>
+          <button class="btn" data-display="rover" title="Rover dashboard: speed, heading, slope ahead, battery and range, route map, alerts">Rover dash</button>
+          <button class="btn" data-display="cuff" title="Wrist cuff tablet: next stop with the rover's photo, procedure checklist, big consumables, acknowledge / pin / return">Wrist cuff</button>
         </div>
+      </section>
+      <section class="section">
+        <details class="simgroup" id="simGroup" open>
+          <summary><h2>Simulator and training</h2></summary>
+          <p class="note" id="simGroupNote" hidden></p>
+          <div class="row" id="simOpts">
+            <label style="flex:1"><span class="lbl">Hidden truth (the software is not told)</span>
+              <select id="truthSel"></select></label>
+          </div>
+          <div class="row">
+            <label style="flex:1" id="speedBox"><span class="lbl">Speed</span>
+              <select id="simSpeed"><option value="30">30x</option><option value="120" selected>120x</option><option value="600">600x</option></select></label>
+          </div>
+          <div class="lbl" style="margin-top:6px">Inject a fault</div>
+          <div class="faults">
+            <button class="btn" data-fault="leak">Suit leak</button>
+            <button class="btn" data-fault="cooling">Cooling</button>
+            <button class="btn" data-fault="injury">Injury</button>
+            <button class="btn" data-fault="dust">Dust storm</button>
+            <button class="btn" data-fault="spe">Solar particle event</button>
+            <button class="btn" data-fault="rover">Rover failure</button>
+          </div>
+        </details>
       </section>
     </div>
 

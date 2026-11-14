@@ -760,11 +760,23 @@ function bindUI() {
     await runSetup();
     $("planMsg").textContent = `Using learned rates: work x${c.met.toFixed(2)}, pace x${c.speed.toFixed(2)}, water x${c.water.toFixed(2)}. Re-plan to apply.`;
   });
+  // the simulator and training group (hidden truth, speed, fault injection) only acts on the built-in simulator:
+  // with any other telemetry source it is folded away and switched off, and says why
+  const simGroupUi = () => {
+    const src = $("telSrc").value, sim = src === "sim";
+    const g = $("simGroup");
+    g.querySelectorAll("select, button, input").forEach((e) => { e.disabled = !sim; });
+    g.classList.toggle("off", !sim);
+    g.open = sim;
+    $("simGroupNote").hidden = sim;
+    $("simGroupNote").textContent = src === "live"
+      ? "Off: the source is the live suit. The demo suit has its own hidden truth and speed under Operations."
+      : "Off: the source is the 3D drive window, which has its own hidden truth and fault controls.";
+  };
   $("telSrc").addEventListener("change", () => {
-    const live = $("telSrc").value === "live" || $("telSrc").value === "drive";
-    $("simOpts").hidden = live;
     $("liveOpts").hidden = $("telSrc").value !== "live";
-    $("speedBox").hidden = live;
+    $("runRow").hidden = $("telSrc").value === "live"; // live: "Enable live telemetry" starts and stops
+    simGroupUi();
     runSim(false);
     state.sim = null;
     setMode(state.mode);
@@ -855,6 +867,7 @@ function bindUI() {
   $("demoTruth").addEventListener("change", () => { if (state.sim?.demo) { runSim(false); state.sim = null; } });
   try { const a = localStorage.getItem("mm-tss-addr"); if (a) $("tssAddr").value = a; } catch { /* storage unavailable */ }
   tssModeUi();
+  simGroupUi();
   $("btnPause").addEventListener("click", () => runSim(false));
   document.querySelectorAll("[data-fault]").forEach((b) => b.addEventListener("click", async () => {
     if (!state.sim) await startSim();
@@ -1351,12 +1364,11 @@ async function startDemo() {
   state.sim.snap = snap;
   state.sim.demo = true;
   onSnap(snap);
-  $("speedBox").hidden = false;
   state.demoTimer = setInterval(async () => {
     if (state.liveBusy || !state.sim?.running) return;
     state.liveBusy = true;
     try {
-      const dt = parseFloat($("simSpeed").value) * 0.5;
+      const dt = parseFloat($("demoSpeed").value) * 0.5;
       const s2 = await call("demoTick", { dt });
       if (!state.sim) return;
       onSnap(s2);
