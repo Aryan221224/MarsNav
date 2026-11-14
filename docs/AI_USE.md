@@ -12,7 +12,7 @@ We used AI tools the way a modern engineering team does: to move faster, while e
 | Tests and validation (`tests/`, `validation/`) | Helped write test and validation code | Chose what to test against (Perseverance's records, NASA's TSS2027 server) and checked the results |
 | Documents (`README.md`, `docs/`, `submission/`, the user guide) | Helped draft and edit text from our results | Checked every statement against the code and data |
 | Demo video (`submission/video/`) | The AI assistant wrote the capture, 3D device-model, compositing and audio scripts and assembled the cut | Wrote and approved the script and every claim in it; the footage is the running app, the numbers come from `validation/results/`, and the music is synthesised by `make_audio.py` (no samples and no AI audio). The video has no narration: the story is in on-screen headlines with English subtitles |
-| Logo (`app/logo-*.png`, `app/icon-256.png`, `app/favicon-64.png`) | Created with an AI image generator | Chose the design; every logo image carries a visible "AI-generated" watermark (the 64 px favicon and the Windows program icon are too small to carry it) |
+| Logo (`app/logo-*.png`, `app/icon-256.png`, `app/favicon-64.png`) | Created with an AI image generator | Chose the design. The logo images carry no watermark; this file, the README, the submission write-up and the demo video's end card say that the logo is AI-generated |
 
 All source files in this repository should be treated as AI-assisted.
 

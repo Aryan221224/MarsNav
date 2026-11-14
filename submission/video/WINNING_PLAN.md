@@ -210,7 +210,7 @@ against Perseverance.
 - [ ] Upload `marsnav_en.srt` too
 - [ ] The repository is public and `main` holds this video and the latest code
 - [ ] The Windows release link works
-- [ ] There are no NASA or Space Apps logos (only the watermarked MarsNav logo)
+- [ ] There are no NASA or Space Apps logos (only the MarsNav logo, identified as AI-generated in the footer)
 - [ ] The AI-use description in the submission covers the video: AI-assisted edit, illustrations, voice if AI
 - [ ] Every number on screen matches `validation/results/`
 

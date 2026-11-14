@@ -149,10 +149,10 @@ Yes. (The guide calls these tools Super Intelligence, SI; this answer is collect
 
 - **Software development.** We used an AI coding assistant (Anthropic's Claude) to help write, refactor, test and debug code to our design. The team designed the system, chose the methods and data, set the safety rules, and reviewed and tested every change. The repository acknowledges the AI-assisted code in `docs/AI_USE.md`, linked from the README.
 - **Documentation.** The assistant helped draft and edit the README, the technical documents, the user guide and this submission from our results; we checked every statement against the code and data.
-- **Logo.** The MarsNav logo was created with an AI image generator and carries a visible "AI-generated" watermark.
+- **Logo.** The MarsNav logo was created with an AI image generator (stated here, in the README, in `docs/AI_USE.md` and on the demo video's end card).
 - **Demo video.** The AI assistant scripted the captures of the running app, the 3D device models and the edit; the music is synthesised by our own script (no samples, no AI audio); the video has no narration (the story is told in on-screen headlines, with English subtitles), and its end card states that the illustrations and logo were made with AI assistance.
 - **Not AI-generated.** All data is real NASA, ESA and USGS mission data, downloaded from its source with recorded checksums. Every number in this submission comes from running our code on that data and can be reproduced with the scripts in `validation/`. Screenshots are captures of the running app. No AI-generated content uses NASA branding.
-- **Where the SI indicators are.** Code and data: `docs/AI_USE.md` (linked from the README) and the AI co-author line in the commit history. Images: the AI-generated logo carries a visible "AI-generated" watermark. Video: the end card says the illustrations and logo were made with AI assistance.
+- **Where the SI indicators are.** Code and data: `docs/AI_USE.md` (linked from the README) and the AI co-author line in the commit history. Logo: identified as AI-generated in this text, the README and `docs/AI_USE.md`. Video: the end card says the illustrations and logo were made with AI assistance.
 
 ## NASA Data
 

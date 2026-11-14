@@ -17,7 +17,7 @@ Everything on screen is the running app or the repository's own validation outpu
 | 16.8–20.3 s | Fly: one EVA on the habitat workstation, the rover's dashboard, the visor and the wrist cuff; at the suit leak all four turn home | The planner and crew displays captured in lockstep (`capture_eva.mjs`), on 3D models built in `devices.html` |
 | 20.3–24.5 s | Proof: Perseverance's real 7.15 km, 85-sol route, then MarsNav's 2.92 km, 84-minute crew route | `validation/results/rover_case_study.json` over the app's 2 m HiRISE relief tiles |
 | 24.5–27.7 s | Benchmark: the same 40 simulated EVAs with hidden surprises, on a fixed plan and with MarsNav; a bar per walk for the lowest oxygen, water or battery left against the emergency reserve (31 of 40 against 0 of 40 ate into it), then three tiles: RETURN NOW alarms 31 → 0, closest call −41% → +3%, science done without touching the reserve 2.2× | `validation/results/closed_loop.json` |
-| 27.7–29.5 s | End card: logo, tagline, repository, the NASA data it is built on | Watermarked AI-generated logo; no NASA or Space Apps logos |
+| 27.7–29.5 s | End card: logo, tagline, repository, the NASA data it is built on | AI-generated logo (the end card's footer says so); no NASA or Space Apps logos |
 
 ## Narration
 
