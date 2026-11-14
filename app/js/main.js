@@ -903,8 +903,9 @@ function bindUI() {
   // review
   $("btnCue").addEventListener("click", cueCard);
   $("btnGeo").addEventListener("click", geoJSON);
-  $("modalClose").addEventListener("click", () => { $("modal").hidden = true; });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("modal").hidden = true; });
+  // as in Landing mode: the close button or Escape closes the dialog and the focus goes back to what opened it
+  $("modalClose").addEventListener("click", closeModal);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 }
 
 async function optimise() {
@@ -1696,7 +1697,15 @@ async function geoJSON() {
   openModal("Routes (GeoJSON)", `<textarea readonly id="gjText">${txt.replace(/</g, "&lt;")}</textarea>`, txt, "martian_map_routes.geojson", "application/geo+json");
 }
 
+function closeModal() {
+  if ($("modal").hidden) return;
+  $("modal").hidden = true;
+  const o = state.modalOpener;
+  state.modalOpener = null;
+  if (o?.isConnected && o.focus) o.focus({ preventScroll: true });
+}
 function openModal(title, bodyHTML, text, filename, mime) {
+  if ($("modal").hidden) state.modalOpener = document.activeElement;
   $("modalTitle").textContent = title;
   $("modalBody").innerHTML = bodyHTML;
   $("modal").hidden = false;

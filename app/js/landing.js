@@ -1832,6 +1832,7 @@ async function runSearch(submit = false) {
   if (ll) {
     box.innerHTML = "";
     const b = document.createElement("button");
+    b.type = "button";                                // inside the search form: a pick must not submit it again
     b.innerHTML = `Go to ${fmtLL(ll.lat, ll.lon, 4)}<small>latitude, longitude (east-positive)</small>`;
     b.onclick = () => { box.hidden = true; flyTo(ll.lon, ll.lat, 300); selectPoint(ll.lon, ll.lat); };
     box.appendChild(b); box.hidden = false;
@@ -1845,7 +1846,7 @@ async function runSearch(submit = false) {
   // when they arrive, with a "searching" row meanwhile
   box.innerHTML = "";
   const group = (title) => { const d = document.createElement("div"); d.className = "grp"; d.textContent = title; box.appendChild(d); return d; };
-  const item = (html, fn) => { const b = document.createElement("button"); b.innerHTML = html; b.onclick = () => { box.hidden = true; fn(); }; box.appendChild(b); return b; };
+  const item = (html, fn) => { const b = document.createElement("button"); b.type = "button"; b.innerHTML = html; b.onclick = () => { box.hidden = true; fn(); }; box.appendChild(b); return b; };
   if (hubs.length) { group("Hubs"); for (const s of hubs) item(`▲ ${esc(s.name || s.id)}<small>built EVA site</small>`, () => openCandidate({ id: `hub:${s.id}`, siteId: s.id, kind: "hub", name: s.name || s.id, lon: s.center.lon, lat: s.center.lat })); }
   if (local.length) { group("Candidate sites"); for (const c of local) item(`${esc(c.name)}<small>${TAG[c.kind]} · ${fmtLL(c.lat, c.lon, 1)}${c.proposer ? ` · ${esc(c.proposer)}` : ""}</small>`, () => { $("searchIn").value = c.name; openCandidate(c); }); }
   const wait = document.createElement("div");
@@ -1855,7 +1856,7 @@ async function runSearch(submit = false) {
   box.hidden = false;
   let iau = [];
   try { iau = (await api(`/api/search?q=${encodeURIComponent(q)}&limit=12`)).results; } catch { /* names offline */ }
-  if (seq !== searchSeq) return;
+  if (seq !== searchSeq || box.hidden) return;        // a newer search, or the list was closed (a pick, Esc, a click away)
   wait.remove();
   if (iau.length) {
     group("IAU place names");
