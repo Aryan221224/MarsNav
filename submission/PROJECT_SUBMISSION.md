@@ -10,13 +10,11 @@ MarsNav
 
 ## High-Level Project Summary
 
-The first astronauts on Mars will walk with no GPS, 3 to 22 light-minutes from help, carrying a fixed supply of oxygen, water and battery across ground that has already trapped a rover. MarsNav is crew mission software, built to run on whatever computer the mission carries (a habitat station, a rover or a suit display), and it answers the two questions every crew will ask: **where do we land and live, and which way do we walk, and can we always get home?**
+On Mars there is no GPS, help can be 22 light-minutes away, and a suit carries a fixed supply of oxygen, water and battery. MarsNav is crew mission software that answers the questions the first Mars crews will ask: where do we land and live, which way do we walk, and can we always get home?
 
-Landing mode screens 66 candidate sites anywhere on Mars against NASA's human landing-site criteria, on live NASA and USGS data, and turns the chosen site into a full EVA site. The EVA planner reads the ground the way a boot meets it, from 1 m HiRISE elevation models, applies hard safety limits before it optimises anything, and plans five named routes on which every step keeps a walk home. During the EVA it reads suit telemetry in NASA's SUITS format, learns how hard the crew is really working, and re-plans before the margin runs out.
+Landing mode screens 66 candidate sites against NASA's human landing-site criteria on live NASA and USGS data, and turns the chosen site into a full EVA site. The EVA planner reads 1 m HiRISE terrain the way a boot meets it, applies hard safety limits before it optimises anything, and plans five named routes on which every step keeps a walk home. During the EVA it reads suit telemetry in NASA's SUITS format, learns how hard the crew is really working, and re-plans before the margin runs out. The same EVA appears on a habitat console, a helmet-visor display, a rover dashboard and a wrist cuff.
 
-A whole-Mars science atlas (minerals, chemistry, gravity, ice, present-day activity, air, radiation, sunlight) and seven science objectives rank where on Mars to go and why; NASA's space-weather database warns of radiation storms; and the same EVA runs on a helmet-visor HUD, a rover dashboard and a wrist cuff that shows the rover's own photograph of the next stop. The challenge's own example, Curiosity's boxwork on Mount Sharp, is a full EVA site.
-
-It is checked against Perseverance's own records, including a result that did not go our way. In 40 paired simulated EVAs it kept every crew out of their reserve (0 of 40, against 31 of 40 flying the filed plan). It runs fully offline, as it must on Mars.
+It is checked against Perseverance's own drives. In 40 simulated EVAs with hidden surprises, no MarsNav crew touched its emergency reserve (31 of 40 did on the fixed plan). It runs fully offline, as it must on Mars.
 
 ## Link to Project Demo
 
