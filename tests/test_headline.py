@@ -70,3 +70,5 @@ def test_documented_test_counts_match_the_suites():
         assert f"{node + py} automated tests" in t, f"{name}: total should be {node + py}"
         assert f"{node} engine" in t, f"{name}: Node count should be {node}"
         assert f"{py} pipeline" in t, f"{name}: pytest count should be {py}"
+    # the README's test badge too
+    assert f"tests-{node + py}%20passing" in docs["README.md"].read_text(), f"README badge should say {node + py}"

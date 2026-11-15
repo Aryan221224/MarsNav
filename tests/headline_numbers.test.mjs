@@ -73,3 +73,11 @@ test("the submission texts quote the same validation counts", () => {
     assert.ok(DOCS.vv.includes(s), `docs/05 is missing: ${s}`);
   }
 });
+
+test("every picture and local link in the README exists in the repository", () => {
+  const refs = [...DOCS.readme.matchAll(/(?:src|href)="([^"#]+)"|\]\(([^)#\s]+)\)/g)].map((m) => m[1] || m[2])
+    .filter((u) => !/^(https?:|mailto:)/.test(u));
+  assert.ok(refs.length > 20);
+  for (const u of refs) assert.ok(fs.existsSync(path.join(ROOT, decodeURIComponent(u))), `README points at a missing file: ${u}`);
+});
+
