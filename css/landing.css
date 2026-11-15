@@ -83,6 +83,17 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .chip { background: var(--bg); border: 1px solid var(--line-2); color: var(--text-dim); border-radius: 99px; padding: 3px 10px; cursor: pointer; font-size: 13px; }
 .chip b { font-family: var(--font-data); font-weight: 500; color: var(--text-faint); margin-left: 3px; }
 .chip.on { border-color: var(--accent); color: var(--text); background: #d8a57a1f; }
+.matbox { margin: 8px 0 4px; border: 1px solid var(--line-2); border-radius: 6px; padding: 6px 10px; background: var(--bg); }
+.matbox summary { cursor: pointer; list-style-position: inside; }
+.matbox summary .hint { font-size: 12px; }
+.matrow { margin-top: 8px; align-items: center; gap: 6px; }
+.matgroups .mg { margin-top: 8px; }
+.matgroups .mg > .lbl { display: block; margin-bottom: 4px; font-size: 11px; }
+.chip.mat b { color: var(--text-faint); }
+.chip.mat.none { opacity: .45; }
+.mats { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.mats .mt { font-size: 11px; padding: 1px 6px; border-radius: 99px; border: 1px solid var(--line-2); color: var(--text-dim); white-space: nowrap; }
+.mats .mt.hit { border-color: var(--accent); color: var(--text); }
 
 .list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .list li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 7px 9px; border: 1px solid transparent; border-radius: var(--r); cursor: pointer; }
@@ -408,3 +419,11 @@ table.stat td:first-child { white-space: normal; color: var(--text-dim); }
 @media (max-width: 760px) {
   #measureL { right: 56px; left: 12px; width: auto; }
 }
+
+.rp { border-top: 1px solid var(--line); padding: 6px 0; }
+.rp summary { cursor: pointer; }
+.rp summary small { color: var(--text-faint); margin-left: 4px; }
+.rp p { margin: 2px 0 6px; color: var(--text-dim); font-size: 13px; }
+.rp .q { color: var(--text); font-style: italic; }
+.rp .lbl { margin-top: 6px; display: block; }
+.rp ul.ev { margin: 2px 0 6px 16px; padding: 0; font-size: 13px; color: var(--text-dim); }

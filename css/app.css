@@ -331,3 +331,10 @@ ul.relay li { margin: 2px 0; }
 .btn.story { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; text-align: left; }
 .btn.story span { color: var(--text-dim); font-size: 13px; }
 .btn.story.first { border-color: var(--accent); } /* the guide's suggested start: the quick tour */
+
+/* science around a stop (planner target list) */
+details.sci { margin-top: 3px; }
+details.sci summary { cursor: pointer; font-size: 12px; display: flex; flex-wrap: wrap; gap: 4px; list-style: none; }
+details.sci summary::-webkit-details-marker { display: none; }
+.sci-m { font-size: 11px; padding: 0 6px; border: 1px solid var(--line-2, #2a3644); border-radius: 99px; color: var(--text-dim, #9aa6b2); white-space: nowrap; }
+details.sci[open] .sci-m { border-color: var(--accent, #d8a57a); color: var(--text, #f2f5f8); }

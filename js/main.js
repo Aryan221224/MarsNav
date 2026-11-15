@@ -98,6 +98,8 @@ async function boot() {
     state.pov = state.siteEntry?.pov ? await fetch(new URL("pov.json", DATA)).then((r) => (r.ok ? r.json() : null)).catch(() => null) : null;
     const meta = await call("init", { base: DATA });
     state.meta = meta;
+    // science around each stop (data/<site>/science.json, built by tools/build_site_science.py; optional)
+    fetch(new URL("science.json", DATA)).then((r) => (r.ok ? r.json() : null)).then((sc) => { state.science = sc; if (state.meta) { buildTargets(); renderStations(); } }).catch(() => { state.science = null; });
     if (meta.projection?.lat_ts != null) setProjection(meta.projection.lat_ts, meta.projection.clon ?? 0);
     state.site = meta.site;
     state.clock = meta.site.clock ? missionClock(meta.site.clock) : M2020_CLOCK;
@@ -447,6 +449,7 @@ function renderStations() {
           · water <input type="number" min="0" max="2000" step="10" value="${s.extraWaterG || 0}" data-f="extraWaterG" style="width:58px;padding:2px 4px"> g</div>
         <div class="note">Stated for the full work time: tool and instrument energy from the suit battery, O₂ for a purge, water for sample handling.</div></details>
       <div class="meta sb" id="sb${k}">${s.budget ? stationBudgetText(s.budget) : ""}</div>
+      ${stopScience(s.id)}
       ${povOf(s).length ? `<button class="btn sm pov" data-pov="${k}" title="The rover's own photographs from this spot">What you'll see · ${povOf(s).length} photos</button>` : ""}</div>
       <div class="ord"><button aria-label="Visit earlier" title="Visit earlier" data-up="${k}">&uarr;</button><button aria-label="Visit later" title="Visit later" data-dn="${k}">&darr;</button><button aria-label="Remove" title="Remove" data-del="${k}">&times;</button></div>`;
     box.appendChild(d);
@@ -501,13 +504,26 @@ function showStationBudgets() {
   });
 }
 
+/** The science around a stop: catalogued minerals, ice and landforms within 30 km, and the research it serves best. */
+function stopScience(id) {
+  const sc = state.science, st = sc?.stops?.[id];
+  if (!st) return "";
+  const lab = (k) => (sc.materials.find((m) => m.id === k)?.label || k).replace(/ \(.*\)/, "");
+  const mats = Object.entries(st.materials || {}).sort((a, b) => a[1][1] - b[1][1]).slice(0, 4)
+    .map(([k, v]) => `<span class="sci-m" title="${v[0]} within ${sc.radius_km} km">${lab(k)} ${v[1] < 1 ? "<1" : v[1].toFixed(0)} km</span>`).join("");
+  const o = st.objectives?.[0];
+  return `<details class="sci"><summary>${mats || '<span class="dim">no catalogued minerals or ice within ' + sc.radius_km + " km</span>"}</summary>
+    ${o ? `<div class="note"><b>Serves:</b> ${st.objectives.slice(0, 2).map((x) => x.title).join("; ")}</div><div class="note"><b>At the outcrop:</b> ${o.at_stations}</div>` : ""}
+    <div class="note dim">Orbital catalogues (CRISM, OMEGA, THEMIS, HiRISE / CTX landform maps) within ${sc.radius_km} km of the stop; full research plans in Landing mode.</div></details>`;
+}
+
 function buildTargets() {
   const box = $("targets");
   box.innerHTML = "";
   for (const t of state.meta.targets.filter((x) => x.kind !== "base")) {
     const row = document.createElement("div");
     row.className = "cand";
-    row.innerHTML = `<button class="btn" style="padding:3px 8px">+</button><div><div>${t.name}</div><div class="note">${t.why}</div></div>
+    row.innerHTML = `<button class="btn" style="padding:3px 8px">+</button><div><div>${t.name}</div><div class="note">${t.why}</div>${stopScience(t.id)}</div>
       <span class="num dim">${t.value ? t.value.toFixed(1) : "-"}</span>`;
     row.querySelector("button").addEventListener("click", () => { addStation(t); scheduleReplan(); });
     box.appendChild(row);
