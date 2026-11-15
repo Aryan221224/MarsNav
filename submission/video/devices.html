@@ -511,34 +511,35 @@ const astroParts = {};
     g.position.set(...w);
     return place(g, {});
   }
-  // right arm hanging, left arm raised to read the wrist cuff
+  // right arm hanging, left arm raised to read the wrist cuff (held a little forward, clear of the chest module)
   const RS = [-0.31, 1.47, 0], RE = [-0.36, 1.18, 0.03], RW = [-0.35, 0.93, 0.08];
   A.add(arm(RS, RE, RW), glove(RW, sub(RW, RE), [-1, 0, 0.2]));
-  const LS = [0.31, 1.47, 0], LE = [0.38, 1.19, 0.2], LW = [0.04, 1.33, 0.4];
+  const LS = [0.31, 1.47, 0], LE = [0.38, 1.19, 0.25], LW = [0.05, 1.33, 0.47];
   const ldir = sub(LW, LE);
   A.add(arm(LS, LE, LW), glove(LW, ldir, [0, 1, 0.15]));
-  // the wrist cuff: a rugged tablet on a rubber cradle that wraps the forearm, held by two straps. The screen lies
-  // flat along the forearm (its normal is square to the arm's axis), so the sleeve never pokes through it, and it is
-  // turned towards the camera side as far as the arm allows.
+  // the wrist cuff: a full sleeve band round the forearm (so nothing hangs or floats), orange edge rings, and a rugged
+  // screen housing sunk into the top of the band. The screen lies along the forearm, turned towards the camera side.
+  // The group's origin is the screen centre and its +z the screen normal (the devices shot frames it from there).
   const cuff = new THREE.Group();
-  const cw = 0.165, ch = 0.118;
+  const cw = 0.15, ch = 0.107;                                  // screen, same aspect as the captured cuff frame
   const rArm = 0.064 + (0.056 - 0.064) * 0.52;                 // the forearm's radius under the cuff
-  const lift = rArm + 0.011 + 0.012;                           // the screen's centre above the forearm's axis
-  cuff.add(rbox(cw + 0.024, ch + 0.024, 0.022, 0.014, M.rubber));
-  cuff.add(place(rbox(cw + 0.03, 0.01, 0.026, 0.005, M.orange), { p: [0, -(ch / 2 + 0.014), 0] }));
-  cuff.add(place(new THREE.Mesh(new THREE.PlaneGeometry(cw, ch), screenMat("cuff", [0, 0.687, 1, 0.313])), { p: [0, 0, 0.0115] }));
-  // the cradle: a rubber shell round the top of the forearm, its axis along the arm (the cuff's local x)
-  const shell = new THREE.Mesh(new THREE.CylinderGeometry(rArm + 0.009, rArm + 0.009, cw + 0.01, 40, 1, true, -1.75, 3.5),
-    new THREE.MeshStandardMaterial({ color: 0x2a2d31, roughness: 0.85, side: THREE.DoubleSide }));
-  shell.rotation.z = Math.PI / 2; shell.position.set(0, 0, -lift);
-  cuff.add(place(shell, {}));
-  // a riser block joins the tablet to the cradle, so nothing floats
-  cuff.add(place(rbox(cw - 0.01, ch * 0.62, lift - rArm - 0.006, 0.006, M.rubber), { p: [0, 0, -(lift - rArm) / 2 - 0.006] }));
-  for (const u2 of [-0.062, 0.062]) {
-    const st = new THREE.Mesh(new THREE.TorusGeometry(rArm + 0.013, 0.008, 8, 48), M.dark);
-    st.rotation.set(0, Math.PI / 2, 0); st.position.set(u2, 0, -lift);
-    cuff.add(place(st, {}));
+  const bandR = rArm + 0.004, bandT = 0.012, bandL = cw + 0.05;
+  const lift = bandR + bandT + 0.016;                          // the screen's centre above the forearm's axis
+  const bandMat = new THREE.MeshStandardMaterial({ color: 0x2b2f34, roughness: 0.82 });
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(bandR + bandT, bandR + bandT, bandL, 56), bandMat);
+  band.rotation.z = Math.PI / 2; band.position.set(0, 0, -lift);
+  cuff.add(place(band, {}));
+  for (const u2 of [-bandL / 2, bandL / 2]) {
+    const edge = new THREE.Mesh(new THREE.TorusGeometry(bandR + bandT, 0.0045, 10, 56), M.orange);
+    edge.rotation.set(0, Math.PI / 2, 0); edge.position.set(u2, 0, -lift);
+    cuff.add(place(edge, {}));
   }
+  // housing: deep enough that its base sits inside the band all the way across, then the bezel and the screen
+  const hD = 0.05;
+  cuff.add(place(rbox(cw + 0.026, ch + 0.026, hD, 0.012, M.rubber), { p: [0, 0, -hD / 2] }));
+  cuff.add(place(rbox(cw + 0.034, 0.012, 0.03, 0.005, M.orange), { p: [0, -(ch / 2 + 0.015), -0.01] }));
+  for (const u2 of [-1, 1]) cuff.add(place(rbox(0.012, 0.024, 0.008, 0.003, M.dark), { p: [u2 * (cw / 2 + 0.006), ch / 2 + 0.006, 0.002] }));
+  cuff.add(place(new THREE.Mesh(new THREE.PlaneGeometry(cw, ch), screenMat("cuff", [0, 0.687, 1, 0.313])), { p: [0, 0, 0.0008] }));
   const along = V(...ldir).normalize();
   const want = V(0.3, 1, 0.7).normalize();                     // up, and towards the camera side
   const nrm = want.clone().sub(along.clone().multiplyScalar(want.dot(along))).normalize();
@@ -637,10 +638,13 @@ window.setup = async (cfg) => { CFG = cfg; await document.fonts.load("600 26px B
 window.renderIntro = async (k) => {
   const { count, every } = CFG;
   const url = `${FRAMES}/visor_plain/${String(Math.floor(k / every.visorPlain) * every.visorPlain).padStart(4, "0")}.jpg`;
-  if (!bmpCache.has(url)) bmpCache.set(url, loadBmp(url));
-  const b = await bmpCache.get(url);
-  for (const [u, p] of bmpCache) if (u !== url) { (await p)?.close?.(); bmpCache.delete(u); }
+  // the wrist cuff shows the same simulated EVA as the visor (its captured frame for this moment), not a dark screen
+  const urlC = `${FRAMES}/cuff/${String(Math.floor(k / every.cuff) * every.cuff).padStart(4, "0")}.jpg`;
+  for (const x of [url, urlC]) if (!bmpCache.has(x)) bmpCache.set(x, loadBmp(x));
+  const b = await bmpCache.get(url), bc = await bmpCache.get(urlC);
+  for (const [u, p] of bmpCache) if (u !== url && u !== urlC) { (await p)?.close?.(); bmpCache.delete(u); }
   for (const sc of screens) if (sc.source === "visorPlain" && b && sc.mat.map.image !== b) { sc.mat.map.image = b; sc.mat.map.needsUpdate = true; }
+  for (const sc of screens) if (sc.source === "cuff" && bc && sc.mat.map.image !== bc) { sc.mat.map.image = bc; sc.mat.map.needsUpdate = true; }
   marsLights.sun.position.set(...INTRO.sun); marsLights.sun.intensity = 3.6; marsLights.alarm.intensity = 0;
   marsLights.dust.visible = true; marsLights.dust.position.set(0.004 * k, 0.0015 * k, -0.003 * k);
   astroParts.caution.color.setHex(0x3a1210);

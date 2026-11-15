@@ -10,9 +10,10 @@ Everything on screen is the running app or the repository's own validation outpu
 |---|---|---|
 | 0.0–5.0 s | Hook: a crew member and rover alone on a Mars plain; "NO GPS. Help can be 22 minutes away."; the camera pushes in to the gold visor and MarsNav's HUD | 3D illustration (`devices.html`); the HUD symbology is `hud.html?mode=visor` with its 3D view off, captured from a simulated EVA |
 | 5.0–7.0 s | Name: MARSNAV full screen over the walkback field (time to walk home from every point) | The planner's "Walkback time" layer (`capture_maps.mjs`) |
-| 7.0–10.6 s | Route analysis: the planner's layers over the same EVA, one after another (safety hazard and no-go zones, slope, wheel slip, radio shadow, walk home, consumables range) with a checklist that builds up, then the five routes | The running planner, one still per layer (`capture_analysis.mjs`) |
-| 10.6–12.0 s | Science: the science atlas (water-formed minerals around Jezero, the 66 screened candidates) and the boxwork objective from the Science tab; "It finds the science. 7 science goals · 66 landing sites" | Landing mode's atlas from the user guide; the objective card from the running app at 2× (`capture_science.mjs`) |
-| 12.0–13.9 s | Data and place: six NASA data layers with their missions, then Curiosity's boxwork at Mount Sharp, built as an EVA site; the instruments named on screen | User-guide captures of Landing mode; the planner's 3D view of the built Mount Sharp site |
+| 7.0–10.2 s | Route analysis: the planner's layers over the same EVA, one after another (safety hazard and no-go zones, slope, wheel slip, radio shadow, walk home, consumables range) with a checklist that builds up, then the five routes | The running planner, one still per layer (`capture_analysis.mjs`) |
+| 10.2–11.4 s | Where to land: Landing mode's whole-Mars globe with the 66 candidate sites (48 NASA Exploration Zones, 7 Starship sites, 11 past landers), pushing in | Landing mode, captured by the user guide's capture (this machine cannot stream the planet imagery) |
+| 11.4–12.7 s | Science filter: carbonates ticked, the list narrows from 66 sites to the 4 with carbonates within 100 km (Nili Fossae, Jezero, the Perseverance site, McLaughlin crater), each with its materials and distances | The running app's science filter at 2× (`capture_filter.mjs`), over Landing mode's science atlas |
+| 12.7–13.9 s | Research plan for Jezero: the evidence nearby and its distance, what to do at the outcrop, why it needs people, the field kit; the NASA missions the data come from | The running app's site dossier at 2× (`capture_filter.mjs`) |
 | 13.9–16.8 s | Closed loop: the crew secretly works 35 % harder; the learned work rate climbs ×1.00 → ×1.35 against the hidden truth, and the planner re-plans | The running planner on the virtual clock, one simulator tick per frame (`capture_loop.mjs`) |
 | 16.8–20.3 s | Fly: one EVA on the habitat workstation, the rover's dashboard, the visor and the wrist cuff; at the suit leak all four turn home | The planner and crew displays captured in lockstep (`capture_eva.mjs`), on 3D models built in `devices.html` |
 | 20.3–24.5 s | Proof: Perseverance's real 7.15 km, 85-sol route, then MarsNav's 2.92 km, 84-minute crew route | `validation/results/rover_case_study.json` over the app's 2 m HiRISE relief tiles |
@@ -29,8 +30,8 @@ too long is sped up to fit, and a longer one is cut and reported.
 |---|---|---|---|
 | 1 | 0.20–4.45 s (4.25 s) | 12 | On Mars there's no GPS, and help can be 22 minutes away. |
 | 2 | 4.55–6.90 s (2.35 s) | 8 | MarsNav keeps a way home on every step. |
-| 3 | 7.10–10.50 s (3.40 s) | 11 | It maps every hazard and radio shadow, then plans safe routes. |
-| 4 | 10.70–13.80 s (3.10 s) | 10 | It finds the science, with data from seven NASA missions. |
+| 3 | 7.10–10.10 s (3.00 s) | 11 | It maps every hazard and radio shadow, then plans safe routes. |
+| 4 | 10.30–13.80 s (3.50 s) | 12 | It picks where to land, and finds the science the crew needs. |
 | 5 | 14.00–16.70 s (2.70 s) | 7 | It learns from the suit, and re-plans. |
 | 6 | 16.90–20.20 s (3.30 s) | 10 | If a suit leaks, every display turns the crew home. |
 | 7 | 20.40–24.40 s (4.00 s) | 11 | Perseverance took 85 sols. MarsNav plans it as an 84-minute walk. |
@@ -53,7 +54,7 @@ anything over 30 s. If an AI voice is used instead, say so in `docs/AI_USE.md`.
 
 ## Rebuilding the picture
 
-Needs Node 20+, Playwright with Chromium, Python 3 with numpy, scipy and Pillow, and ffmpeg. The five captures need the
+Needs Node 20+, Playwright with Chromium, Python 3 with numpy, scipy and Pillow, and ffmpeg. The six captures need the
 planet server; the rest only a static server at the repository root.
 
 ```bash
@@ -85,13 +86,17 @@ node submission/video/capture_analysis.mjs http://127.0.0.1:8790/ submission/vid
 ```
 
 ```bash
+node submission/video/capture_filter.mjs http://127.0.0.1:8790/ submission/video/build/stills
+```
+
+```bash
 RESUME=1 bash submission/video/build_video.sh
 ```
 
 `build_video.sh` renders the opening and the devices shot, the rover map and every frame, then the sound and the
 MP4 (add `--vo` once the narration is recorded). With `RESUME=1` it keeps frames that already exist, so an
 interrupted run picks up where it stopped. The 3D models (habitat workstation, crew rover, suited crew member with
-its helmet and wrist cuff) are built from three.js primitives in `devices.html`; nothing is downloaded.
+its helmet and wrist cuff: a sleeve band round the forearm with the screen housing sunk into it) are built from three.js primitives in `devices.html`; nothing is downloaded.
 
 The app has no notion of video time, and software 3D cannot render 30 frames a second, so the captures run every page
 on a virtual clock (`lib/vt_shim.js`): each frame the clock moves exactly 1/30 s, the page renders, and a screenshot is
@@ -115,8 +120,8 @@ no AI. The warning at the suit leak is the app's own caution-and-warning tone (`
 - The closed-loop beat is the simulator's "crew working 35 % harder than modelled" scenario. The truth column is what
   the simulator really does; the engine sees only TSS-format telemetry and learns the rates from it. The frames are
   stepped one tick at a time, so the time between ticks is not real time, but every number is the app's own.
-- The science atlas behind the objective card is the user guide's capture of Landing mode (this machine cannot reach
-  the imagery servers); the objective card is captured fresh. The site ranking under the card is left out, because the
-  capture machine lacks the 323 MB science layers that ranking reads.
+- The globe and the science atlas behind the cards are the user guide's captures of Landing mode (this machine cannot
+  reach the imagery servers); the science filter and the research plan are captured fresh from the running app. For
+  the cards, the screening button and its note, which sit between the filter and the list in the app, are hidden.
 - "Down to one metre": not every site has 1 m data (docs/08), so the line does not claim every walk is planned at 1 m.
 - The 0 / 40 result is from 40 paired simulated EVAs, as the narration says.
