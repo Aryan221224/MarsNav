@@ -8,14 +8,14 @@ and help can be 22 minutes away.
 MarsNav keeps a way home on every step.
 
 3
-00:00:07,100 --> 00:00:10,500
+00:00:07,100 --> 00:00:10,100
 It maps every hazard and radio shadow,
 then plans safe routes.
 
 4
-00:00:10,700 --> 00:00:13,800
-It finds the science,
-with data from seven NASA missions.
+00:00:10,300 --> 00:00:13,800
+It picks where to land,
+and finds the science the crew needs.
 
 5
 00:00:14,000 --> 00:00:16,700
