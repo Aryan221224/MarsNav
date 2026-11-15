@@ -78,8 +78,9 @@
       <details class="matbox" id="matBox">
         <summary><span class="lbl">Science filter</span> <span id="matSum" class="hint">what the crew needs nearby: minerals, ice, landforms</span></summary>
         <div class="row matrow">
-          <select id="matR" aria-label="Search radius"><option value="25">within 25 km</option><option value="50">within 50 km</option><option value="100" selected>within 100 km</option><option value="200">within 200 km</option></select>
-          <select id="matMode" aria-label="Match all or any"><option value="all">has all of</option><option value="any">has any of</option></select>
+          <span class="lbl">Within</span>
+          <select id="matR" aria-label="Search radius"><option value="25">25 km</option><option value="50">50 km</option><option value="100" selected>100 km</option><option value="200">200 km</option></select>
+          <select id="matMode" aria-label="Match all or any"><option value="all">all of</option><option value="any">any of</option></select>
           <button class="btn" id="matClear" type="button">Clear</button>
         </div>
         <div id="matChips" class="matgroups" role="group" aria-label="Science materials"></div>
