@@ -14,12 +14,12 @@ already pasted Project Details, paste it again.
 MarsNav
 ```
 
-**Summary \*** (1167 of 1500 characters, 211 words; the form suggests 50-200)
+**Summary \*** (1097 of 1500 characters, 199 words; the form suggests 50-200)
 
 ```
-On Mars there is no GPS, help can be 22 light-minutes away, and a suit carries a fixed supply of oxygen, water and battery. MarsNav is crew mission software that answers the questions the first Mars crews will ask: where do we land and live, which way do we walk, and can we always get home?
+On Mars there is no GPS, help can be 22 light-minutes away, and a suit carries a fixed supply of oxygen, water and battery. MarsNav is crew mission software that answers the first Mars crews' questions: where do we land and live, which way do we walk, and can we always get home?
 
-Landing mode screens 66 candidate sites against NASA's human landing-site criteria on live NASA and USGS data, filters them by the minerals and ice a crew needs nearby, and turns the chosen site into a full EVA site. The EVA planner reads 1 m HiRISE terrain the way a boot meets it, applies hard safety limits before it optimises anything, and plans five named routes on which every step keeps a walk home. During the EVA it reads suit telemetry in NASA's SUITS format, learns how hard the crew is really working, and re-plans before the margin runs out. The same EVA appears on a habitat console, a helmet-visor display, a rover dashboard and a wrist cuff.
+Landing mode screens 66 candidate sites against NASA's human landing-site criteria on NASA and USGS data, filters them by the minerals and ice a crew needs, and turns the chosen site into a full EVA site. The EVA planner reads 1 m HiRISE terrain the way a boot meets it, applies hard safety limits first, and plans five named routes that keep a walk home. During the EVA it reads suit telemetry in NASA's SUITS format, learns how hard the crew is working, and re-plans before the margin runs out. The same EVA appears on a habitat console, a helmet-visor display, a rover dashboard and a wrist cuff.
 
 It is checked against Perseverance's own drives. In 40 simulated EVAs with hidden surprises, no MarsNav crew touched its emergency reserve (31 of 40 did on the fixed plan). It runs fully offline, as it must on Mars.
 ```
