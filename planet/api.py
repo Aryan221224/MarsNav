@@ -33,6 +33,7 @@ GET  /api/missions                          past, present and future Mars missio
 GET  /api/objectives                        science objectives
 GET  /api/objective/rank?id=                every candidate site and hub scored for one objective
 GET  /api/objective/eval?lon=&lat=          every objective scored at one place
+GET  /api/science/materials?r=               for every candidate site: which minerals, ice and landforms lie within r km
 GET  /api/spaceweather                      NASA DONKI digest for Mars with an EVA advisory (planet/spaceweather.py)
 POST /api/spaceweather/refresh              -> job (fetch the latest from DONKI)
 GET  /api/marci/index                       every MRO MARCI daily global map: [sub, day, Mars year, Ls] (planet/marci.py)
@@ -220,6 +221,12 @@ def handle(method: str, raw_path: str, body: bytes, root: Path, client_gone=None
         if p == "/api/objectives":
             from . import science
             return _ok({"ok": True, **science.objectives()})
+        if p == "/api/science/materials":
+            from . import assess, science
+            c = assess.candidates()
+            pts = [[x["lon"], x["lat"], x["id"], x["name"]] for k in ("ez", "starship", "heritage") for x in c.get(k, [])]
+            r = max(10.0, min(300.0, float(q.get("r", 100))))
+            return _ok({"ok": True, **science.materials_for_sites(pts, r)})
         if p == "/api/objective/rank":
             from . import assess, science
             c = assess.candidates()

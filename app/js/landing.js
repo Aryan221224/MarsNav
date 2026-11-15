@@ -864,6 +864,39 @@ for (const b of document.querySelectorAll(".seg button[data-crit]")) {
   };
 }
 
+// ------------------------------------------------------------------------------------------------- science filter
+// which minerals, ice and landforms lie within r km of every candidate (planet/science.py MATERIALS, bundled catalogues)
+S.matSel = new Set(); S.matMode = "all"; S.matR = 100; S.mat = null;
+async function loadMaterials() {
+  try { S.mat = await api(`/api/science/materials?r=${S.matR}`); } catch { S.mat = null; $("matSum").textContent = "unavailable (needs the MarsNav server)"; return; }
+  renderMatChips();
+  renderCandList();
+}
+function renderMatChips() {
+  if (!S.mat) return;
+  const n = (k) => Object.values(S.mat.sites).filter((m) => m[k]).length;
+  const groups = [...new Set(S.mat.materials.map((m) => m.group))];
+  $("matChips").innerHTML = groups.map((g) => `<div class="mg"><span class="lbl">${esc(g)}</span><div class="chips">${S.mat.materials.filter((m) => m.group === g).map((m) =>
+    `<button type="button" class="chip mat${S.matSel.has(m.id) ? " on" : ""}${n(m.id) ? "" : " none"}" data-mat="${esc(m.id)}" aria-pressed="${S.matSel.has(m.id)}" title="${n(m.id)} candidate sites have this within ${S.matR} km">${esc(m.label)} <b>${n(m.id)}</b></button>`).join("")}</div></div>`).join("");
+  for (const b of $("matChips").querySelectorAll("[data-mat]")) b.onclick = () => {
+    const k = b.dataset.mat;
+    S.matSel.has(k) ? S.matSel.delete(k) : S.matSel.add(k);
+    renderMatChips(); renderCandList();
+  };
+  const lab = (k) => S.mat.materials.find((m) => m.id === k)?.label || k;
+  $("matSum").textContent = S.matSel.size ? `${S.matMode === "any" ? "any of" : "all of"}: ${[...S.matSel].map(lab).join(", ")} within ${S.matR} km` : "what the crew needs nearby: minerals, ice, landforms";
+}
+function matTags(c) {
+  const m = S.mat?.sites[c.id];
+  if (!m || !Object.keys(m).length) return "";
+  const lab = (k) => S.mat.materials.find((x) => x.id === k)?.label.replace(/ \(.*\)/, "") || k;
+  const keys = Object.keys(m).sort((a, b) => (S.matSel.has(b) - S.matSel.has(a)) || m[a][1] - m[b][1]).slice(0, 5);
+  return `<span class="mats">${keys.map((k) => `<span class="mt${S.matSel.has(k) ? " hit" : ""}" title="${m[k][0]} within ${S.matR} km; nearest ${m[k][1].toFixed(0)} km">${esc(lab(k))} ${m[k][1] < 1 ? "<1" : m[k][1].toFixed(0)} km</span>`).join("")}</span>`;
+}
+$("matR").onchange = () => { S.matR = +$("matR").value; loadMaterials(); };
+$("matMode").onchange = () => { S.matMode = $("matMode").value; renderMatChips(); renderCandList(); };
+$("matClear").onclick = () => { S.matSel.clear(); renderMatChips(); renderCandList(); };
+
 // ------------------------------------------------------------------------------------------------- candidates
 async function loadCandidates() {
   try {
@@ -881,6 +914,7 @@ async function loadCandidates() {
       el.dataset.cid = x.id;
     }
     renderCandList();
+    loadMaterials();
     restoreFocusFromHash();
     screenAll(true);
   } catch (e) {
@@ -889,11 +923,20 @@ async function loadCandidates() {
 }
 function visibleCands() {
   const q = $("candFilter").value.trim().toLowerCase();
-  let list = S.cand.filter((c) => (S.set === "all" || c.kind === S.set)
+  const sel = [...S.matSel];
+  const hasMat = (c) => {
+    if (!sel.length || !S.mat) return true;
+    const m = S.mat.sites[c.id] || {};
+    return S.matMode === "any" ? sel.some((k) => m[k]) : sel.every((k) => m[k]);
+  };
+  let list = S.cand.filter((c) => (S.set === "all" || c.kind === S.set) && hasMat(c)
     && (!q || c.name.toLowerCase().includes(q) || (c.proposer || "").toLowerCase().includes(q) || (c.sub || "").toLowerCase().includes(q)));
   const by = $("candSort").value;
   const sc = (c) => S.screen.get(c.id)?.score ?? -1;
-  if (by === "score") list.sort((a, b) => sc(b) - sc(a) || a.name.localeCompare(b.name));
+  // with a science filter on, the sites with the most of the chosen material (then the nearest) come first
+  const matScore = (c) => sel.reduce((a, k) => a + Math.log2(1 + (S.mat?.sites[c.id]?.[k]?.[0] || 0)), 0);
+  if (sel.length && S.mat && by === "score") list.sort((a, b) => matScore(b) - matScore(a) || sc(b) - sc(a));
+  else if (by === "score") list.sort((a, b) => sc(b) - sc(a) || a.name.localeCompare(b.name));
   else if (by === "name") list.sort((a, b) => a.name.localeCompare(b.name));
   else list.sort((a, b) => Math.abs(a.lat) - Math.abs(b.lat));
   return list;
@@ -902,7 +945,7 @@ function renderCandList() {
   const ol = $("candList"), list = visibleCands();
   ol.innerHTML = "";
   if (!S.cand.length) { ol.innerHTML = `<li class="hint">Loading candidate sites…</li>`; return; }
-  if (!list.length) { ol.innerHTML = `<li class="hint">No candidate matches.</li>`; }
+  if (!list.length) { ol.innerHTML = `<li class="hint">${S.matSel.size ? "No candidate has that within " + S.matR + " km: widen the radius, or switch to \"has any of\"." : "No candidate matches."}</li>`; }
   const fid = S.focus?.cand?.id;
   for (const c of list) {
     const s = S.screen.get(c.id);
@@ -912,15 +955,16 @@ function renderCandList() {
     li.innerHTML = `<span class="t">${esc(c.name)}${c.kind === "starship" && c.tier ? `<small>${esc(c.tier)}</small>` : c.kind === "heritage" && c.year ? `<small>${c.year}</small>` : ""}</span>
       <span class="m"><span class="tag ${c.kind}">${TAG[c.kind]}</span> ${fmtLL(c.lat, c.lon, 1)}${elev != null ? ` · ${elev.toFixed(1)} km` : ""}${c.proposer ? ` · ${esc(c.proposer)}` : ""}</span>
       <span class="b">${s ? `<span class="badge ${s.verdict}" title="Screen score (global data)">${s.score ?? "–"}</span><span class="dots">${s.rows.map((r) =>
-        `<i class="${r.status}" title="${esc(CRIT_SHORT[r.id] || r.id)}: ${esc(r.value)}"></i>`).join("")}</span>` : ""}</span>`;
+        `<i class="${r.status}" title="${esc(CRIT_SHORT[r.id] || r.id)}: ${esc(r.value)}"></i>`).join("")}</span>` : ""}</span>${matTags(c)}`;
     li.onclick = () => openCandidate(c);
     ol.appendChild(li);
   }
-  // candidate markers: dim the ones outside the chosen list, colour the dot by the screen verdict
+  // candidate markers: dim the ones outside the chosen list (or the science filter), colour the dot by the screen verdict
+  const shown = new Set(list.map((c) => c.id));
   for (const m of markers) {
     if (!["ez", "starship", "heritage"].includes(m.kind)) continue;
     const id = m.el.dataset.cid, s = S.screen.get(id);
-    m.el.classList.toggle("dim", S.set !== "all" && S.set !== m.kind);
+    m.el.classList.toggle("dim", (S.set !== "all" && S.set !== m.kind) || (S.matSel.size > 0 && !shown.has(id)));
     m.el.classList.toggle("sel", id === fid);
     m.el.classList.remove("v-GO", "v-CAUTION", "v-NO-GO");
     if (s?.verdict) m.el.classList.add(`v-${s.verdict}`);
@@ -1167,8 +1211,8 @@ function meter(label, v) {
 // one highlighted (accent) action in the dossier at a time: the next step
 function setPrimary(id) { for (const b of ["btnAssess", "btnSafe", "btnHub"]) $(b).classList.toggle("accent", b === id); }
 // a row of section links at the top of a long dossier; each jumps to its part
-const DINDEX = [["Criteria", "Criteria"], ["Landing ellipse", "Landing"], ["Water and resources", "Water"], ["Environment", "Environment"],
-  ["Earth relay coverage", "Relay"], ["Weather here in past years", "Weather"]];
+const DINDEX = [["Criteria", "Criteria"], ["Landing ellipse", "Landing"], ["Research plan", "Research"], ["Science along the way", "Science"],
+  ["Water and resources", "Water"], ["Environment", "Environment"], ["Earth relay coverage", "Relay"], ["Weather here in past years", "Weather"]];
 function dossierIndex() {
   const heads = [...$("dSections").querySelectorAll("section.sect > h3")];
   const links = DINDEX.map(([h, lbl]) => [heads.find((e) => e.firstChild?.textContent.trim().startsWith(h))?.parentElement, lbl]).filter(([sec]) => sec);
@@ -1290,6 +1334,7 @@ function renderDossier(d) {
     sect.push(`<section class="sect"><h3>Science objectives here <small>evidence within 100 km</small></h3>${d.objectives.map((o) =>
       `<div class="crit"><i class="${o.score >= 6 ? "go" : o.score >= 2 ? "caution" : "unknown"}"></i><span class="l">${esc(o.title)}</span>
         <span class="v"><i class="sbar"><b style="width:${Math.max(3, 100 * o.score / top)}%"></b></i> ${o.score.toFixed(1)}</span></div>`).join("")}</section>`);
+    sect.push(researchPlan(d.objectives));
   }
   // chemistry, gravity, radiation
   const ch = d.data?.chem, md = d.model || {};
@@ -2001,6 +2046,35 @@ async function loadAtlas() {
     if (S.hashOvls?.includes(el.dataset.ovl)) { el.checked = true; el.closest("details").open = true; ticked = true; }
   }
   if (ticked) { reloadTextures(); updateLegend(); }
+}
+
+// ------------------------------------------------------------------------------------------------- research plan
+// For a site: every objective with evidence nearby, as a research plan a crew can act on: the question, the evidence and
+// its distance, what to do at the outcrop, why it needs people, a suggested kit, the safety note, and the missions that
+// did related work (planet/data/objectives.json and missions.json).
+const LAYER_NAME = { aqueous: "water-formed minerals", hydrous: "hydrated-mineral detections", chlorides: "chloride deposits", valleys: "river valleys",
+  fans: "alluvial fans", glacial: "glacier landforms", gullies: "gullies", active: "present-day activity", dunes: "dune fields", traverses: "rover traverses", landers: "landed missions" };
+function researchPlan(results) {
+  const defs = new Map((S.objectives || []).map((o) => [o.id, o]));
+  const mis = new Map((S.missions || []).map((m) => [m.id, m]));
+  const rows = results.filter((r) => r.score > 0 && defs.has(r.objective)).slice(0, 4);
+  if (!rows.length) return `<section class="sect"><h3>Research plan</h3><p class="hint">No catalogued evidence for any of the seven objectives within 100 km. Install the science layers (Data tab) for ice, water and chemistry terms, or try a nearby site.</p></section>`;
+  return `<section class="sect"><h3>Research plan <small>what a crew could study from here</small></h3>${rows.map((r, k) => {
+    const o = defs.get(r.objective);
+    const ev = (r.evidence || []).map((e) => `<li>${esc(e.class === "*" ? LAYER_NAME[e.layer] || e.layer : e.class)}: ${fmtN(e.count)} within 100 km, nearest ${fmtKm(e.nearest_km)}</li>`).join("")
+      + (r.data || []).map((t) => `<li>${esc(t)}</li>`).join("");
+    const her = (o.heritage || []).map((id) => mis.get(id)).filter(Boolean);
+    return `<details class="rp"${k === 0 ? " open" : ""}><summary><b>${esc(o.title)}</b> <small>${esc(o.goal || "")} · score ${r.score.toFixed(1)}</small></summary>
+      <p class="q">${esc(o.question)}</p>
+      ${ev ? `<div class="lbl">Evidence near this site</div><ul class="ev">${ev}</ul>` : ""}
+      <div class="lbl">At the outcrop</div><p>${esc(o.at_stations || "")}</p>
+      <div class="lbl">Why it needs people</div><p>${esc(o.why_humans || "")}</p>
+      ${o.kit?.length ? `<div class="lbl">Suggested field kit <small>[team suggestion]</small></div><p>${o.kit.map(esc).join(" · ")}</p>` : ""}
+      <div class="lbl">Safety</div><p class="warn-t">${esc(o.safety || "")}</p>
+      ${her.length ? `<div class="lbl">Missions that did related research</div><p>${her.map((m) => `<b>${esc(m.name)}</b>: ${esc(m.science)}`).join("<br>")}</p>` : ""}
+      ${o.examples?.length ? `<div class="lbl">Best-known places for it</div><p>${o.examples.slice(0, 3).map((x) => esc(x.name)).join(" · ")}</p>` : ""}
+    </details>`;
+  }).join("")}<p class="hint">Scores count catalogued evidence within 100 km (planet/science.py); they guide where to look, not what will be found.</p></section>`;
 }
 
 // ------------------------------------------------------------------------------------------------- science objectives, missions

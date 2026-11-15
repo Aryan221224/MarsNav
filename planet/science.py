@@ -64,6 +64,8 @@ def _data_terms(terms, lon, lat, elev_m) -> tuple[float, list]:
             why.append(f"gravity anomaly {D['gravity_mgal']:+.0f} mGal")
         elif key in ("gcr_low", "sun") and elev_m is not None:
             m = atlas.point(lon, lat, elev_m)
+            if key == "gcr_low" and "gcr_vs_gale" not in m:
+                continue                                          # no usable elevation yet (MOLA not downloaded): skip the term
             if key == "gcr_low":
                 v = max(0.0, (1.15 - m["gcr_vs_gale"]) * 10)          # less dose than 15 % above Gale's scores
                 why.append(f"cosmic-ray dose {m['gcr_ugy_day']:.0f} uGy/day (model)")
@@ -79,7 +81,7 @@ def _data_terms(terms, lon, lat, elev_m) -> tuple[float, list]:
     return pts, why
 
 
-def evaluate(oid: str, lon: float, lat: float, elev_m: float | None = None, radius_km: float = 100.0) -> dict:
+def evaluate(oid: str, lon: float, lat: float, elev_m: float | None = None, radius_km: float = 100.0, use_data: bool = True) -> dict:
     """Score one place for one objective, with the evidence listed."""
     from . import features
     o = objective(oid)
@@ -93,7 +95,7 @@ def evaluate(oid: str, lon: float, lat: float, elev_m: float | None = None, radi
         if hits:
             score += w * math.log2(1 + len(hits))
             ev.append({"layer": layer, "class": cls, "count": len(hits), "nearest_km": hits[0]["km"], "label": hits[0]["label"]})
-    dp, why = _data_terms(o.get("data_terms", []), lon, lat, elev_m)
+    dp, why = _data_terms(o.get("data_terms", []), lon, lat, elev_m) if use_data else (0.0, [])
     score += dp
     return {"objective": oid, "lon": lon, "lat": lat, "score": round(score, 2), "evidence": ev, "data": why}
 
@@ -114,3 +116,84 @@ def rank(oid: str, points: list, radius_km: float = 100.0) -> list:
         out.append(r)
     out.sort(key=lambda r: -r["score"])
     return out
+
+
+# ---------------------------------------------------------------------------------------------- materials filter
+# What a crew might need a site to have nearby, as matches in the bundled catalogues (planet/features.py). Each entry:
+# (id, label, group, feature layer, class text to match in the feature's label, "*" = any).
+MATERIALS = [
+    ("clays", "Clays (phyllosilicates)", "Water-formed minerals", "aqueous", "Phyllosilicates"),
+    ("sulfates", "Sulfates", "Water-formed minerals", "aqueous", "Sulfates"),
+    ("silica", "Hydrated silica", "Water-formed minerals", "aqueous", "Hydrated silica"),
+    ("carbonates", "Carbonates", "Water-formed minerals", "aqueous", "Carbonates"),
+    ("chlorides", "Chloride salts", "Water-formed minerals", "chlorides", "*"),
+    ("hydrous", "Hydrated minerals (CRISM / OMEGA)", "Water-formed minerals", "hydrous", "*"),
+    ("glacier", "Buried glacier ice", "Ice", "glacial", "Glacier-like form"),
+    ("newice", "Fresh craters that exposed ice", "Ice", "active", "exposed ice"),
+    ("gullies", "Gullies", "Ice", "gullies", "*"),
+    ("rsl", "Recurring slope lineae", "Mars today", "active", "Recurring slope lineae"),
+    ("newcrater", "New impact craters (since 1999)", "Mars today", "active", "New impact crater"),
+    ("rivers", "Ancient river valleys", "Ancient water", "valleys", "*"),
+    ("fans", "Alluvial fans", "Ancient water", "fans", "*"),
+    ("dunes", "Dune fields (soft ground)", "Hazards", "dunes", "*"),
+]
+
+
+def materials_near(lon: float, lat: float, radius_km: float = 100.0) -> dict:
+    """Count and nearest distance of every MATERIALS entry within radius_km: {id: [count, nearest_km]}."""
+    from . import features
+    layers = {m[3] for m in MATERIALS}
+    near = features.in_radius(lon, lat, radius_km, layers, limit=1_000_000)
+    out = {}
+    for mid, _label, _group, layer, cls in MATERIALS:
+        hits = [r for r in near if r["layer"] == layer and (cls == "*" or cls.lower() in r["label"].lower())]
+        if hits:
+            out[mid] = [len(hits), hits[0]["km"]]
+    return out
+
+
+_mat_cache: dict = {}
+
+
+def materials_for_sites(points: list, radius_km: float = 100.0) -> dict:
+    """materials_near() for a list of [lon, lat, id, name] places, cached per radius (the catalogues never change)."""
+    key = (round(radius_km), tuple(p[2] for p in points))
+    if key not in _mat_cache:
+        _mat_cache[key] = {p[2]: materials_near(float(p[0]), float(p[1]), radius_km) for p in points}
+    return {"radius_km": radius_km, "materials": [{"id": m[0], "label": m[1], "group": m[2]} for m in MATERIALS],
+            "sites": _mat_cache[key]}
+
+
+def site_science(targets: list, radius_km: float = 30.0) -> dict:
+    """Science around each stop of a built site, for the planner (written next to the site's manifest as science.json):
+    the materials within radius_km with the nearest distance, and the objectives the stop serves best."""
+    defs = {o["id"]: o for o in objectives().get("objectives", [])}
+    out = {"radius_km": radius_km, "materials": [{"id": m[0], "label": m[1], "group": m[2]} for m in MATERIALS], "stops": {}}
+    for t in targets:
+        if t.get("kind") == "base":
+            continue
+        lon, lat = float(t["lon"]), float(t["lat"])
+        objs = []
+        for oid in defs:
+            # catalogued evidence only: the global data layers (3 km and coarser) cannot tell stops a few km apart
+            r = evaluate(oid, lon, lat, None, radius_km, use_data=False)
+            if r["score"] > 0:
+                objs.append({"id": oid, "title": defs[oid]["title"], "score": r["score"], "at_stations": defs[oid].get("at_stations", ""),
+                             "evidence": r["evidence"][:4]})
+        objs.sort(key=lambda o: -o["score"])
+        out["stops"][t["id"]] = {"materials": materials_near(lon, lat, radius_km), "objectives": objs[:3]}
+    return out
+
+
+def write_site_science(site_dir) -> dict | None:
+    """Build science.json for the site in site_dir (a folder with manifest.json). Returns the dict, or None."""
+    site_dir = Path(site_dir)
+    try:
+        man = json.loads((site_dir / "manifest.json").read_text())
+    except (OSError, ValueError):
+        return None
+    sc = site_science(man.get("targets", []))
+    sc["site"] = man.get("site_info", {}).get("name") or man.get("site")
+    (site_dir / "science.json").write_text(json.dumps(sc, separators=(",", ":")))
+    return sc
+

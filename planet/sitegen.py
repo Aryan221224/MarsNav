@@ -258,6 +258,11 @@ def build(lon: float, lat: float, km: float = 10.0, lander: str = "human", name:
     build_layers.main(sitecfg.load_site(sid))
     log("layers done; building imagery")
     build_imagery.main(sitecfg.load_site(sid))
+    try:   # science around each stop for the planner (catalogued minerals, ice and landforms; planet/science.py)
+        from . import science
+        science.write_site_science(PATHS["app_data"] / "sites" / sid)
+    except Exception as e:  # noqa: BLE001 - optional: the site works without it
+        log(f"science context skipped: {e}")
     log(f"site {sid} built in {time.time() - t0:.0f} s")
     return {"ok": True, "id": sid, "name": cfg["name"], "path": f"sites/{sid}/", "sources": sources, "dem_res_m": dem_res,
             "hirise": [h["key"] for h in hires], "ctx": ctx_used}

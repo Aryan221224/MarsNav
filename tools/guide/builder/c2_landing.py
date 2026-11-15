@@ -81,6 +81,9 @@ bullets(["<b>Criteria</b>, grouped (engineering, landing, resources, surface), e
          "<b>Science along the way</b>: the catalogued minerals, ice landforms, active slopes and mission sites within 100 km, "
          "the nearest of each, and a planetary-protection warning when a candidate Special Region is near (Chapter 6).",
          "<b>Science objectives here</b>: the seven objectives scored on the evidence within 100 km.",
+         "<b>Research plan</b>: for the objectives with evidence nearby, the research question, each piece of evidence and how "
+         "far it is, what to do at the outcrop, why it needs people, a suggested field kit, the safety note and the missions "
+         "that did related research. The <b>Research</b> and <b>Science</b> links at the top of the dossier jump there.",
          "<b>Chemistry, gravity and radiation</b>: the GRS elements, albedo, the gravity anomaly, the cosmic-ray dose for the "
          "air overhead and space weather now; then the <b>data sources</b> with citations.",
          "Below the dossier, <b>All data at this place</b> stays open for the same point, folded (Chapter 5)."])
@@ -317,6 +320,11 @@ P("The <b>Science</b> tab starts from the question, as the challenge does: choos
   "scores every candidate and every hub you have built by the evidence within 100 km, each kind counted on a logarithmic "
   "scale and weighted, plus terms from the installed layers such as ice, water, dose or sunlight. Click a result to fly "
   "there and open it.")
+P("<b>Science filter</b> (Candidates tab): when the crew needs a particular material or landform, tick it, for example "
+  "carbonates, chloride salts, buried glacier ice or recurring slope lineae, and choose a radius (25 to 200 km) and "
+  "<i>has all of</i> or <i>has any of</i>. The list keeps only the sites that have it nearby, best first, each row shows "
+  "its materials with the nearest distance, and the other sites dim on the globe. It reads the catalogues bundled with "
+  "MarsNav, so it works with no download.")
 table([["Objective", "Evidence that scores"],
        ["Ancient life in lakes and deltas", "Aqueous and hydrous minerals, valley networks, fans, chlorides, the geologic map"],
        ["Groundwater and the boxwork of Mount Sharp", "Aqueous and hydrous minerals, rover traverses, dunes, the gravity anomaly (the challenge's example)"],

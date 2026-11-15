@@ -1,5 +1,5 @@
 {
- "note": "Science objectives for a crewed Mars surface mission, after the MEPAG goals (I life, II climate, III geology, IV preparation for human exploration). Each lists the map layers that show it, the catalogued features that count as evidence (planet/features.py), and example places (IAU gazetteer centres or rover positions). 'evidence' weights score a place by the features within 100 km: weight * log2(1 + count).",
+ "note": "Science objectives for a crewed Mars surface mission, after the MEPAG goals (I life, II climate, III geology, IV preparation for human exploration). Each lists the map layers that show it, the catalogued features that count as evidence (planet/features.py), and example places (IAU gazetteer centres or rover positions). 'evidence' weights score a place by the features within 100 km: weight * log2(1 + count). kit: a suggested field kit for crews (team suggestion [ASSUME], modelled on rover and Apollo field instruments); heritage: missions in planet/data/missions.json that did related research.",
  "objectives": [
   {
    "id": "life",
@@ -79,7 +79,22 @@
     }
    ],
    "at_stations": "Look for fine layering, colour changes and nodules; core the finest-grained mudstone; keep samples shaded and sealed.",
-   "safety": "Delta fronts are steep and layered: watch the slope and cliff layers; plan cores at the base of outcrops."
+   "safety": "Delta fronts are steep and layered: watch the slope and cliff layers; plan cores at the base of outcrops.",
+   "kit": [
+    "Rock corer and sealed sample tubes",
+    "Close-up imager (hand-lens scale)",
+    "Raman / UV-fluorescence spectrometer for organics",
+    "X-ray fluorescence (APXS / PIXL class) for chemistry",
+    "Clean sample handling (planetary protection)"
+   ],
+   "heritage": [
+    "m2020",
+    "msl",
+    "spirit",
+    "opportunity",
+    "viking1",
+    "rosalind"
+   ]
   },
   {
    "id": "boxwork",
@@ -126,7 +141,16 @@
     }
    ],
    "at_stations": "Pair every ridge sample with a hollow sample; photograph the ridge network from a high point; note vein colour and hardness.",
-   "safety": "Sandy hollows are soft ground (the sand layer); ridges are narrow: walk the hollow floors, step up to sample."
+   "safety": "Sandy hollows are soft ground (the sand layer); ridges are narrow: walk the hollow floors, step up to sample.",
+   "kit": [
+    "Drill and powder sampler",
+    "X-ray fluorescence for vein chemistry",
+    "Close-up imager",
+    "Ground-penetrating radar for the ridge network"
+   ],
+   "heritage": [
+    "msl"
+   ]
   },
   {
    "id": "ice",
@@ -195,7 +219,20 @@
     }
    ],
    "at_stations": "Trench or drill below the dry layer; log depth to ice; keep ice cores frozen.",
-   "safety": "Ice-rich ground is cold and shaded slopes stay frozen: budget heater power; avoid scarps that expose ice (unstable)."
+   "safety": "Ice-rich ground is cold and shaded slopes stay frozen: budget heater power; avoid scarps that expose ice (unstable).",
+   "kit": [
+    "Ground-penetrating radar (SHARAD / RIMFAX class)",
+    "Ice auger or core drill",
+    "Neutron spectrometer for hydrogen",
+    "Cold-chain sample containers"
+   ],
+   "heritage": [
+    "phoenix",
+    "mro",
+    "odyssey",
+    "tgo",
+    "zhurong"
+   ]
   },
   {
    "id": "activity",
@@ -241,7 +278,18 @@
     }
    ],
    "at_stations": "Observe from outside the feature with long-range cameras; sample only after a planetary-protection review.",
-   "safety": "RSL slopes are steep (25-40 deg): no-go for walking. The planner flags RSL within 300 km of a site."
+   "safety": "RSL slopes are steep (25-40 deg): no-go for walking. The planner flags RSL within 300 km of a site.",
+   "kit": [
+    "Time-lapse camera",
+    "Humidity and temperature sensors",
+    "Sterile sampling kit (Special Regions protocol)",
+    "Stand-off imaging before any approach"
+   ],
+   "heritage": [
+    "mro",
+    "msl",
+    "m2020"
+   ]
   },
   {
    "id": "volcanism",
@@ -291,7 +339,20 @@
     }
    ],
    "at_stations": "Sample each flow with its contact; measure orientation of layers; deploy seismic and heat-flow instruments.",
-   "safety": "High volcanoes have thin air: more radiation (cosmic-ray layer), weaker aerobraking for landers."
+   "safety": "High volcanoes have thin air: more radiation (cosmic-ray layer), weaker aerobraking for landers.",
+   "kit": [
+    "Portable seismometer",
+    "Magnetometer",
+    "Rock hammer and X-ray fluorescence",
+    "Oriented-sample kit"
+   ],
+   "heritage": [
+    "insight",
+    "spirit",
+    "mgs",
+    "mex",
+    "mro"
+   ]
   },
   {
    "id": "climate",
@@ -349,7 +410,20 @@
     }
    ],
    "at_stations": "Measure layer thickness and dip; sample at regular intervals; photograph with scale.",
-   "safety": "Layered mesas have cliffs: the planner's cliff stand-off grows with position error."
+   "safety": "Layered mesas have cliffs: the planner's cliff stand-off grows with position error.",
+   "kit": [
+    "Stratigraphy camera (multispectral)",
+    "Sediment / ice corer",
+    "Ground-penetrating radar",
+    "Meteorology station"
+   ],
+   "heritage": [
+    "msl",
+    "mro",
+    "mex",
+    "phoenix",
+    "hope"
+   ]
   },
   {
    "id": "resources",
@@ -425,7 +499,22 @@
     }
    ],
    "at_stations": "Survey regolith for building, measure dust and ice; set up the habitat where the lander can come down safely.",
-   "safety": "Every candidate still needs HiRISE 1 m coverage of the landing ellipse before commitment (the dossier says where it exists)."
+   "safety": "Every candidate still needs HiRISE 1 m coverage of the landing ellipse before commitment (the dossier says where it exists).",
+   "kit": [
+    "Ice-extraction test rig",
+    "Radiation dosimeter",
+    "Regolith penetrometer and shear vane",
+    "Solar-array test panel",
+    "Dust monitor"
+   ],
+   "heritage": [
+    "phoenix",
+    "odyssey",
+    "tgo",
+    "mro",
+    "m2020",
+    "humans"
+   ]
   }
  ]
 }

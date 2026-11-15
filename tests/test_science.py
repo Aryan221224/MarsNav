@@ -219,3 +219,62 @@ def test_mission_catalogue_has_dated_status_and_sources():
         s = x.get("site")
         if s and s.get("lon") is not None:
             assert -180 <= s["lon"] <= 180 and -90 <= s["lat"] <= 90
+
+
+# ------------------------------------------------------------------------------------- science filter and research
+def test_materials_filter_counts_match_the_catalogue_by_brute_force():
+    """materials_near() must agree with a direct count over the bundled catalogue (Jezero, 100 km)."""
+    lon, lat = 77.45, 18.44
+    got = science.materials_near(lon, lat, 100.0)
+    for mid, _label, _group, layer, cls in science.MATERIALS:
+        hits = [r for r in features.in_radius(lon, lat, 100.0, {layer}, limit=1_000_000)
+                if cls == "*" or cls.lower() in r["label"].lower()]
+        if hits:
+            assert got[mid] == [len(hits), hits[0]["km"]], mid
+        else:
+            assert mid not in got, mid
+    # Jezero: clays and carbonates are what made it Perseverance's site
+    assert {"clays", "carbonates", "silica"} <= set(got)
+
+
+def test_materials_for_every_candidate_and_wider_radius_finds_more():
+    from planet import assess
+    c = assess.candidates()
+    pts = [[x["lon"], x["lat"], x["id"], x["name"]] for k in ("ez", "starship", "heritage") for x in c.get(k, [])]
+    r50, r200 = science.materials_for_sites(pts, 50.0), science.materials_for_sites(pts, 200.0)
+    assert len(r50["sites"]) == len(pts) == 66
+    assert [m["id"] for m in r50["materials"]] == [m[0] for m in science.MATERIALS]
+    for sid, m in r50["sites"].items():
+        for k, (n, km) in m.items():
+            assert km <= 50.0 and r200["sites"][sid][k][0] >= n
+
+
+def test_objectives_have_a_research_plan_with_real_heritage_missions():
+    ids = {m["id"] for m in science.missions()["missions"]}
+    for o in science.objectives()["objectives"]:
+        for key in ("question", "why_humans", "at_stations", "safety"):
+            assert o.get(key), (o["id"], key)
+        assert o.get("kit") and o.get("heritage"), o["id"]
+        assert set(o["heritage"]) <= ids, o["id"]
+
+
+def test_site_science_files_are_current():
+    """app/data/**/science.json must be what site_science() gives for each site's stops (rebuild with
+    python tools/build_site_science.py)."""
+    import glob
+    files = [os.path.join(ROOT, "app", "data", "science.json")] + glob.glob(os.path.join(ROOT, "app", "data", "sites", "*", "science.json"))
+    assert len(files) >= 3
+    for f in files:
+        man = json.load(open(os.path.join(os.path.dirname(f), "manifest.json")))
+        want = science.site_science(man["targets"])
+        got = json.load(open(f))
+        assert got["stops"] == json.loads(json.dumps(want["stops"])), f
+        assert set(got["stops"]) == {t["id"] for t in man["targets"] if t.get("kind") != "base"}
+
+
+def test_objective_scoring_survives_a_missing_elevation(monkeypatch):
+    """With no MOLA elevation yet (NaN), the dose term is skipped instead of failing the whole dossier section."""
+    monkeypatch.setattr(datasets, "point", lambda lon, lat: {})      # no global layers installed
+    for o in science.objectives()["objectives"]:
+        r = science.evaluate(o["id"], 77.0, 17.5, float("nan"))
+        assert r["score"] >= 0 and "error" not in r

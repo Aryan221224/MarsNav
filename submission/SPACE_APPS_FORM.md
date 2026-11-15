@@ -3,7 +3,7 @@
 Everything to type or paste into your team's **Project** tab (spaceappschallenge.org: profile icon > My Team > Project >
 Edit), in the form's own order. Turn the edit **Lock** on while you work and click **Save Progress** often.
 Updated 15 November 2026: Project Details now has the browser demo link, the terrain radiation shielding feature and
-its check against Curiosity RAD, 95 % intervals on the validation results, twelve map layers and 182 tests. If you
+its check against Curiosity RAD, 95 % intervals on the validation results, twelve map layers, the science filter and research plans, and 188 tests. If you
 already pasted Project Details, paste it again.
 
 ## Project Summary
